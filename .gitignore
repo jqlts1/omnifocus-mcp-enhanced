@@ -41,5 +41,18 @@ mcpTypescriptREADME.txt
 devnotes.md
 
 devnotes.md
-devnotes.md
 ProjectDevNotes.md
+
+# Project specific files to exclude
+*.tgz
+*.tar.gz
+test_*.js
+debug_*.js
+generate_*.js
+.space/
+.npmignore
+
+# Personal files and reports
+CLAUDE.md
+*报告*.md
+个人文档/

@@ -11,6 +11,18 @@ import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
+import * as getTaskByIdTool from './tools/definitions/getTaskById.js';
+import * as getTodayCompletedTasksTool from './tools/definitions/getTodayCompletedTasks.js';
+// Import perspective tools
+import * as getInboxTasksTool from './tools/definitions/getInboxTasks.js';
+import * as getFlaggedTasksTool from './tools/definitions/getFlaggedTasks.js';
+import * as getForecastTasksTool from './tools/definitions/getForecastTasks.js';
+import * as getTasksByTagTool from './tools/definitions/getTasksByTag.js';
+// Import ultimate filter tool
+import * as filterTasksTool from './tools/definitions/filterTasks.js';
+// Import custom perspective tools
+import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
+import * as getCustomPerspectiveTool from './tools/definitions/getCustomPerspective.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -68,15 +80,80 @@ server.tool(
   batchRemoveItemsTool.handler
 );
 
+
+server.tool(
+  "get_task_by_id",
+  "Get information about a specific task by ID or name",
+  getTaskByIdTool.schema.shape,
+  getTaskByIdTool.handler
+);
+
+server.tool(
+  "get_today_completed_tasks",
+  "Get tasks completed today - view today's accomplishments",
+  getTodayCompletedTasksTool.schema.shape,
+  getTodayCompletedTasksTool.handler
+);
+
+// Register perspective tools
+server.tool(
+  "get_inbox_tasks",
+  "Get tasks from OmniFocus inbox perspective",
+  getInboxTasksTool.schema.shape,
+  getInboxTasksTool.handler
+);
+
+server.tool(
+  "get_flagged_tasks", 
+  "Get flagged tasks from OmniFocus with optional project filtering",
+  getFlaggedTasksTool.schema.shape,
+  getFlaggedTasksTool.handler
+);
+
+server.tool(
+  "get_forecast_tasks",
+  "Get tasks from OmniFocus forecast perspective (due/deferred tasks in date range)", 
+  getForecastTasksTool.schema.shape,
+  getForecastTasksTool.handler
+);
+
+server.tool(
+  "get_tasks_by_tag",
+  "Get tasks filtered by a specific tag name with exact or partial matching",
+  getTasksByTagTool.schema.shape, 
+  getTasksByTagTool.handler
+);
+
+// Ultimate filter tool - The most powerful task perspective engine
+server.tool(
+  "filter_tasks",
+  "Advanced task filtering with unlimited perspective combinations - status, dates, projects, tags, search, and more",
+  filterTasksTool.schema.shape,
+  filterTasksTool.handler
+);
+
+// Custom perspective tools - Query user-defined perspectives
+server.tool(
+  "list_custom_perspectives",
+  "List all custom perspectives defined in OmniFocus with optional built-in and sidebar items",
+  listCustomPerspectivesTool.schema.shape,
+  listCustomPerspectivesTool.handler
+);
+
+server.tool(
+  "get_custom_perspective",
+  "Get tasks from a specific custom perspective by name or ID",
+  getCustomPerspectiveTool.schema.shape,
+  getCustomPerspectiveTool.handler
+);
+
 // Start the MCP server
 const transport = new StdioServerTransport();
 
 // Use await with server.connect to ensure proper connection
 (async function() {
   try {
-    console.error("Starting MCP server...");
     await server.connect(transport);
-    console.error("MCP Server connected and ready to accept commands from Claude");
   } catch (err) {
     console.error(`Failed to start MCP server: ${err}`);
   }

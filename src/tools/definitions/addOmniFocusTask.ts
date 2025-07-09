@@ -10,7 +10,9 @@ export const schema = z.object({
   flagged: z.boolean().optional().describe("Whether the task is flagged or not"),
   estimatedMinutes: z.number().optional().describe("Estimated time to complete the task, in minutes"),
   tags: z.array(z.string()).optional().describe("Tags to assign to the task"),
-  projectName: z.string().optional().describe("The name of the project to add the task to (will add to inbox if not specified)")
+  projectName: z.string().optional().describe("The name of the project to add the task to (will add to inbox if not specified)"),
+  parentTaskId: z.string().optional().describe("The ID of the parent task to create this task as a subtask"),
+  parentTaskName: z.string().optional().describe("The name of the parent task to create this task as a subtask (alternative to parentTaskId)")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
@@ -20,9 +22,15 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
     
     if (result.success) {
       // Task was added successfully
-      let locationText = args.projectName 
-        ? `in project "${args.projectName}"` 
-        : "in your inbox";
+      let locationText;
+      if (args.parentTaskId || args.parentTaskName) {
+        const parentRef = args.parentTaskId || args.parentTaskName;
+        locationText = `as a subtask of "${parentRef}"`;
+      } else if (args.projectName) {
+        locationText = `in project "${args.projectName}"`;
+      } else {
+        locationText = "in your inbox";
+      }
         
       let tagText = args.tags && args.tags.length > 0
         ? ` with tags: ${args.tags.join(', ')}`

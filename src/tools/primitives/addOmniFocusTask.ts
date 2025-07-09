@@ -12,6 +12,8 @@ export interface AddOmniFocusTaskParams {
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
   projectName?: string; // Project name to add task to
+  parentTaskId?: string; // Parent task ID for subtask creation
+  parentTaskName?: string; // Parent task name for subtask creation (alternative to ID)
 }
 
 /**
@@ -27,17 +29,32 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
+  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
+  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
   
   // Construct AppleScript with error handling
   let script = `
   try
     tell application "OmniFocus"
       tell front document
-        -- Determine the container (inbox or project)
-        if "${projectName}" is "" then
-          -- Use inbox of the document
-          set newTask to make new inbox task with properties {name:"${name}"}
-        else
+        -- Determine the container (parent task, project, or inbox)
+        if "${parentTaskId}" is not "" then
+          -- Create subtask using parent task ID
+          try
+            set theParentTask to first flattened task where id = "${parentTaskId}"
+            set newTask to make new task with properties {name:"${name}"} at end of tasks of theParentTask
+          on error
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with ID: ${parentTaskId}\\\"}"
+          end try
+        else if "${parentTaskName}" is not "" then
+          -- Create subtask using parent task name
+          try
+            set theParentTask to first flattened task where name = "${parentTaskName}"
+            set newTask to make new task with properties {name:"${name}"} at end of tasks of theParentTask
+          on error
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with name: ${parentTaskName}\\\"}"
+          end try
+        else if "${projectName}" is not "" then
           -- Use specified project
           try
             set theProject to first flattened project where name = "${projectName}"
@@ -45,6 +62,9 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           on error
             return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
           end try
+        else
+          -- Use inbox of the document
+          set newTask to make new inbox task with properties {name:"${name}"}
         end if
         
         -- Set task properties
@@ -86,10 +106,42 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
 }
 
 /**
+ * Validate parent task parameters to prevent conflicts
+ */
+async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise<{valid: boolean, error?: string}> {
+  // Check if both parentTaskId and parentTaskName are provided
+  if (params.parentTaskId && params.parentTaskName) {
+    return {
+      valid: false,
+      error: "Cannot specify both parentTaskId and parentTaskName. Please use only one."
+    };
+  }
+
+  // Check if parent task is specified along with projectName
+  if ((params.parentTaskId || params.parentTaskName) && params.projectName) {
+    return {
+      valid: false,
+      error: "Cannot specify both parent task and project. Subtasks inherit project from their parent."
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Add a task to OmniFocus
  */
 export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{success: boolean, taskId?: string, error?: string}> {
   try {
+    // Validate parent task parameters
+    const validation = await validateParentTaskParams(params);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: validation.error
+      };
+    }
+
     // Generate AppleScript
     const script = generateAppleScript(params);
     
