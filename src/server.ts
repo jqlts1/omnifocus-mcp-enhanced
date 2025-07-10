@@ -119,7 +119,7 @@ server.tool(
 
 server.tool(
   "get_tasks_by_tag",
-  "Get tasks filtered by a specific tag name with exact or partial matching",
+  "Get tasks filtered by OmniFocus tags (labels like @home, @work, @urgent). Use this for tag-based filtering, NOT for custom perspective names. Tags are labels assigned to individual tasks.",
   getTasksByTagTool.schema.shape, 
   getTasksByTagTool.handler
 );
@@ -142,7 +142,7 @@ server.tool(
 
 server.tool(
   "get_custom_perspective_tasks",
-  "Get tasks from a specific custom perspective by name",
+  "Get tasks from a specific OmniFocus custom perspective by name. Use this when user refers to perspective names like '今日工作安排', '今日复盘', '本周项目' etc. - these are custom views created in OmniFocus, NOT tags. Supports hierarchical tree display of task relationships.",
   getCustomPerspectiveTasksTool.schema.shape,
   getCustomPerspectiveTasksTool.handler
 );
