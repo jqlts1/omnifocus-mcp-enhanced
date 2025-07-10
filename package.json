@@ -1,8 +1,8 @@
 {
   "name": "omnifocus-mcp-enhanced",
   "type": "module",
-  "version": "1.5.0",
-  "description": "🔥 BREAKTHROUGH: World's first OmniFocus 4.2+ native perspective API access! Enhanced MCP server with 100% accurate perspective filtering, complete subtask support, and advanced task management",
+  "version": "1.6.0",
+  "description": "🚀 NEW: Native Custom Perspective Access! Enhanced MCP server with OmniFocus custom perspective support, hierarchical task display, AI-optimized tool selection, and comprehensive task management",
   "main": "dist/server.js",
   "bin": {
     "omnifocus-mcp-enhanced": "./cli.cjs"
