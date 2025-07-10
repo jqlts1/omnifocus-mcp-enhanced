@@ -20,6 +20,8 @@ import * as getForecastTasksTool from './tools/definitions/getForecastTasks.js';
 import * as getTasksByTagTool from './tools/definitions/getTasksByTag.js';
 // Import ultimate filter tool
 import * as filterTasksTool from './tools/definitions/filterTasks.js';
+// Import custom perspective tool
+import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -127,6 +129,14 @@ server.tool(
   "Advanced task filtering with unlimited perspective combinations - status, dates, projects, tags, search, and more",
   filterTasksTool.schema.shape,
   filterTasksTool.handler
+);
+
+// Custom perspective tool - List all custom perspectives
+server.tool(
+  "list_custom_perspectives",
+  "List all custom perspectives defined in OmniFocus",
+  listCustomPerspectivesTool.schema.shape,
+  listCustomPerspectivesTool.handler
 );
 
 
