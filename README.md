@@ -5,23 +5,23 @@
 [![Node.js CI](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
 [![macOS](https://img.shields.io/badge/macOS-only-blue.svg)](https://www.apple.com/macos/)
 
-> **🎯 BREAKTHROUGH: World's First OmniFocus 4.2+ Perspective API Access!**
+> **🌟 NEW: Native Custom Perspective Access with Hierarchical Display!**
 
-> **Transform OmniFocus into an AI-powered productivity powerhouse with revolutionary perspective access**
+> **Transform OmniFocus into an AI-powered productivity powerhouse with custom perspective support**
 
-Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **KILLER FEATURE**: Direct access to OmniFocus 4.2+ native perspective filtering with 100% accuracy. Plus complete subtask support, advanced filtering, and seamless Claude AI integration.
+Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native custom perspective access**, hierarchical task display, AI-optimized tool selection, and comprehensive task management. Perfect integration with Claude AI for intelligent workflows.
 
 ## ✨ Key Features
 
-### 🎯 **KILLER FEATURE: OmniFocus 4.2+ Native Perspective Access**
-- **🔥 BREAKTHROUGH** - World's first direct access to OmniFocus 4.2+ `archivedFilterRules` API
-- **🎯 100% Accuracy** - Get REAL perspective-filtered tasks, not approximations
-- **⚡ Zero Configuration** - Works with your existing custom perspectives instantly
-- **🚀 27 Filter Rules** - Support for all perspective filter types and aggregation methods
+### 🌟 **NEW: Native Custom Perspective Access**
+- **🎯 Direct Integration** - Native access to your OmniFocus custom perspectives via `Perspective.Custom` API
+- **🌳 Hierarchical Display** - Tree-style task visualization with parent-child relationships
+- **🧠 AI-Optimized** - Enhanced tool descriptions prevent AI confusion between perspectives and tags
+- **⚡ Zero Setup** - Works with your existing custom perspectives instantly
 
 ### 🏗️ **Complete Task Management**
 - **🏗️ Complete Subtask Support** - Create hierarchical tasks with parent-child relationships
-- **🔍 Perspective Views** - Access Inbox, Flagged, Forecast, and Tag-based views
+- **🔍 Built-in Perspectives** - Access Inbox, Flagged, Forecast, and Tag-based views
 - **🚀 Ultimate Task Filter** - Advanced filtering beyond OmniFocus native capabilities  
 - **🎯 Batch Operations** - Add/remove multiple tasks efficiently
 - **📊 Smart Querying** - Find tasks by ID, name, or complex criteria
@@ -57,6 +57,7 @@ claude mcp add omnifocus-enhanced -- node "/path/to/omnifocus-mcp-enhanced/dist/
 
 - **macOS 10.15+** - OmniFocus is macOS-only
 - **OmniFocus 3+** - The application must be installed and running
+- **OmniFocus Pro** - Required for custom perspectives (new features in v1.6.0)
 - **Node.js 18+** - For running the MCP server
 - **Claude Code** - For MCP integration
 
@@ -130,45 +131,38 @@ filter_tasks {
 }
 ```
 
-### 4. 🎯 **REVOLUTIONARY: Native Perspective Access (KILLER FEATURE)**
+### 4. 🌟 **NEW: Native Custom Perspective Access**
 
-**BREAKTHROUGH**: Direct access to OmniFocus 4.2+ native perspective filtering with 100% accuracy!
-
-```bash
-# 🔥 NEW: Get REAL perspective-filtered tasks (not approximations!)
-get_perspective_tasks_v2 {
-  "perspectiveName": "今日工作安排",  # Your custom perspective name
-  "hideCompleted": true,
-  "limit": 20
-}
-
-# Examples with your actual perspectives
-get_perspective_tasks_v2 {"perspectiveName": "Today Review"}
-get_perspective_tasks_v2 {"perspectiveName": "Weekly Planning"}
-get_perspective_tasks_v2 {"perspectiveName": "Next Actions"}
-```
-
-**Why This Is Revolutionary:**
-- ✅ **100% Accurate** - Gets exactly what your perspective shows in OmniFocus
-- ✅ **Zero Setup** - Works with existing perspectives instantly  
-- ✅ **Real Filtering** - Uses OmniFocus native `archivedFilterRules` API
-- ✅ **All Rule Types** - Supports 27 different filter rules and aggregation methods
-
-### 5. 💫 Legacy Custom Perspectives
-
-Access your OmniFocus custom perspectives (legacy method):
+Access your OmniFocus custom perspectives with hierarchical task display:
 
 ```bash
-# List all custom perspectives
+# 🌟 NEW: List all your custom perspectives
 list_custom_perspectives {"format": "detailed"}
 
-# Access specific perspective
-get_custom_perspective {
-  "name": "Today's Focus",
-  "hideCompleted": true,
-  "limit": 50
+# 🌳 NEW: Get tasks from custom perspective with tree display
+get_custom_perspective_tasks {
+  "perspectiveName": "今日工作安排",  # Your custom perspective name
+  "showHierarchy": true,            # Enable tree display
+  "hideCompleted": true
+}
+
+# Examples with different perspectives
+get_custom_perspective_tasks {
+  "perspectiveName": "Today Review",
+  "showHierarchy": true
+}
+
+get_custom_perspective_tasks {
+  "perspectiveName": "Weekly Planning",
+  "showHierarchy": false  # Flat display
 }
 ```
+
+**Why This Is Powerful:**
+- ✅ **Native Integration** - Uses OmniFocus `Perspective.Custom` API directly
+- ✅ **Tree Structure** - Visual parent-child task relationships with ├─, └─ symbols
+- ✅ **AI-Friendly** - Enhanced descriptions prevent tool selection confusion
+- ✅ **Professional Output** - Clean, readable task hierarchies
 
 ### 5. 🎯 Batch Operations
 
@@ -212,19 +206,19 @@ Efficiently manage multiple tasks:
 7. **batch_remove_items** - Bulk remove
 8. **get_task_by_id** - Query task information
 
-### 🔍 Perspective Tools
+### 🔍 Built-in Perspective Tools
 9. **get_inbox_tasks** - Inbox perspective
 10. **get_flagged_tasks** - Flagged perspective
 11. **get_forecast_tasks** - Forecast perspective (due/deferred tasks)
 12. **get_tasks_by_tag** - Tag-based filtering
 13. **filter_tasks** - Ultimate filtering with unlimited combinations
 
-### 🎯 Native Perspective Access (KILLER FEATURE)
-14. **get_perspective_tasks_v2** - 🔥 **NEW**: Direct OmniFocus 4.2+ perspective access with 100% accuracy
+### 🌟 Custom Perspective Tools (NEW)
+14. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
+15. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
 
-### 💫 Legacy Custom Perspectives  
-15. **list_custom_perspectives** - List user custom perspectives
-16. **get_custom_perspective** - Query custom perspective tasks (legacy method)
+### 📊 Analytics & Tracking
+16. **get_today_completed_tasks** - View today's completed tasks
 
 ## 🚀 Quick Start Examples
 
@@ -275,6 +269,25 @@ filter_tasks {
 }
 ```
 
+### 🌟 Custom Perspective Usage
+```bash
+# List your custom perspectives
+list_custom_perspectives {"format": "detailed"}
+
+# Access a custom perspective with hierarchy
+get_custom_perspective_tasks {
+  "perspectiveName": "Today Review",
+  "showHierarchy": true,
+  "hideCompleted": true
+}
+
+# Quick flat view of weekly planning
+get_custom_perspective_tasks {
+  "perspectiveName": "Weekly Planning",
+  "showHierarchy": false
+}
+```
+
 ## 🔧 Configuration
 
 ### Verify Installation
@@ -282,8 +295,11 @@ filter_tasks {
 # Check MCP status
 claude mcp list
 
-# Test connection
+# Test basic connection
 get_inbox_tasks
+
+# Test new custom perspective features
+list_custom_perspectives
 ```
 
 ### Troubleshooting
