@@ -23,6 +23,8 @@ import * as filterTasksTool from './tools/definitions/filterTasks.js';
 // Import custom perspective tools
 import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
 import * as getCustomPerspectiveTool from './tools/definitions/getCustomPerspective.js';
+// Import advanced perspective tools (OmniFocus 4.2+ API)
+import * as getPerspectiveTasksV2Tool from './tools/definitions/getPerspectiveTasksV2.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -145,6 +147,14 @@ server.tool(
   "Get tasks from a specific custom perspective by name or ID",
   getCustomPerspectiveTool.schema.shape,
   getCustomPerspectiveTool.handler
+);
+
+// Advanced perspective tool - True perspective access using OmniFocus 4.2+ API
+server.tool(
+  "get_perspective_tasks_v2",
+  "🚀 Advanced perspective access using OmniFocus 4.2+ archivedFilterRules API - Get REAL perspective-filtered tasks with 100% accuracy",
+  getPerspectiveTasksV2Tool.schema.shape,
+  getPerspectiveTasksV2Tool.handler
 );
 
 // Start the MCP server
