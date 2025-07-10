@@ -1,8 +1,8 @@
 {
   "name": "omnifocus-mcp-enhanced",
   "type": "module",
-  "version": "1.4.0",
-  "description": "Enhanced Model Context Protocol (MCP) server for OmniFocus with complete subtask support, perspective views (Inbox/Flagged/Forecast/Tags), and advanced task management features",
+  "version": "1.5.0",
+  "description": "🔥 BREAKTHROUGH: World's first OmniFocus 4.2+ native perspective API access! Enhanced MCP server with 100% accurate perspective filtering, complete subtask support, and advanced task management",
   "main": "dist/server.js",
   "bin": {
     "omnifocus-mcp-enhanced": "./cli.cjs"
@@ -37,7 +37,13 @@
     "subtasks",
     "enhanced",
     "productivity",
-    "macos"
+    "macos",
+    "perspective",
+    "perspective-api",
+    "archivedfillterrules",
+    "omnifocus-4.2",
+    "breakthrough",
+    "killer-feature"
   ],
   "author": {
     "name": "jqlts1",
