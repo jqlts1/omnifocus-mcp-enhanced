@@ -65,26 +65,6 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       sortOrder = "asc"
     } = options;
     
-    // 特殊处理自定义透视
-    if (perspective === "custom") {
-      if (!options.customPerspectiveName && !options.customPerspectiveId) {
-        throw new Error("When perspective is 'custom', either customPerspectiveName or customPerspectiveId must be provided");
-      }
-      
-      // 使用自定义透视获取基础任务集，然后应用额外的过滤器
-      const { getCustomPerspective } = await import('./getCustomPerspective.js');
-      
-      const baseResult = await getCustomPerspective({
-        perspectiveName: options.customPerspectiveName,
-        perspectiveId: options.customPerspectiveId,
-        hideCompleted: true, // 先获取非完成任务，后续会根据taskStatus过滤
-        limit: 1000 // 获取更多以便后续过滤
-      });
-      
-      // TODO: 需要解析baseResult并重新应用filter_tasks的其他过滤条件
-      // 这里暂时返回自定义透视的原始结果，附加说明
-      return baseResult + "\n\n⚠️ **注意**: 当前自定义透视模式下的额外过滤功能正在开发中。如需复杂过滤，请直接使用 `get_custom_perspective` 或常规的 `filter_tasks`。\n";
-    }
     
     // 执行常规过滤脚本
     const result = await executeOmniFocusScript('@filterTasks.js', {
