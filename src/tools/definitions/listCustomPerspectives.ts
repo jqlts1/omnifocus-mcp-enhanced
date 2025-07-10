@@ -3,17 +3,13 @@ import { listCustomPerspectives } from '../primitives/listCustomPerspectives.js'
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  includeBuiltIn: z.boolean().optional().describe("Include built-in perspectives like Inbox, Flagged (default: false)"),
-  includeSidebar: z.boolean().optional().describe("Include sidebar perspectives and folders (default: true)"),
-  format: z.enum(["simple", "detailed"]).optional().describe("Output format: simple (names only) or detailed (with metadata)")
+  format: z.enum(['simple', 'detailed']).optional().describe("Output format: simple (names only) or detailed (with identifiers) - default: simple")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
   try {
     const result = await listCustomPerspectives({
-      includeBuiltIn: args.includeBuiltIn || false,
-      includeSidebar: args.includeSidebar !== false, // Default to true
-      format: args.format || "detailed"
+      format: args.format || 'simple'
     });
     
     return {

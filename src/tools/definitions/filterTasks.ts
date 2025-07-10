@@ -14,18 +14,14 @@ const TaskStatusEnum = z.enum([
 ]);
 
 // 透视范围枚举
-const PerspectiveEnum = z.enum(["inbox", "flagged", "all", "custom"]);
+const PerspectiveEnum = z.enum(["inbox", "flagged", "all"]);
 
 export const schema = z.object({
   // 🎯 任务状态过滤
   taskStatus: z.array(TaskStatusEnum).optional().describe("Filter by task status. Can specify multiple statuses"),
   
   // 📍 透视范围  
-  perspective: PerspectiveEnum.optional().describe("Limit search to specific perspective: inbox, flagged, all tasks, or custom perspective"),
-  
-  // 💫 自定义透视参数（当perspective为"custom"时使用）
-  customPerspectiveName: z.string().optional().describe("Name of custom perspective to filter by (used when perspective is 'custom')"),
-  customPerspectiveId: z.string().optional().describe("ID of custom perspective to filter by (alternative to customPerspectiveName)"),
+  perspective: PerspectiveEnum.optional().describe("Limit search to specific perspective: inbox, flagged, all tasks"),
   
   // 📁 项目/标签过滤
   projectFilter: z.string().optional().describe("Filter by project name (partial match)"),

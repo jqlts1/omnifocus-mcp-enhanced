@@ -22,9 +22,7 @@ import * as getTasksByTagTool from './tools/definitions/getTasksByTag.js';
 import * as filterTasksTool from './tools/definitions/filterTasks.js';
 // Import custom perspective tools
 import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
-import * as getCustomPerspectiveTool from './tools/definitions/getCustomPerspective.js';
-// Import advanced perspective tools (OmniFocus 4.2+ API)
-import * as getPerspectiveTasksV2Tool from './tools/definitions/getPerspectiveTasksV2.js';
+import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPerspectiveTasks.js';
 
 // Create an MCP server
 const server = new McpServer({
@@ -121,7 +119,7 @@ server.tool(
 
 server.tool(
   "get_tasks_by_tag",
-  "Get tasks filtered by a specific tag name with exact or partial matching",
+  "Get tasks filtered by OmniFocus tags (labels like @home, @work, @urgent). Use this for tag-based filtering, NOT for custom perspective names. Tags are labels assigned to individual tasks.",
   getTasksByTagTool.schema.shape, 
   getTasksByTagTool.handler
 );
@@ -134,27 +132,19 @@ server.tool(
   filterTasksTool.handler
 );
 
-// Custom perspective tools - Query user-defined perspectives
+// Custom perspective tools
 server.tool(
   "list_custom_perspectives",
-  "List all custom perspectives defined in OmniFocus with optional built-in and sidebar items",
+  "List all custom perspectives defined in OmniFocus",
   listCustomPerspectivesTool.schema.shape,
   listCustomPerspectivesTool.handler
 );
 
 server.tool(
-  "get_custom_perspective",
-  "Get tasks from a specific custom perspective by name or ID",
-  getCustomPerspectiveTool.schema.shape,
-  getCustomPerspectiveTool.handler
-);
-
-// Advanced perspective tool - True perspective access using OmniFocus 4.2+ API
-server.tool(
-  "get_perspective_tasks_v2",
-  "🚀 Advanced perspective access using OmniFocus 4.2+ archivedFilterRules API - Get REAL perspective-filtered tasks with 100% accuracy",
-  getPerspectiveTasksV2Tool.schema.shape,
-  getPerspectiveTasksV2Tool.handler
+  "get_custom_perspective_tasks",
+  "Get tasks from a specific OmniFocus custom perspective by name. Use this when user refers to perspective names like '今日工作安排', '今日复盘', '本周项目' etc. - these are custom views created in OmniFocus, NOT tags. Supports hierarchical tree display of task relationships.",
+  getCustomPerspectiveTasksTool.schema.shape,
+  getCustomPerspectiveTasksTool.handler
 );
 
 // Start the MCP server

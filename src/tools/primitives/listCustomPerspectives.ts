@@ -1,152 +1,65 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 
 export interface ListCustomPerspectivesOptions {
-  includeBuiltIn?: boolean;
-  includeSidebar?: boolean;
-  format?: "simple" | "detailed";
+  format?: 'simple' | 'detailed';
 }
 
 export async function listCustomPerspectives(options: ListCustomPerspectivesOptions = {}): Promise<string> {
-  const { includeBuiltIn = false, includeSidebar = true, format = "detailed" } = options;
+  const { format = 'simple' } = options;
   
   try {
-    // Execute the list perspectives script
-    const result = await executeOmniFocusScript('@listPerspectives.js', {
-      includeBuiltIn,
-      includeSidebar,
-      format
-    });
+    console.log('🚀 开始执行 listCustomPerspectives 脚本...');
+    
+    // Execute the list custom perspectives script
+    const result = await executeOmniFocusScript('@listCustomPerspectives.js', {});
+    
+    console.log('📋 脚本执行完成，结果类型:', typeof result);
+    console.log('📋 脚本执行结果:', result);
+    
+    // 处理各种可能的返回类型
+    let data: any;
     
     if (typeof result === 'string') {
-      return result;
+      console.log('📝 结果是字符串，尝试解析 JSON...');
+      try {
+        data = JSON.parse(result);
+        console.log('✅ JSON 解析成功:', data);
+      } catch (parseError) {
+        console.error('❌ JSON 解析失败:', parseError);
+        throw new Error(`解析字符串结果失败: ${result}`);
+      }
+    } else if (typeof result === 'object' && result !== null) {
+      console.log('🔄 结果是对象，直接使用...');
+      data = result;
+    } else {
+      console.error('❌ 无效的结果类型:', typeof result, result);
+      throw new Error(`脚本执行返回了无效的结果类型: ${typeof result}, 值: ${result}`);
     }
     
-    // If result is an object, format it
-    if (result && typeof result === 'object') {
-      const data = result as any;
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      // Format the perspectives list
-      let output = `# 🔍 OMNIFOCUS PERSPECTIVES\n\n`;
-      
-      if (data.perspectives && Array.isArray(data.perspectives)) {
-        if (data.perspectives.length === 0) {
-          output += "📪 No custom perspectives found.\n";
-          output += "\n**Tip**: Create custom perspectives in OmniFocus to organize your workflow!\n";
-        } else {
-          const perspectiveCount = data.perspectives.length;
-          output += `Found ${perspectiveCount} perspective${perspectiveCount === 1 ? '' : 's'}:\n\n`;
-          
-          // Group perspectives by type
-          const groupedPerspectives = groupPerspectivesByType(data.perspectives);
-          
-          Object.entries(groupedPerspectives).forEach(([type, perspectives]) => {
-            if (perspectives.length > 0) {
-              output += `## ${getTypeEmoji(type)} ${getTypeDisplayName(type)}\n`;
-              
-              perspectives.forEach((perspective: any) => {
-                if (format === "simple") {
-                  output += `• ${perspective.name}\n`;
-                } else {
-                  output += formatDetailedPerspective(perspective);
-                }
-              });
-              
-              output += '\n';
-            }
-          });
-          
-          // Add usage instructions
-          output += `💡 **Usage**: Use \`get_custom_perspective({"name": "PerspectiveName"})\` to view tasks\n`;
-        }
-      } else {
-        output += "No perspective data available\n";
-      }
-      
-      return output;
+    // 检查是否有错误
+    if (!data.success) {
+      throw new Error(data.error || 'Unknown error occurred');
     }
     
-    return "Unexpected result format from OmniFocus";
+    // 格式化输出
+    if (data.count === 0) {
+      return "📋 **自定义透视列表**\n\n暂无自定义透视。";
+    }
+    
+    if (format === 'simple') {
+      // 简单格式：只显示名称列表
+      const perspectiveNames = data.perspectives.map((p: any) => p.name);
+      return `📋 **自定义透视列表** (${data.count}个)\n\n${perspectiveNames.map((name: string, index: number) => `${index + 1}. ${name}`).join('\n')}`;
+    } else {
+      // 详细格式：显示名称和标识符
+      const perspectiveDetails = data.perspectives.map((p: any, index: number) => 
+        `${index + 1}. **${p.name}**\n   🆔 ${p.identifier}`
+      );
+      return `📋 **自定义透视列表** (${data.count}个)\n\n${perspectiveDetails.join('\n\n')}`;
+    }
     
   } catch (error) {
-    console.error("Error in listCustomPerspectives:", error);
-    throw new Error(`Failed to list custom perspectives: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Error in listCustomPerspectives:', error);
+    return `❌ **错误**: ${error instanceof Error ? error.message : String(error)}`;
   }
-}
-
-// Group perspectives by type for better organization
-function groupPerspectivesByType(perspectives: any[]): { [key: string]: any[] } {
-  const groups: { [key: string]: any[] } = {
-    'custom': [],
-    'builtin': [],
-    'sidebar': []
-  };
-  
-  perspectives.forEach(perspective => {
-    const type = perspective.type || 'custom';
-    if (groups[type]) {
-      groups[type].push(perspective);
-    } else {
-      groups['custom'].push(perspective);
-    }
-  });
-  
-  return groups;
-}
-
-// Get emoji for perspective type
-function getTypeEmoji(type: string): string {
-  const emojiMap: { [key: string]: string } = {
-    'custom': '🎯',
-    'builtin': '🏠',
-    'sidebar': '📂'
-  };
-  return emojiMap[type] || '🔍';
-}
-
-// Get display name for perspective type
-function getTypeDisplayName(type: string): string {
-  const nameMap: { [key: string]: string } = {
-    'custom': 'Custom Perspectives',
-    'builtin': 'Built-in Perspectives',
-    'sidebar': 'Sidebar Items'
-  };
-  return nameMap[type] || 'Other Perspectives';
-}
-
-// Format a detailed perspective entry
-function formatDetailedPerspective(perspective: any): string {
-  let output = `• **${perspective.name}**`;
-  
-  // Add description if available
-  if (perspective.description && perspective.description.trim()) {
-    output += ` - ${perspective.description.trim()}`;
-  }
-  
-  output += '\n';
-  
-  // Add metadata if available
-  const metadata: string[] = [];
-  
-  if (perspective.taskCount !== undefined) {
-    metadata.push(`${perspective.taskCount} task${perspective.taskCount === 1 ? '' : 's'}`);
-  }
-  
-  if (perspective.lastUsed) {
-    const lastUsedDate = new Date(perspective.lastUsed).toLocaleDateString();
-    metadata.push(`Last used: ${lastUsedDate}`);
-  }
-  
-  if (perspective.isDefault) {
-    metadata.push('Default perspective');
-  }
-  
-  if (metadata.length > 0) {
-    output += `  📊 ${metadata.join(' • ')}\n`;
-  }
-  
-  return output + '\n';
 }
