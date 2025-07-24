@@ -1,5 +1,8 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 const execAsync = promisify(exec);
 
 // Interface for task creation parameters
@@ -20,17 +23,18 @@ export interface AddOmniFocusTaskParams {
  * Generate pure AppleScript for task creation
  */
 function generateAppleScript(params: AddOmniFocusTaskParams): string {
-  // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  // CLAUDEAI: Sanitize and prepare parameters for AppleScript - only escape backslashes and double quotes
+  // Single quotes (apostrophes) don't need escaping in AppleScript double-quoted strings
+  const name = params.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const note = params.note?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || '';
+  const parentTaskId = params.parentTaskId?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || '';
+  const parentTaskName = params.parentTaskName?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || '';
   
   // Construct AppleScript with error handling
   let script = `
@@ -83,7 +87,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/\\/g, '\\\\').replace(/"/g, '\\"'); // CLAUDEAI: Only escape backslashes and double quotes for AppleScript
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -145,10 +149,26 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     // Generate AppleScript
     const script = generateAppleScript(params);
     
-    console.error("Executing AppleScript directly...");
+    console.error("Executing AppleScript via temporary file...");
     
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    // CLAUDEAI: Write AppleScript to temporary file to avoid shell escaping issues with apostrophes
+    const tempFile = join(tmpdir(), `omnifocus-task-${Date.now()}.applescript`);
+    let stdout = '';
+    let stderr = '';
+    
+    try {
+      writeFileSync(tempFile, script);
+      const result = await execAsync(`osascript "${tempFile}"`);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } finally {
+      // CLAUDEAI: Clean up temporary file
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temporary file:", cleanupError);
+      }
+    }
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);

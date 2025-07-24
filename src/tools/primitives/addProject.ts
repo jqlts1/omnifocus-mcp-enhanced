@@ -19,15 +19,16 @@ export interface AddProjectParams {
  * Generate pure AppleScript for project creation
  */
 function generateAppleScript(params: AddProjectParams): string {
-  // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  // CLAUDEAI: Sanitize and prepare parameters for AppleScript - only escape backslashes and double quotes
+  // Single quotes (apostrophes) don't need escaping in AppleScript double-quoted strings
+  const name = params.name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const note = params.note?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || '';
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || '';
   const sequential = params.sequential === true;
   
   // Construct AppleScript with error handling
@@ -66,7 +67,7 @@ function generateAppleScript(params: AddProjectParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = tag.replace(/\\/g, '\\\\').replace(/"/g, '\\"'); // CLAUDEAI: Only escape backslashes and double quotes for AppleScript
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"

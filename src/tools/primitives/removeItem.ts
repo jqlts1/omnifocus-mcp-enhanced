@@ -14,8 +14,8 @@ export interface RemoveItemParams {
  */
 function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || ''; // CLAUDEAI: Escape backslashes and double quotes only
+  const name = params.name?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || ''; // CLAUDEAI: Escape backslashes and double quotes only
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
