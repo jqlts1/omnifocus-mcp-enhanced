@@ -1,5 +1,9 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs'; // CLAUDEAI: Add filesystem operations for temporary file handling
+import { join } from 'path'; // CLAUDEAI: Add path utilities for temporary file handling
+import { tmpdir } from 'os'; // CLAUDEAI: Add OS utilities for temporary file handling
+import { escapeForAppleScript, generateJsonEscapeHelper } from '../../utils/applescriptUtils.js'; // CLAUDEAI: Import AppleScript utilities
 const execAsync = promisify(exec);
 
 // Status options for tasks and projects
@@ -37,8 +41,8 @@ export interface EditItemParams {
  */
 function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || ''; // CLAUDEAI: Escape backslashes and double quotes only
-  const name = params.name?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || ''; // CLAUDEAI: Escape backslashes and double quotes only
+  const id = escapeForAppleScript(params.id || ''); // CLAUDEAI: Use utility function for consistent escaping
+  const name = escapeForAppleScript(params.name || ''); // CLAUDEAI: Use utility function for consistent escaping
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
@@ -48,6 +52,8 @@ function generateAppleScript(params: EditItemParams): string {
   
   // Construct AppleScript with error handling
   let script = `
+  ${generateJsonEscapeHelper()}
+  
   try
     tell application "OmniFocus"
       tell front document
@@ -97,7 +103,7 @@ function generateAppleScript(params: EditItemParams): string {
   if (params.newName !== undefined) {
     script += `
           -- Update name
-          set name of foundItem to "${params.newName.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+          set name of foundItem to "${escapeForAppleScript(params.newName)}"
           set end of changedProperties to "name"
 `;
   }
@@ -105,7 +111,7 @@ function generateAppleScript(params: EditItemParams): string {
   if (params.newNote !== undefined) {
     script += `
           -- Update note
-          set note of foundItem to "${params.newNote.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"
+          set note of foundItem to "${escapeForAppleScript(params.newNote)}"
           set end of changedProperties to "note"
 `;
   }
@@ -186,7 +192,7 @@ function generateAppleScript(params: EditItemParams): string {
     
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(", ");
+      const tagsList = params.replaceTags.map(tag => `"${escapeForAppleScript(tag)}"`).join(", ");
       script += `
           -- Replace all tags
           set tagNames to {${tagsList}}
@@ -213,7 +219,7 @@ function generateAppleScript(params: EditItemParams): string {
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(", ");
+        const tagsList = params.addTags.map(tag => `"${escapeForAppleScript(tag)}"`).join(", ");
         script += `
           -- Add tags
           set tagNames to {${tagsList}}
@@ -233,7 +239,7 @@ function generateAppleScript(params: EditItemParams): string {
       
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(", ");
+        const tagsList = params.removeTags.map(tag => `"${escapeForAppleScript(tag)}"`).join(", ");
         script += `
           -- Remove tags
           set tagNames to {${tagsList}}
@@ -275,7 +281,7 @@ function generateAppleScript(params: EditItemParams): string {
     
     // Move to a new folder
     if (params.newFolderName !== undefined) {
-      const folderName = params.newFolderName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const folderName = escapeForAppleScript(params.newFolderName);
       script += `
           -- Move to new folder
           set destFolder to missing value
@@ -305,8 +311,13 @@ function generateAppleScript(params: EditItemParams): string {
             end if
           end repeat
           
+          -- Escape the values for JSON output
+          set escapedId to my escapeForJson(itemId)
+          set escapedName to my escapeForJson(itemName)
+          set escapedChangedProps to my escapeForJson(changedPropsText)
+          
           -- Return success with details
-          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\",\\\"changedProperties\\\":\\"" & changedPropsText & "\\"}"
+          return "{\\\"success\\\":true,\\\"id\\\":\\"" & escapedId & "\\",\\\"name\\\":\\"" & escapedName & "\\",\\\"changedProperties\\\":\\"" & escapedChangedProps & "\\"}"
         else
           -- Item not found
           return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\\"}"
@@ -314,7 +325,9 @@ function generateAppleScript(params: EditItemParams): string {
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    -- Escape error message for JSON output
+    set escapedError to my escapeForJson(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   
@@ -335,15 +348,27 @@ export async function editItem(params: EditItemParams): Promise<{
     // Generate AppleScript
     const script = generateAppleScript(params);
     
-    console.error("Executing AppleScript for editing...");
+    console.error("Executing AppleScript via temporary file..."); // CLAUDEAI: Updated log message
     console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
     
-    // Log a preview of the script for debugging (first few lines)
-    const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-    console.error("AppleScript preview:\n", scriptPreview);
+    // CLAUDEAI: Write AppleScript to temporary file to avoid shell escaping issues with apostrophes
+    const tempFile = join(tmpdir(), `omnifocus-edit-${Date.now()}.applescript`);
+    let stdout = '';
+    let stderr = '';
     
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    try {
+      writeFileSync(tempFile, script);
+      const result = await execAsync(`osascript "${tempFile}"`);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } finally {
+      // CLAUDEAI: Clean up temporary file
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temporary file:", cleanupError);
+      }
+    }
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);

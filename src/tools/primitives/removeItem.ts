@@ -1,5 +1,9 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs'; // CLAUDEAI: Add imports for temporary file handling
+import { join } from 'path'; // CLAUDEAI: Add import for path operations
+import { tmpdir } from 'os'; // CLAUDEAI: Add import for temporary directory
+import { escapeForAppleScript, generateJsonEscapeHelper } from '../../utils/applescriptUtils.js'; // CLAUDEAI: Import AppleScript utilities
 const execAsync = promisify(exec);
 
 // Interface for item removal parameters
@@ -14,8 +18,8 @@ export interface RemoveItemParams {
  */
 function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || ''; // CLAUDEAI: Escape backslashes and double quotes only
-  const name = params.name?.replace(/\\/g, '\\\\').replace(/"/g, '\\"') || ''; // CLAUDEAI: Escape backslashes and double quotes only
+  const id = escapeForAppleScript(params.id || ''); // CLAUDEAI: Use utility function for consistent escaping
+  const name = escapeForAppleScript(params.name || ''); // CLAUDEAI: Use utility function for consistent escaping
   const itemType = params.itemType;
   
   // Verify we have at least one identifier
@@ -25,6 +29,8 @@ function generateAppleScript(params: RemoveItemParams): string {
   
   // Construct AppleScript with error handling
   let script = `
+  ${generateJsonEscapeHelper()}
+  
   try
     tell application "OmniFocus"
       tell front document
@@ -71,8 +77,12 @@ function generateAppleScript(params: RemoveItemParams): string {
           -- Delete the item
           delete foundItem
           
+          -- Escape the values for JSON output
+          set escapedName to my escapeForJson(itemName)
+          set escapedId to my escapeForJson(itemId)
+          
           -- Return success
-          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\"}"
+          return "{\\\"success\\\":true,\\\"id\\\":\\"" & escapedId & "\\",\\\"name\\\":\\"" & escapedName & "\\"}"
         else
           -- Item not found
           return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\\"}"
@@ -80,7 +90,9 @@ function generateAppleScript(params: RemoveItemParams): string {
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    -- Escape error message for JSON output
+    set escapedError to my escapeForJson(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   
@@ -95,15 +107,26 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
     // Generate AppleScript
     const script = generateAppleScript(params);
     
-    console.error("Executing AppleScript for removal...");
-    console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
+    console.error("Executing AppleScript via temporary file..."); // CLAUDEAI: Updated message for temporary file approach
     
-    // Log a preview of the script for debugging (first few lines)
-    const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-    console.error("AppleScript preview:\n", scriptPreview);
+    // CLAUDEAI: Write AppleScript to temporary file to avoid shell escaping issues with apostrophes
+    const tempFile = join(tmpdir(), `omnifocus-remove-${Date.now()}.applescript`);
+    let stdout = '';
+    let stderr = '';
     
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    try {
+      writeFileSync(tempFile, script);
+      const result = await execAsync(`osascript "${tempFile}"`);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } finally {
+      // CLAUDEAI: Clean up temporary file
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temporary file:", cleanupError);
+      }
+    }
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
