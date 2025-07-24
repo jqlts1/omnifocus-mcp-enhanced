@@ -1,5 +1,9 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs'; // CLAUDEAI: Add file system imports for temporary file handling
+import { join } from 'path'; // CLAUDEAI: Add path utilities for temporary file handling
+import { tmpdir } from 'os'; // CLAUDEAI: Add OS utilities for temporary file handling
+import { escapeForAppleScript, generateJsonEscapeHelper } from '../../utils/applescriptUtils.js'; // CLAUDEAI: Import AppleScript utilities
 const execAsync = promisify(exec);
 
 // Interface for task lookup parameters
@@ -25,10 +29,12 @@ export interface TaskInfo {
  * Generate AppleScript to get task information by ID or name
  */
 function generateGetTaskScript(params: GetTaskByIdParams): string {
-  const taskId = params.taskId?.replace(/['"\\]/g, '\\$&') || '';
-  const taskName = params.taskName?.replace(/['"\\]/g, '\\$&') || '';
+  const taskId = escapeForAppleScript(params.taskId || ''); // CLAUDEAI: Use utility function for consistent escaping
+  const taskName = escapeForAppleScript(params.taskName || ''); // CLAUDEAI: Use utility function for consistent escaping
   
   let script = `
+  ${generateJsonEscapeHelper()}
+  
   try
     tell application "OmniFocus"
       tell front document
@@ -71,12 +77,23 @@ function generateGetTaskScript(params: GetTaskByIdParams): string {
           end if
         end try
         
+        -- Escape all values for JSON output
+        set escapedTaskId to my escapeForJson(taskId)
+        set escapedTaskName to my escapeForJson(taskName)
+        set escapedTaskNote to my escapeForJson(taskNote)
+        set escapedParentId to my escapeForJson(parentId)
+        set escapedParentName to my escapeForJson(parentName)
+        set escapedProjectId to my escapeForJson(projectId)
+        set escapedProjectName to my escapeForJson(projectName)
+        
         -- Return JSON result
-        return "{\\\"success\\\":true,\\\"task\\\":{\\\"id\\\":\\"" & taskId & "\\",\\\"name\\\":\\"" & taskName & "\\",\\\"note\\\":\\"" & taskNote & "\\",\\\"parentId\\\":\\"" & parentId & "\\",\\\"parentName\\\":\\"" & parentName & "\\",\\\"projectId\\\":\\"" & projectId & "\\",\\\"projectName\\\":\\"" & projectName & "\\",\\\"hasChildren\\\":" & hasChildren & ",\\\"childrenCount\\\":" & childrenCount & "}}"
+        return "{\\\"success\\\":true,\\\"task\\\":{\\\"id\\\":\\"" & escapedTaskId & "\\",\\\"name\\\":\\"" & escapedTaskName & "\\",\\\"note\\\":\\"" & escapedTaskNote & "\\",\\\"parentId\\\":\\"" & escapedParentId & "\\",\\\"parentName\\\":\\"" & escapedParentName & "\\",\\\"projectId\\\":\\"" & escapedProjectId & "\\",\\\"projectName\\\":\\"" & escapedProjectName & "\\",\\\"hasChildren\\\":" & hasChildren & ",\\\"childrenCount\\\":" & childrenCount & "}}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    -- Escape error message for JSON output
+    set escapedError to my escapeForJson(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   
@@ -99,10 +116,26 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{success: 
     // Generate AppleScript
     const script = generateGetTaskScript(params);
     
-    console.error("Executing getTaskById AppleScript...");
+    console.error("Executing AppleScript via temporary file...");
     
-    // Execute AppleScript
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    // CLAUDEAI: Write AppleScript to temporary file to avoid shell escaping issues with apostrophes
+    const tempFile = join(tmpdir(), `omnifocus-gettask-${Date.now()}.applescript`);
+    let stdout = '';
+    let stderr = '';
+    
+    try {
+      writeFileSync(tempFile, script);
+      const result = await execAsync(`osascript "${tempFile}"`);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } finally {
+      // CLAUDEAI: Clean up temporary file
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temporary file:", cleanupError);
+      }
+    }
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);

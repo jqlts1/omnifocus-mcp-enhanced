@@ -1,5 +1,9 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { escapeForAppleScript, generateJsonEscapeHelper } from '../../utils/applescriptUtils.js'; // CLAUDEAI: Import AppleScript utilities
 const execAsync = promisify(exec);
 
 // Interface for task creation parameters
@@ -20,20 +24,22 @@ export interface AddOmniFocusTaskParams {
  * Generate pure AppleScript for task creation
  */
 function generateAppleScript(params: AddOmniFocusTaskParams): string {
-  // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  // CLAUDEAI: Sanitize and prepare parameters for AppleScript using utility functions
+  const name = escapeForAppleScript(params.name);
+  const note = escapeForAppleScript(params.note || '');
   const dueDate = params.dueDate || '';
   const deferDate = params.deferDate || '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = escapeForAppleScript(params.projectName || '');
+  const parentTaskId = escapeForAppleScript(params.parentTaskId || '');
+  const parentTaskName = escapeForAppleScript(params.parentTaskName || '');
   
   // Construct AppleScript with error handling
   let script = `
+  ${generateJsonEscapeHelper()}
+  
   try
     tell application "OmniFocus"
       tell front document
@@ -83,7 +89,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+          const sanitizedTag = escapeForAppleScript(tag); // CLAUDEAI: Use utility function for consistent escaping
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
@@ -93,12 +99,18 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           end try`;
         }).join('\n') : ''}
         
+        -- Escape values for JSON output
+        set escapedTaskId to my escapeForJson(taskId)
+        set escapedName to my escapeForJson("${name}")
+        
         -- Return success with task ID
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
+        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & escapedTaskId & "\\",\\\"name\\\":\\"" & escapedName & "\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    -- Escape error message for JSON output
+    set escapedError to my escapeForJson(errorMessage)
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & escapedError & "\\"}"
   end try
   `;
   
@@ -145,10 +157,26 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     // Generate AppleScript
     const script = generateAppleScript(params);
     
-    console.error("Executing AppleScript directly...");
+    console.error("Executing AppleScript via temporary file...");
     
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
+    // CLAUDEAI: Write AppleScript to temporary file to avoid shell escaping issues with apostrophes
+    const tempFile = join(tmpdir(), `omnifocus-task-${Date.now()}.applescript`);
+    let stdout = '';
+    let stderr = '';
+    
+    try {
+      writeFileSync(tempFile, script);
+      const result = await execAsync(`osascript "${tempFile}"`);
+      stdout = result.stdout;
+      stderr = result.stderr;
+    } finally {
+      // CLAUDEAI: Clean up temporary file
+      try {
+        unlinkSync(tempFile);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temporary file:", cleanupError);
+      }
+    }
     
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
