@@ -9,6 +9,10 @@
 
 > **Transform OmniFocus into an AI-powered productivity powerhouse with custom perspective support**
 
+<a href="https://glama.ai/mcp/servers/@jqlts1/omnifocus-mcp-enhanced">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@jqlts1/omnifocus-mcp-enhanced/badge" alt="OmniFocus Enhanced MCP server" />
+</a>
+
 Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native custom perspective access**, hierarchical task display, AI-optimized tool selection, and comprehensive task management. Perfect integration with Claude AI for intelligent workflows.
 
 ## ✨ Key Features
