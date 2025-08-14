@@ -70,7 +70,7 @@ function generateAppleScript(params: AddProjectParams): string {
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
-            tell newProject to add theTag
+            add theTag to tags of newProject
           on error
             -- Ignore errors finding/adding tags
           end try`;

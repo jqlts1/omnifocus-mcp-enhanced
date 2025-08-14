@@ -1,10 +1,10 @@
 // OmniJS script to get tasks by tag from OmniFocus
 (() => {
   try {
-    // Use default values since parameters are not easily available in JXA mode
-    const tagName = "编程"; // Default for testing
-    const hideCompleted = true; // Default to true
-    const exactMatch = false;
+    // Parameters will be injected by the script execution system
+    const tagName = injectedArgs ? injectedArgs.tagName : "编程"; // Default for testing
+    const hideCompleted = injectedArgs ? injectedArgs.hideCompleted : true; // Default to true
+    const exactMatch = injectedArgs ? injectedArgs.exactMatch : false;
     
     if (!tagName) {
       return JSON.stringify({
