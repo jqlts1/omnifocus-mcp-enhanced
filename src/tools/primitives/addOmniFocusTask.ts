@@ -87,7 +87,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
           return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
-            tell newTask to add theTag
+            add theTag to tags of newTask
           on error
             -- Ignore errors finding/adding tags
           end try`;
@@ -145,6 +145,8 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     // Generate AppleScript
     const script = generateAppleScript(params);
     
+    console.error("Generated AppleScript:");
+    console.error(script);
     console.error("Executing AppleScript directly...");
     
     // Execute AppleScript directly
