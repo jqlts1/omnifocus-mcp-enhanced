@@ -9,6 +9,35 @@ import { existsSync } from 'fs';
 
 const execAsync = promisify(exec);
 
+/**
+ * Safely execute AppleScript by writing to a temp file
+ * This avoids shell escaping issues with quotes and special characters
+ */
+export async function executeAppleScript(script: string): Promise<string> {
+  const tempFile = join(tmpdir(), `applescript_${Date.now()}.scpt`);
+
+  try {
+    // Write the script to a temporary file
+    writeFileSync(tempFile, script);
+
+    // Execute using osascript with the file path (no shell escaping needed)
+    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+
+    if (stderr) {
+      console.error("AppleScript stderr:", stderr);
+    }
+
+    return stdout.trim();
+  } finally {
+    // Clean up the temporary file
+    try {
+      unlinkSync(tempFile);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+}
+
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<any[]> {
   try {

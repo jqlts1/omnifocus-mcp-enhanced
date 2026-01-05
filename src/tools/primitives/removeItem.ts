@@ -1,6 +1,4 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-const execAsync = promisify(exec);
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 
 // Interface for item removal parameters
 export interface RemoveItemParams {
@@ -94,21 +92,17 @@ export async function removeItem(params: RemoveItemParams): Promise<{success: bo
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
+
     console.error("Executing AppleScript for removal...");
     console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
-    
+
     // Log a preview of the script for debugging (first few lines)
     const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
     console.error("AppleScript preview:\n", scriptPreview);
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
+
+    // Execute AppleScript using temp file (avoids shell escaping issues)
+    const stdout = await executeAppleScript(script);
+
     console.error("AppleScript stdout:", stdout);
     
     // Parse the result

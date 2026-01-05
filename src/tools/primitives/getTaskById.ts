@@ -1,6 +1,4 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-const execAsync = promisify(exec);
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 
 // Interface for task lookup parameters
 export interface GetTaskByIdParams {
@@ -98,16 +96,12 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{success: 
 
     // Generate AppleScript
     const script = generateGetTaskScript(params);
-    
+
     console.error("Executing getTaskById AppleScript...");
-    
-    // Execute AppleScript
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
+
+    // Execute AppleScript using temp file (avoids shell escaping issues)
+    const stdout = await executeAppleScript(script);
+
     console.error("AppleScript stdout:", stdout);
     
     // Parse the result
