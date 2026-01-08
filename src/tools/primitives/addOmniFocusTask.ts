@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
 const execAsync = promisify(exec);
 
 // Interface for task creation parameters
@@ -23,8 +24,9 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
-  const dueDate = params.dueDate || '';
-  const deferDate = params.deferDate || '';
+  // Convert ISO dates to AppleScript format
+  const dueDate = params.dueDate ? formatDateForAppleScript(params.dueDate) : '';
+  const deferDate = params.deferDate ? formatDateForAppleScript(params.deferDate) : '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
@@ -69,12 +71,8 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Set task properties
         ${note ? `set note of newTask to "${note}"` : ''}
-        ${dueDate ? `
-          set due date of newTask to (current date) + (time to GMT)
-          set due date of newTask to date "${dueDate}"` : ''}
-        ${deferDate ? `
-          set defer date of newTask to (current date) + (time to GMT)
-          set defer date of newTask to date "${deferDate}"` : ''}
+        ${dueDate ? `set due date of newTask to date "${dueDate}"` : ''}
+        ${deferDate ? `set defer date of newTask to date "${deferDate}"` : ''}
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
         
