@@ -90,6 +90,8 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     const includeBuiltIn = injectedArgs.includeBuiltIn !== undefined ? injectedArgs.includeBuiltIn : false;
     const includeSidebar = injectedArgs.includeSidebar !== undefined ? injectedArgs.includeSidebar : true;
     const format = injectedArgs.format || "detailed";
+    const tagName = injectedArgs.tagName || null;
+    const exactMatch = injectedArgs.exactMatch !== undefined ? injectedArgs.exactMatch : false;
     `;
       
       // Replace any hardcoded parameters in the script with injected ones

@@ -19,6 +19,12 @@ export interface TaskInfo {
   projectName?: string;
   hasChildren: boolean;
   childrenCount: number;
+  tags: string[];
+  dueDate?: string;
+  deferDate?: string;
+  flagged: boolean;
+  completed: boolean;
+  estimatedMinutes?: number;
 }
 
 /**
@@ -71,8 +77,46 @@ function generateGetTaskScript(params: GetTaskByIdParams): string {
           end if
         end try
         
-        -- Return JSON result
-        return "{\\\"success\\\":true,\\\"task\\\":{\\\"id\\\":\\"" & taskId & "\\",\\\"name\\\":\\"" & taskName & "\\",\\\"note\\\":\\"" & taskNote & "\\",\\\"parentId\\\":\\"" & parentId & "\\",\\\"parentName\\\":\\"" & parentName & "\\",\\\"projectId\\\":\\"" & projectId & "\\",\\\"projectName\\\":\\"" & projectName & "\\",\\\"hasChildren\\\":" & hasChildren & ",\\\"childrenCount\\\":" & childrenCount & "}}"
+        -- Get tags
+        set taskTags to tags of theTask
+        set tagNames to ""
+        if (count of taskTags) > 0 then
+          set tagList to {}
+          repeat with taskTag in taskTags
+            set end of tagList to "\\"" & (name of taskTag) & "\\""
+          end repeat
+          set AppleScript's text item delimiters to ","
+          set tagNames to tagList as string
+          set AppleScript's text item delimiters to ""
+        end if
+        
+        -- Get other properties
+        set taskFlagged to flagged of theTask
+        set taskCompleted to completed of theTask
+        set taskDueDate to ""
+        set taskDeferDate to ""
+        set taskEstimatedMinutes to ""
+        
+        try
+          if due date of theTask is not missing value then
+            set taskDueDate to (due date of theTask) as string
+          end if
+        end try
+        
+        try
+          if defer date of theTask is not missing value then
+            set taskDeferDate to (defer date of theTask) as string
+          end if
+        end try
+        
+        try
+          if estimated minutes of theTask is not missing value then
+            set taskEstimatedMinutes to (estimated minutes of theTask) as string
+          end if
+        end try
+        
+        -- Return simple pipe-delimited result to avoid JSON escaping issues
+        return "SUCCESS|" & taskId & "|" & taskName & "|" & taskNote & "|" & parentId & "|" & parentName & "|" & projectId & "|" & projectName & "|" & hasChildren & "|" & childrenCount & "|" & tagNames & "|" & taskDueDate & "|" & taskDeferDate & "|" & taskFlagged & "|" & taskCompleted & "|" & taskEstimatedMinutes
       end tell
     end tell
   on error errorMessage
@@ -99,6 +143,8 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{success: 
     // Generate AppleScript
     const script = generateGetTaskScript(params);
     
+    console.error("Generated getTaskById AppleScript:");
+    console.error(script);
     console.error("Executing getTaskById AppleScript...");
     
     // Execute AppleScript
@@ -112,14 +158,42 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{success: 
     
     // Parse the result
     try {
-      const result = JSON.parse(stdout);
-      
-      if (result.success) {
+      if (stdout.startsWith('SUCCESS|')) {
+        // Parse pipe-delimited format
+        const parts = stdout.substring(8).split('|'); // Remove "SUCCESS|" prefix
+        const [id, name, note, parentId, parentName, projectId, projectName, hasChildrenStr, childrenCountStr, tagNamesStr, dueDate, deferDate, flaggedStr, completedStr, estimatedMinutesStr] = parts;
+        
+        // Parse tags from comma-separated quoted strings
+        let tags: string[] = [];
+        if (tagNamesStr && tagNamesStr.trim() !== '') {
+          tags = tagNamesStr.split(',').map(tag => tag.replace(/^"(.*)"$/, '$1'));
+        }
+        
+        const taskInfo: TaskInfo = {
+          id,
+          name,
+          note,
+          parentId: parentId || undefined,
+          parentName: parentName || undefined,
+          projectId: projectId || undefined,
+          projectName: projectName || undefined,
+          hasChildren: hasChildrenStr === 'true',
+          childrenCount: parseInt(childrenCountStr) || 0,
+          tags,
+          dueDate: dueDate || undefined,
+          deferDate: deferDate || undefined,
+          flagged: flaggedStr === 'true',
+          completed: completedStr === 'true',
+          estimatedMinutes: estimatedMinutesStr ? parseInt(estimatedMinutesStr) : undefined
+        };
+        
         return {
           success: true,
-          task: result.task as TaskInfo
+          task: taskInfo
         };
       } else {
+        // Try JSON parsing for error messages
+        const result = JSON.parse(stdout);
         return {
           success: false,
           error: result.error
