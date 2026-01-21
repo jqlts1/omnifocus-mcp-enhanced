@@ -1,7 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
-const execAsync = promisify(exec);
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -33,7 +31,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
   const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
   const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
-  
+
   // Construct AppleScript with error handling
   let script = `
   try
@@ -81,15 +79,15 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-          return `
+    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+    return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
             add theTag to tags of newTask
           on error
             -- Ignore errors finding/adding tags
           end try`;
-        }).join('\n') : ''}
+  }).join('\n') : ''}
         
         -- Return success with task ID
         return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
@@ -99,14 +97,14 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
     return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
   end try
   `;
-  
+
   return script;
 }
 
 /**
  * Validate parent task parameters to prevent conflicts
  */
-async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise<{valid: boolean, error?: string}> {
+async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise<{ valid: boolean, error?: string }> {
   // Check if both parentTaskId and parentTaskName are provided
   if (params.parentTaskId && params.parentTaskName) {
     return {
@@ -129,7 +127,7 @@ async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise
 /**
  * Add a task to OmniFocus
  */
-export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{success: boolean, taskId?: string, error?: string}> {
+export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{ success: boolean, taskId?: string, error?: string }> {
   try {
     // Validate parent task parameters
     const validation = await validateParentTaskParams(params);
@@ -142,24 +140,20 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
 
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
+
     console.error("Generated AppleScript:");
     console.error(script);
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
+    console.error("Executing AppleScript...");
+
+    // Execute AppleScript using temp file (avoids shell escaping issues)
+    const stdout = await executeAppleScript(script);
+
     console.error("AppleScript stdout:", stdout);
-    
+
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,

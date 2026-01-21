@@ -1,6 +1,4 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-const execAsync = promisify(exec);
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 
 // Interface for task lookup parameters
 export interface GetTaskByIdParams {
@@ -33,7 +31,7 @@ export interface TaskInfo {
 function generateGetTaskScript(params: GetTaskByIdParams): string {
   const taskId = params.taskId?.replace(/['"\\]/g, '\\$&') || '';
   const taskName = params.taskName?.replace(/['"\\]/g, '\\$&') || '';
-  
+
   let script = `
   try
     tell application "OmniFocus"
@@ -123,14 +121,14 @@ function generateGetTaskScript(params: GetTaskByIdParams): string {
     return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
   end try
   `;
-  
+
   return script;
 }
 
 /**
  * Get task information by ID or name from OmniFocus
  */
-export async function getTaskById(params: GetTaskByIdParams): Promise<{success: boolean, task?: TaskInfo, error?: string}> {
+export async function getTaskById(params: GetTaskByIdParams): Promise<{ success: boolean, task?: TaskInfo, error?: string }> {
   try {
     // Validate parameters
     if (!params.taskId && !params.taskName) {
@@ -142,33 +140,29 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{success: 
 
     // Generate AppleScript
     const script = generateGetTaskScript(params);
-    
+
     console.error("Generated getTaskById AppleScript:");
     console.error(script);
     console.error("Executing getTaskById AppleScript...");
-    
-    // Execute AppleScript
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
+
+    // Execute AppleScript using temp file (avoids shell escaping issues)
+    const stdout = await executeAppleScript(script);
+
     console.error("AppleScript stdout:", stdout);
-    
+
     // Parse the result
     try {
       if (stdout.startsWith('SUCCESS|')) {
         // Parse pipe-delimited format
         const parts = stdout.substring(8).split('|'); // Remove "SUCCESS|" prefix
         const [id, name, note, parentId, parentName, projectId, projectName, hasChildrenStr, childrenCountStr, tagNamesStr, dueDate, deferDate, flaggedStr, completedStr, estimatedMinutesStr] = parts;
-        
+
         // Parse tags from comma-separated quoted strings
         let tags: string[] = [];
         if (tagNamesStr && tagNamesStr.trim() !== '') {
           tags = tagNamesStr.split(',').map(tag => tag.replace(/^"(.*)"$/, '$1'));
         }
-        
+
         const taskInfo: TaskInfo = {
           id,
           name,
@@ -186,7 +180,7 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{success: 
           completed: completedStr === 'true',
           estimatedMinutes: estimatedMinutesStr ? parseInt(estimatedMinutesStr) : undefined
         };
-        
+
         return {
           success: true,
           task: taskInfo

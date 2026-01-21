@@ -1,7 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
-const execAsync = promisify(exec);
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -31,7 +29,7 @@ function generateAppleScript(params: AddProjectParams): string {
   const tags = params.tags || [];
   const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
   const sequential = params.sequential === true;
-  
+
   // Construct AppleScript with error handling
   let script = `
   try
@@ -64,15 +62,15 @@ function generateAppleScript(params: AddProjectParams): string {
         
         -- Add tags if provided
         ${tags.length > 0 ? tags.map(tag => {
-          const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-          return `
+    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+    return `
           try
             set theTag to first flattened tag where name = "${sanitizedTag}"
             add theTag to tags of newProject
           on error
             -- Ignore errors finding/adding tags
           end try`;
-        }).join('\n') : ''}
+  }).join('\n') : ''}
         
         -- Return success with project ID
         return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
@@ -82,33 +80,29 @@ function generateAppleScript(params: AddProjectParams): string {
     return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
   end try
   `;
-  
+
   return script;
 }
 
 /**
  * Add a project to OmniFocus
  */
-export async function addProject(params: AddProjectParams): Promise<{success: boolean, projectId?: string, error?: string}> {
+export async function addProject(params: AddProjectParams): Promise<{ success: boolean, projectId?: string, error?: string }> {
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
-    
-    console.error("Executing AppleScript directly...");
-    
-    // Execute AppleScript directly
-    const { stdout, stderr } = await execAsync(`osascript -e '${script}'`);
-    
-    if (stderr) {
-      console.error("AppleScript stderr:", stderr);
-    }
-    
+
+    console.error("Executing AppleScript...");
+
+    // Execute AppleScript using temp file (avoids shell escaping issues)
+    const stdout = await executeAppleScript(script);
+
     console.error("AppleScript stdout:", stdout);
-    
+
     // Parse the result
     try {
       const result = JSON.parse(stdout);
-      
+
       // Return the result
       return {
         success: result.success,
