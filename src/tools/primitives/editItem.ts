@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
 const execAsync = promisify(exec);
 
 // Status options for tasks and projects
@@ -118,9 +119,10 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "due date"
 `;
     } else {
+      const formattedDueDate = formatDateForAppleScript(params.newDueDate);
       script += `
           -- Update due date
-          set due date of foundItem to (current date) + ((((date "${params.newDueDate}") - (current date)) / days) * days)
+          set due date of foundItem to date "${formattedDueDate}"
           set end of changedProperties to "due date"
 `;
     }
@@ -134,9 +136,10 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "defer date"
 `;
     } else {
+      const formattedDeferDate = formatDateForAppleScript(params.newDeferDate);
       script += `
           -- Update defer date
-          set defer date of foundItem to (current date) + ((((date "${params.newDeferDate}") - (current date)) / days) * days)
+          set defer date of foundItem to date "${formattedDeferDate}"
           set end of changedProperties to "defer date"
 `;
     }
