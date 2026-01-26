@@ -1,5 +1,5 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
-import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
+import { generateAppleScriptDateCode } from '../../utils/dateFormatter.js';
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -21,9 +21,9 @@ function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
-  // Convert ISO dates to AppleScript format
-  const dueDate = params.dueDate ? formatDateForAppleScript(params.dueDate) : '';
-  const deferDate = params.deferDate ? formatDateForAppleScript(params.deferDate) : '';
+  // Generate locale-independent date code
+  const dueDateCode = params.dueDate ? generateAppleScriptDateCode(params.dueDate, "projectDueDate") : '';
+  const deferDateCode = params.deferDate ? generateAppleScriptDateCode(params.deferDate, "projectDeferDate") : '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
@@ -33,6 +33,9 @@ function generateAppleScript(params: AddProjectParams): string {
   // Construct AppleScript with error handling
   let script = `
   try
+    -- Build date objects OUTSIDE the tell block (avoids permission issues)
+    ${dueDateCode}
+    ${deferDateCode}
     tell application "OmniFocus"
       tell front document
         -- Determine the container (root or folder)
@@ -51,8 +54,12 @@ function generateAppleScript(params: AddProjectParams): string {
         
         -- Set project properties
         ${note ? `set note of newProject to "${note}"` : ''}
-        ${dueDate ? `set due date of newProject to date "${dueDate}"` : ''}
-        ${deferDate ? `set defer date of newProject to date "${deferDate}"` : ''}
+        ${dueDateCode ? `
+        -- Set due date (using pre-built date object)
+        set due date of newProject to projectDueDate` : ''}
+        ${deferDateCode ? `
+        -- Set defer date (using pre-built date object)
+        set defer date of newProject to projectDeferDate` : ''}
         ${flagged ? `set flagged of newProject to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
         ${`set sequential of newProject to ${sequential}`}

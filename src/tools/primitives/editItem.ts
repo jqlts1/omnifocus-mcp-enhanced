@@ -1,5 +1,5 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
-import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
+import { generateAppleScriptDateCode } from '../../utils/dateFormatter.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -45,9 +45,20 @@ function generateAppleScript(params: EditItemParams): string {
     return `return "{\\\"success\\\":false,\\\"error\\\":\\\"Either id or name must be provided\\\"}"`;
   }
 
+  // Generate date construction code (must be outside tell block)
+  let dateSetupCode = '';
+  if (params.newDueDate && params.newDueDate !== "") {
+    dateSetupCode += generateAppleScriptDateCode(params.newDueDate, "newDueDate") + '\n';
+  }
+  if (params.newDeferDate && params.newDeferDate !== "") {
+    dateSetupCode += generateAppleScriptDateCode(params.newDeferDate, "newDeferDate") + '\n';
+  }
+
   // Construct AppleScript with error handling
   let script = `
   try
+    -- Build date objects OUTSIDE the tell block (avoids permission issues)
+    ${dateSetupCode}
     tell application "OmniFocus"
       tell front document
         -- Find the item to edit
@@ -117,10 +128,9 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "due date"
 `;
     } else {
-      const formattedDueDate = formatDateForAppleScript(params.newDueDate);
       script += `
-          -- Update due date
-          set due date of foundItem to date "${formattedDueDate}"
+          -- Update due date (using pre-built date object)
+          set due date of foundItem to newDueDate
           set end of changedProperties to "due date"
 `;
     }
@@ -134,10 +144,9 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "defer date"
 `;
     } else {
-      const formattedDeferDate = formatDateForAppleScript(params.newDeferDate);
       script += `
-          -- Update defer date
-          set defer date of foundItem to date "${formattedDeferDate}"
+          -- Update defer date (using pre-built date object)
+          set defer date of foundItem to newDeferDate
           set end of changedProperties to "defer date"
 `;
     }
