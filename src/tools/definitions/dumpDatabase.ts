@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import { dumpDatabase } from '../dumpDatabase.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import { ServerRequest, ServerNotification } from '@modelcontextprotocol/sdk/types.js';
 
 export const schema = z.object({
   hideCompleted: z.boolean().optional().describe("Set to false to show completed and dropped tasks (default: true)"),
   hideRecurringDuplicates: z.boolean().optional().describe("Set to true to hide duplicate instances of recurring tasks (default: true)")
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) {
   try {
     // Get raw database
     const database = await dumpDatabase();
@@ -251,11 +252,21 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   
   // Process projects not in any folder (if any)
   const rootProjects = Object.values(database.projects).filter((project: any) => !project.folderID);
-  
+
   for (const project of rootProjects) {
     output += processProject(project, 0);
   }
-  
+
+  // Process inbox tasks (tasks not in any project)
+  const inboxTasks = database.tasks.filter((task: any) => !task.projectId && !task.parentId);
+
+  if (inboxTasks.length > 0) {
+    output += 'INBOX:\n';
+    for (const task of inboxTasks) {
+      output += processTask(task, 1);
+    }
+  }
+
   return output;
 }
 
