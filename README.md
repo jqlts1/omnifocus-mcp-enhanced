@@ -17,7 +17,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 
 ## 🆕 Latest Release
 
-- **v1.6.5** - Fixed open issues for date handling, tag creation/assignment, and `filter_tasks` tag/defer filtering (`#5 #6 #7 #10`).
+- **v1.6.6** - Added full Planned Date support (create/edit/read/filter/sort/export), including `plannedDate`/`newPlannedDate` and updated task displays.
 
 ## ✨ Key Features
 
