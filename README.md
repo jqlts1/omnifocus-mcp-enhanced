@@ -17,7 +17,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 
 ## 🆕 Latest Release
 
-- **v1.6.4** - Fixed `dump_database` missing root inbox tasks by adding an `INBOX` section in report output.
+- **v1.6.5** - Fixed open issues for date handling, tag creation/assignment, and `filter_tasks` tag/defer filtering (`#5 #6 #7 #10`).
 
 ## ✨ Key Features
 
