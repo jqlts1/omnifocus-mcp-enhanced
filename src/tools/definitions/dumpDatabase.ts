@@ -44,7 +44,7 @@ function formatCompactDate(isoDate: string | null): string {
 }
 
 // Function to format the database in the compact report format
-function formatCompactReport(database: any, options: { hideCompleted: boolean, hideRecurringDuplicates: boolean }): string {
+export function formatCompactReport(database: any, options: { hideCompleted: boolean, hideRecurringDuplicates: boolean }): string {
   const { hideCompleted, hideRecurringDuplicates } = options;
   
   // Get current date for the header
@@ -254,6 +254,20 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
   
   for (const project of rootProjects) {
     output += processProject(project, 0);
+  }
+
+  // Process inbox tasks (tasks not assigned to any project)
+  const inboxTasks = database.tasks.filter((task: any) =>
+    !task.projectId &&
+    !task.parentId &&
+    !(hideCompleted && (task.completed || task.taskStatus === 'Completed' || task.taskStatus === 'Dropped'))
+  );
+
+  if (inboxTasks.length > 0) {
+    output += 'INBOX:\n';
+    for (const task of inboxTasks) {
+      output += processTask(task, 1);
+    }
   }
   
   return output;
