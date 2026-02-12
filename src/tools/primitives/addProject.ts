@@ -29,6 +29,24 @@ function generateAppleScript(params: AddProjectParams): string {
   const tags = params.tags || [];
   const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
   const sequential = params.sequential === true;
+  const tagAssignmentScript = tags.length > 0
+    ? tags.map(tag => {
+      const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+      return `
+          try
+            set theTag to missing value
+            try
+              set theTag to first flattened tag where name = "${sanitizedTag}"
+            end try
+            if theTag is missing value then
+              set theTag to make new tag with properties {name:"${sanitizedTag}"}
+            end if
+            add theTag to tags of newProject
+          on error
+            -- Ignore errors finding/adding tags
+          end try`;
+    }).join('\n')
+    : '';
 
   // Construct AppleScript with error handling
   let script = `
@@ -61,16 +79,7 @@ function generateAppleScript(params: AddProjectParams): string {
         set projectId to id of newProject as string
         
         -- Add tags if provided
-        ${tags.length > 0 ? tags.map(tag => {
-    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-    return `
-          try
-            set theTag to first flattened tag where name = "${sanitizedTag}"
-            add theTag to tags of newProject
-          on error
-            -- Ignore errors finding/adding tags
-          end try`;
-  }).join('\n') : ''}
+        ${tagAssignmentScript}
         
         -- Return success with project ID
         return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"

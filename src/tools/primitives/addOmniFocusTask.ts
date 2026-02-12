@@ -15,6 +15,29 @@ export interface AddOmniFocusTaskParams {
   parentTaskName?: string; // Parent task name for subtask creation (alternative to ID)
 }
 
+export function buildTagAssignmentScript(tags: string[], targetVar: string): string {
+  if (!tags || tags.length === 0) {
+    return '';
+  }
+
+  return tags.map(tag => {
+    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+    return `
+          try
+            set theTag to missing value
+            try
+              set theTag to first flattened tag where name = "${sanitizedTag}"
+            end try
+            if theTag is missing value then
+              set theTag to make new tag with properties {name:"${sanitizedTag}"}
+            end if
+            add theTag to tags of ${targetVar}
+          on error
+            -- Ignore errors finding/adding tags
+          end try`;
+  }).join('\n');
+}
+
 /**
  * Generate pure AppleScript for task creation
  */
@@ -31,6 +54,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
   const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
   const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const tagAssignmentScript = buildTagAssignmentScript(tags, 'newTask');
 
   // Construct AppleScript with error handling
   let script = `
@@ -78,16 +102,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         set taskId to id of newTask as string
         
         -- Add tags if provided
-        ${tags.length > 0 ? tags.map(tag => {
-    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
-    return `
-          try
-            set theTag to first flattened tag where name = "${sanitizedTag}"
-            add theTag to tags of newTask
-          on error
-            -- Ignore errors finding/adding tags
-          end try`;
-  }).join('\n') : ''}
+        ${tagAssignmentScript}
         
         -- Return success with task ID
         return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
