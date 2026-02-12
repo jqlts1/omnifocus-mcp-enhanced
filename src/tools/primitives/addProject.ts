@@ -7,6 +7,7 @@ export interface AddProjectParams {
   note?: string;
   dueDate?: string; // ISO date string
   deferDate?: string; // ISO date string
+  plannedDate?: string; // ISO date string
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
@@ -24,6 +25,7 @@ function generateAppleScript(params: AddProjectParams): string {
   // Convert ISO dates to AppleScript format
   const dueDate = params.dueDate ? formatDateForAppleScript(params.dueDate) : '';
   const deferDate = params.deferDate ? formatDateForAppleScript(params.deferDate) : '';
+  const plannedDate = params.plannedDate ? formatDateForAppleScript(params.plannedDate) : '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
@@ -71,6 +73,7 @@ function generateAppleScript(params: AddProjectParams): string {
         ${note ? `set note of newProject to "${note}"` : ''}
         ${dueDate ? `set due date of newProject to date "${dueDate}"` : ''}
         ${deferDate ? `set defer date of newProject to date "${deferDate}"` : ''}
+        ${plannedDate ? `set planned date of newProject to date "${plannedDate}"` : ''}
         ${flagged ? `set flagged of newProject to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
         ${`set sequential of newProject to ${sequential}`}

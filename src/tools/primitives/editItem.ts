@@ -16,6 +16,7 @@ export interface EditItemParams {
   newNote?: string;             // New note for the item
   newDueDate?: string;          // New due date in ISO format (empty string to clear)
   newDeferDate?: string;        // New defer date in ISO format (empty string to clear)
+  newPlannedDate?: string;      // New planned date in ISO format (empty string to clear)
   newFlagged?: boolean;         // New flagged status (false to remove flag, true to add flag)
   newEstimatedMinutes?: number; // New estimated minutes
 
@@ -139,6 +140,23 @@ function generateAppleScript(params: EditItemParams): string {
           -- Update defer date
           set defer date of foundItem to date "${formattedDeferDate}"
           set end of changedProperties to "defer date"
+`;
+    }
+  }
+
+  if (params.newPlannedDate !== undefined) {
+    if (params.newPlannedDate === "") {
+      script += `
+          -- Clear planned date
+          set planned date of foundItem to missing value
+          set end of changedProperties to "planned date"
+`;
+    } else {
+      const formattedPlannedDate = formatDateForAppleScript(params.newPlannedDate);
+      script += `
+          -- Update planned date
+          set planned date of foundItem to date "${formattedPlannedDate}"
+          set end of changedProperties to "planned date"
 `;
     }
   }

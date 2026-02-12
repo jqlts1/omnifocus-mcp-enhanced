@@ -37,3 +37,33 @@ test('applyClientSideFilters applies deferToday without including yesterday', ()
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].id, 'today');
 });
+
+test('applyClientSideFilters applies plannedToday without including yesterday', () => {
+  const tasks = [
+    { id: 'today', name: 'today task', plannedDate: isoWithOffset(0), tags: [] },
+    { id: 'yesterday', name: 'yesterday task', plannedDate: isoWithOffset(-1), tags: [] },
+  ];
+
+  const filtered = applyClientSideFilters(tasks as any[], {
+    plannedToday: true,
+  } as any);
+
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].id, 'today');
+});
+
+test('applyClientSideFilters applies plannedBefore and plannedAfter window', () => {
+  const tasks = [
+    { id: 'early', name: 'early task', plannedDate: '2026-02-10T09:00:00.000Z', tags: [] },
+    { id: 'in-window', name: 'window task', plannedDate: '2026-02-15T09:00:00.000Z', tags: [] },
+    { id: 'late', name: 'late task', plannedDate: '2026-02-22T09:00:00.000Z', tags: [] },
+  ];
+
+  const filtered = applyClientSideFilters(tasks as any[], {
+    plannedAfter: '2026-02-12',
+    plannedBefore: '2026-02-20',
+  } as any);
+
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].id, 'in-window');
+});

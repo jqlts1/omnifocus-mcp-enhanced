@@ -9,15 +9,16 @@ export const schema = z.object({
     note: z.string().optional().describe("Additional notes for the item"),
     dueDate: z.string().optional().describe("The due date in ISO format (YYYY-MM-DD or full ISO date)"),
     deferDate: z.string().optional().describe("The defer date in ISO format (YYYY-MM-DD or full ISO date)"),
+    plannedDate: z.string().optional().describe("The planned date in ISO format (YYYY-MM-DD or full ISO date)"),
     flagged: z.boolean().optional().describe("Whether the item is flagged or not"),
     estimatedMinutes: z.number().optional().describe("Estimated time to complete the item, in minutes"),
     tags: z.array(z.string()).optional().describe("Tags to assign to the item"),
-    
+
     // Task-specific properties
     projectName: z.string().optional().describe("For tasks: The name of the project to add the task to"),
     parentTaskId: z.string().optional().describe("For tasks: The ID of the parent task to create this task as a subtask"),
     parentTaskName: z.string().optional().describe("For tasks: The name of the parent task to create this task as a subtask"),
-    
+
     // Project-specific properties
     folderName: z.string().optional().describe("For projects: The name of the folder to add the project to"),
     sequential: z.boolean().optional().describe("For projects: Whether tasks in the project should be sequential")
@@ -28,17 +29,17 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
   try {
     // Call the batchAddItems function
     const result = await batchAddItems(args.items as BatchAddItemsParams[]);
-    
+
     if (result.success) {
       const successCount = result.results.filter(r => r.success).length;
       const failureCount = result.results.filter(r => !r.success).length;
-      
+
       let message = `✅ Successfully added ${successCount} items.`;
-      
+
       if (failureCount > 0) {
         message += ` ⚠️ Failed to add ${failureCount} items.`;
       }
-      
+
       // Include details about added items
       const details = result.results.map((item, index) => {
         if (item.success) {
@@ -51,7 +52,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
           return `- ❌ ${itemType}: "${itemName}" - Error: ${item.error}`;
         }
       }).join('\n');
-      
+
       return {
         content: [{
           type: "text" as const,
@@ -79,4 +80,4 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       isError: true
     };
   }
-} 
+}

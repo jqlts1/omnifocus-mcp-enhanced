@@ -7,6 +7,7 @@ export const schema = z.object({
   note: z.string().optional().describe("Additional notes for the project"),
   dueDate: z.string().optional().describe("The due date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
   deferDate: z.string().optional().describe("The defer date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
+  plannedDate: z.string().optional().describe("The planned date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
   flagged: z.boolean().optional().describe("Whether the project is flagged or not"),
   estimatedMinutes: z.number().optional().describe("Estimated time to complete the project, in minutes"),
   tags: z.array(z.string()).optional().describe("Tags to assign to the project"),
@@ -16,31 +17,35 @@ export const schema = z.object({
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
   try {
-    // Call the addProject function 
+    // Call the addProject function
     const result = await addProject(args as AddProjectParams);
-    
+
     if (result.success) {
       // Project was added successfully
-      let locationText = args.folderName 
-        ? `in folder "${args.folderName}"` 
+      let locationText = args.folderName
+        ? `in folder "${args.folderName}"`
         : "at the root level";
-        
+
       let tagText = args.tags && args.tags.length > 0
         ? ` with tags: ${args.tags.join(', ')}`
         : "";
-        
+
       let dueDateText = args.dueDate
         ? ` due on ${new Date(args.dueDate).toLocaleDateString()}`
         : "";
-        
+
+      let plannedDateText = args.plannedDate
+        ? ` planned for ${new Date(args.plannedDate).toLocaleDateString()}`
+        : "";
+
       let sequentialText = args.sequential
         ? " (sequential)"
         : " (parallel)";
-        
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${tagText}${sequentialText}.`
+          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.`
         }]
       };
     } else {
@@ -64,4 +69,4 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       isError: true
     };
   }
-} 
+}

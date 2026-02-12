@@ -51,6 +51,7 @@ export interface TaskItem {
   flagged: boolean;
   dueDate?: string;
   deferDate?: string;
+  plannedDate?: string;
   completedDate?: string;
   estimatedMinutes?: number;
   projectName?: string;
@@ -669,6 +670,7 @@ export class PerspectiveEngine {
       flagged: task.flagged || false,
       dueDate: task.dueDate,
       deferDate: task.deferDate,
+      plannedDate: task.plannedDate,
       completedDate: task.completedDate,
       estimatedMinutes: task.estimatedMinutes,
       projectName: task.containingProjectInfo?.name,

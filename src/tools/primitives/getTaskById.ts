@@ -20,6 +20,7 @@ export interface TaskInfo {
   tags: string[];
   dueDate?: string;
   deferDate?: string;
+  plannedDate?: string;
   flagged: boolean;
   completed: boolean;
   estimatedMinutes?: number;
@@ -93,6 +94,7 @@ function generateGetTaskScript(params: GetTaskByIdParams): string {
         set taskCompleted to completed of theTask
         set taskDueDate to ""
         set taskDeferDate to ""
+        set taskPlannedDate to ""
         set taskEstimatedMinutes to ""
         
         try
@@ -106,6 +108,12 @@ function generateGetTaskScript(params: GetTaskByIdParams): string {
             set taskDeferDate to (defer date of theTask) as string
           end if
         end try
+
+        try
+          if planned date of theTask is not missing value then
+            set taskPlannedDate to (planned date of theTask) as string
+          end if
+        end try
         
         try
           if estimated minutes of theTask is not missing value then
@@ -114,7 +122,7 @@ function generateGetTaskScript(params: GetTaskByIdParams): string {
         end try
         
         -- Return simple pipe-delimited result to avoid JSON escaping issues
-        return "SUCCESS|" & taskId & "|" & taskName & "|" & taskNote & "|" & parentId & "|" & parentName & "|" & projectId & "|" & projectName & "|" & hasChildren & "|" & childrenCount & "|" & tagNames & "|" & taskDueDate & "|" & taskDeferDate & "|" & taskFlagged & "|" & taskCompleted & "|" & taskEstimatedMinutes
+        return "SUCCESS|" & taskId & "|" & taskName & "|" & taskNote & "|" & parentId & "|" & parentName & "|" & projectId & "|" & projectName & "|" & hasChildren & "|" & childrenCount & "|" & tagNames & "|" & taskDueDate & "|" & taskDeferDate & "|" & taskPlannedDate & "|" & taskFlagged & "|" & taskCompleted & "|" & taskEstimatedMinutes
       end tell
     end tell
   on error errorMessage
@@ -155,7 +163,7 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{ success:
       if (stdout.startsWith('SUCCESS|')) {
         // Parse pipe-delimited format
         const parts = stdout.substring(8).split('|'); // Remove "SUCCESS|" prefix
-        const [id, name, note, parentId, parentName, projectId, projectName, hasChildrenStr, childrenCountStr, tagNamesStr, dueDate, deferDate, flaggedStr, completedStr, estimatedMinutesStr] = parts;
+        const [id, name, note, parentId, parentName, projectId, projectName, hasChildrenStr, childrenCountStr, tagNamesStr, dueDate, deferDate, plannedDate, flaggedStr, completedStr, estimatedMinutesStr] = parts;
 
         // Parse tags from comma-separated quoted strings
         let tags: string[] = [];
@@ -176,6 +184,7 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{ success:
           tags,
           dueDate: dueDate || undefined,
           deferDate: deferDate || undefined,
+          plannedDate: plannedDate || undefined,
           flagged: flaggedStr === 'true',
           completed: completedStr === 'true',
           estimatedMinutes: estimatedMinutesStr ? parseInt(estimatedMinutesStr) : undefined

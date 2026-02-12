@@ -64,6 +64,7 @@
           flagged: task.flagged, // Should always be true for flagged tasks
           dueDate: formatDate(task.dueDate),
           deferDate: formatDate(task.deferDate),
+          plannedDate: formatDate(task.plannedDate),
           estimatedMinutes: task.estimatedMinutes,
           projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
           projectName: task.containingProject ? task.containingProject.name : null,

@@ -34,7 +34,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 - **🎯 Batch Operations** - Add/remove multiple tasks efficiently
 - **📊 Smart Querying** - Find tasks by ID, name, or complex criteria
 - **🔄 Full CRUD Operations** - Create, read, update, delete tasks and projects
-- **📅 Time Management** - Due dates, defer dates, estimates, and scheduling
+- **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🤖 AI Integration** - Seamless Claude AI integration for intelligent workflows
 
@@ -135,6 +135,12 @@ filter_tasks {
   "taskStatus": ["Available"]
 }
 
+# Planned work view (tasks planned for today)
+filter_tasks {
+  "plannedToday": true,
+  "sortBy": "plannedDate"
+}
+
 # Project overdue tasks
 filter_tasks {
   "projectFilter": "Website Redesign",
@@ -220,7 +226,7 @@ Efficiently manage multiple tasks:
 ### 🔍 Built-in Perspective Tools
 9. **get_inbox_tasks** - Inbox perspective
 10. **get_flagged_tasks** - Flagged perspective
-11. **get_forecast_tasks** - Forecast perspective (due/deferred tasks)
+11. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
 12. **get_tasks_by_tag** - Tag-based filtering
 13. **filter_tasks** - Ultimate filtering with unlimited combinations
 
@@ -239,7 +245,8 @@ Efficiently manage multiple tasks:
 add_omnifocus_task {
   "name": "Review quarterly goals",
   "projectName": "Planning",
-  "dueDate": "2025-01-31"
+  "dueDate": "2025-01-31",
+  "plannedDate": "2025-01-28"
 }
 ```
 

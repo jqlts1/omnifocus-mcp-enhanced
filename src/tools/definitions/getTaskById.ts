@@ -20,31 +20,43 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       };
     }
 
-    // Call the getTaskById function 
+    // Call the getTaskById function
     const result = await getTaskById(args as GetTaskByIdParams);
-    
+
     if (result.success && result.task) {
       const task = result.task;
-      
+
       // Format task information for display
       let infoText = `📋 **Task Information**\n`;
       infoText += `• **Name**: ${task.name}\n`;
       infoText += `• **ID**: ${task.id}\n`;
-      
+
       if (task.note) {
         infoText += `• **Note**: ${task.note}\n`;
       }
-      
+
       if (task.parentId && task.parentName) {
         infoText += `• **Parent Task**: ${task.parentName} (${task.parentId})\n`;
       }
-      
+
       if (task.projectId && task.projectName) {
         infoText += `• **Project**: ${task.projectName} (${task.projectId})\n`;
       }
-      
+
+      if (task.dueDate) {
+        infoText += `• **Due**: ${new Date(task.dueDate).toLocaleString()}\n`;
+      }
+
+      if (task.deferDate) {
+        infoText += `• **Defer**: ${new Date(task.deferDate).toLocaleString()}\n`;
+      }
+
+      if (task.plannedDate) {
+        infoText += `• **Planned**: ${new Date(task.plannedDate).toLocaleString()}\n`;
+      }
+
       infoText += `• **Has Children**: ${task.hasChildren ? `Yes (${task.childrenCount} subtasks)` : 'No'}\n`;
-      
+
       return {
         content: [{
           type: "text" as const,

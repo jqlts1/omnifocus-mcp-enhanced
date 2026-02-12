@@ -22,6 +22,7 @@ test('formatCompactReport includes root inbox tasks in dedicated INBOX section',
           flagged: false,
           dueDate: null,
           deferDate: null,
+          plannedDate: null,
           estimatedMinutes: null,
           tagNames: []
         }
@@ -57,6 +58,7 @@ test('formatCompactReport respects hideCompleted for inbox tasks', () => {
         flagged: false,
         dueDate: null,
         deferDate: null,
+        plannedDate: null,
         estimatedMinutes: null,
         tagNames: []
       }
@@ -79,4 +81,40 @@ test('formatCompactReport respects hideCompleted for inbox tasks', () => {
   });
 
   assert.match(visibleOutput, /Archive notes/);
+});
+
+test('formatCompactReport includes planned date marker for tasks', () => {
+  assert.equal(typeof formatCompactReport, 'function');
+
+  const output = formatCompactReport(
+    {
+      exportDate: '2026-02-12T00:00:00.000Z',
+      tasks: [
+        {
+          id: 'task-plan-1',
+          name: 'Prepare proposal',
+          projectId: null,
+          parentId: null,
+          childIds: [],
+          completed: false,
+          taskStatus: 'Available',
+          flagged: false,
+          dueDate: null,
+          deferDate: null,
+          plannedDate: '2026-02-20T09:00:00.000Z',
+          estimatedMinutes: null,
+          tagNames: []
+        }
+      ],
+      projects: {},
+      folders: {},
+      tags: {}
+    },
+    {
+      hideCompleted: true,
+      hideRecurringDuplicates: true
+    }
+  );
+
+  assert.match(output, /PLAN:2\/20/);
 });

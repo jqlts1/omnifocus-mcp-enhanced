@@ -56,7 +56,7 @@ export function formatCompactReport(database: any, options: { hideCompleted: boo
   // Add legend
   output += `FORMAT LEGEND:
 F: Folder | P: Project | •: Task | 🚩: Flagged
-Dates: [M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
+Dates: [M/D] | [DUE:M/D] [PLAN:M/D] [defer:M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
 Status: #next #avail #block #due #over #compl #drop\n\n`;
   
   // Map of folder IDs to folder objects for quick lookup
@@ -138,6 +138,12 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
       const dueDateStr = formatCompactDate(project.dueDate);
       statusInfo += statusInfo ? ` [DUE:${dueDateStr}]` : ` [DUE:${dueDateStr}]`;
     }
+
+    // Add planned date if present
+    if (project.plannedDate) {
+      const plannedDateStr = formatCompactDate(project.plannedDate);
+      statusInfo += statusInfo ? ` [PLAN:${plannedDateStr}]` : ` [PLAN:${plannedDateStr}]`;
+    }
     
     // Add flag if present
     const flaggedSymbol = project.flagged ? ' 🚩' : '';
@@ -179,6 +185,10 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
     if (task.deferDate) {
       const deferDateStr = formatCompactDate(task.deferDate);
       dateInfo += ` [defer:${deferDateStr}]`;
+    }
+    if (task.plannedDate) {
+      const plannedDateStr = formatCompactDate(task.plannedDate);
+      dateInfo += ` [PLAN:${plannedDateStr}]`;
     }
     
     // Format duration

@@ -7,6 +7,7 @@ export interface AddOmniFocusTaskParams {
   note?: string;
   dueDate?: string; // ISO date string
   deferDate?: string; // ISO date string
+  plannedDate?: string; // ISO date string
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
@@ -48,6 +49,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Convert ISO dates to AppleScript format
   const dueDate = params.dueDate ? formatDateForAppleScript(params.dueDate) : '';
   const deferDate = params.deferDate ? formatDateForAppleScript(params.deferDate) : '';
+  const plannedDate = params.plannedDate ? formatDateForAppleScript(params.plannedDate) : '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
@@ -95,6 +97,7 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         ${note ? `set note of newTask to "${note}"` : ''}
         ${dueDate ? `set due date of newTask to date "${dueDate}"` : ''}
         ${deferDate ? `set defer date of newTask to date "${deferDate}"` : ''}
+        ${plannedDate ? `set planned date of newTask to date "${plannedDate}"` : ''}
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
         

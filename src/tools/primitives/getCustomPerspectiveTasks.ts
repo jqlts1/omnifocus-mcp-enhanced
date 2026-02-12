@@ -157,6 +157,11 @@ function formatTaskDetails(task: any): string[] {
     details.push(`截止: ${dueDate}`);
   }
 
+  if (task.plannedDate) {
+    const plannedDate = new Date(task.plannedDate).toLocaleDateString();
+    details.push(`计划: ${plannedDate}`);
+  }
+
   if (task.estimatedMinutes) {
     const hours = Math.floor(task.estimatedMinutes / 60);
     const minutes = task.estimatedMinutes % 60;
@@ -198,6 +203,11 @@ function formatFlatTasks(perspectiveName: string, tasks: any[], limit: number, t
     if (task.dueDate) {
       const dueDate = new Date(task.dueDate).toLocaleDateString();
       taskText += `\n   截止: ${dueDate}`;
+    }
+
+    if (task.plannedDate) {
+      const plannedDate = new Date(task.plannedDate).toLocaleDateString();
+      taskText += `\n   计划: ${plannedDate}`;
     }
 
     if (task.flagged) {
@@ -295,6 +305,11 @@ function formatTaskForGroup(task: any): string {
   if (task.dueDate) {
     const dueDate = new Date(task.dueDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
     taskLine += ` 📅 ${dueDate}`;
+  }
+
+  if (task.plannedDate) {
+    const plannedDate = new Date(task.plannedDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+    taskLine += ` 🗓 ${plannedDate}`;
   }
 
   // 添加预估时间

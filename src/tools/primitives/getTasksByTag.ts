@@ -76,10 +76,11 @@ export async function getTasksByTag(options: GetTasksByTagOptions): Promise<stri
               const flagSymbol = task.flagged ? '🚩 ' : '';
               const dueDateStr = task.dueDate ? ` [DUE: ${new Date(task.dueDate).toLocaleDateString()}]` : '';
               const deferDateStr = task.deferDate ? ` [DEFER: ${new Date(task.deferDate).toLocaleDateString()}]` : '';
+              const plannedDateStr = task.plannedDate ? ` [PLAN: ${new Date(task.plannedDate).toLocaleDateString()}]` : '';
               const statusStr = task.taskStatus !== 'Available' ? ` (${task.taskStatus})` : '';
               const estimateStr = task.estimatedMinutes ? ` ⏱${task.estimatedMinutes}m` : '';
               
-              output += `• ${flagSymbol}${task.name}${dueDateStr}${deferDateStr}${statusStr}${estimateStr}\n`;
+              output += `• ${flagSymbol}${task.name}${dueDateStr}${deferDateStr}${plannedDateStr}${statusStr}${estimateStr}\n`;
               
               if (task.note && task.note.trim()) {
                 output += `  📝 ${task.note.trim()}\n`;

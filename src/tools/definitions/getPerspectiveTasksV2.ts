@@ -57,6 +57,7 @@ export async function handler(params: GetPerspectiveTasksV2Params) {
         flaggedTasks: result.tasks.filter(t => t.flagged).length,
         tasksWithDueDate: result.tasks.filter(t => t.dueDate).length,
         tasksWithDeferDate: result.tasks.filter(t => t.deferDate).length,
+        tasksWithPlannedDate: result.tasks.filter(t => t.plannedDate).length,
         projectTasks: result.tasks.filter(t => t.projectName).length,
         inboxTasks: result.tasks.filter(t => !t.projectName).length
       };

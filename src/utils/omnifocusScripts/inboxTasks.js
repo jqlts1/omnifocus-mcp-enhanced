@@ -60,6 +60,7 @@
           flagged: task.flagged,
           dueDate: formatDate(task.dueDate),
           deferDate: formatDate(task.deferDate),
+          plannedDate: formatDate(task.plannedDate),
           estimatedMinutes: task.estimatedMinutes,
           tags: task.tags.map(tag => ({
             id: tag.id.primaryKey,

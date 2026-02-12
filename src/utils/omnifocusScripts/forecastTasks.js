@@ -115,6 +115,7 @@
             flagged: task.flagged,
             dueDate: formatDate(task.dueDate),
             deferDate: formatDate(task.deferDate),
+          plannedDate: formatDate(task.plannedDate),
             estimatedMinutes: task.estimatedMinutes,
             projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
             projectName: task.containingProject ? task.containingProject.name : null,
