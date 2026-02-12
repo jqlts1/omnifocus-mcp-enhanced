@@ -15,6 +15,10 @@
 
 Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native custom perspective access**, hierarchical task display, AI-optimized tool selection, and comprehensive task management. Perfect integration with Claude AI for intelligent workflows.
 
+## 🆕 Latest Release
+
+- **v1.6.4** - Fixed `dump_database` missing root inbox tasks by adding an `INBOX` section in report output.
+
 ## ✨ Key Features
 
 ### 🌟 **NEW: Native Custom Perspective Access**
@@ -46,6 +50,9 @@ claude mcp add omnifocus-enhanced -- npx -y omnifocus-mcp-enhanced
 ### Alternative Installation Methods
 
 ```bash
+# Upgrade to latest
+npm install -g omnifocus-mcp-enhanced@latest
+
 # Global installation
 npm install -g omnifocus-mcp-enhanced
 claude mcp add omnifocus-enhanced -- omnifocus-mcp-enhanced

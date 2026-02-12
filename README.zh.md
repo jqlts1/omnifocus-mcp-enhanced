@@ -11,6 +11,10 @@
 
 增强版 OmniFocus 模型上下文协议（MCP）服务器，具备**原生自定义透视访问**、层级任务显示、AI 优化工具选择和全面的任务管理功能。与 Claude AI 完美集成，实现智能工作流。
 
+## 🆕 最新版本
+
+- **v1.6.4** - 修复 `dump_database` 漏掉收件箱根任务的问题，报告输出新增 `INBOX` 区块显示。
+
 ## ✨ 核心特性
 
 ### 🌟 **新功能：原生自定义透视访问**
@@ -42,6 +46,9 @@ claude mcp add omnifocus-enhanced -- npx -y omnifocus-mcp-enhanced
 ### 其他安装方式
 
 ```bash
+# 升级到最新版
+npm install -g omnifocus-mcp-enhanced@latest
+
 # 全局安装
 npm install -g omnifocus-mcp-enhanced
 claude mcp add omnifocus-enhanced -- omnifocus-mcp-enhanced
