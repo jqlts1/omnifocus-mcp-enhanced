@@ -156,28 +156,31 @@ Access your OmniFocus custom perspectives with hierarchical task display:
 # 🌟 NEW: List all your custom perspectives
 list_custom_perspectives {"format": "detailed"}
 
-# 🌳 NEW: Get tasks from custom perspective with tree display
+# 🌳 NEW: Project tree view (default)
 get_custom_perspective_tasks {
   "perspectiveName": "今日工作安排",  # Your custom perspective name
-  "showHierarchy": true,            # Enable tree display
+  "displayMode": "project_tree",    # project_tree | task_tree | flat
   "hideCompleted": true
 }
 
-# Examples with different perspectives
+# Global task tree (legacy showHierarchy=true equivalent)
 get_custom_perspective_tasks {
   "perspectiveName": "Today Review",
-  "showHierarchy": true
+  "displayMode": "task_tree"
 }
 
+# Flat list (legacy groupByProject=false equivalent)
 get_custom_perspective_tasks {
   "perspectiveName": "Weekly Planning",
-  "showHierarchy": false  # Flat display
+  "displayMode": "flat"
 }
 ```
 
 **Why This Is Powerful:**
 - ✅ **Native Integration** - Uses OmniFocus `Perspective.Custom` API directly
 - ✅ **Tree Structure** - Visual parent-child task relationships with ├─, └─ symbols
+- ✅ **Project-First Grouping** - Project header first, then nested subtasks
+- ✅ **Readable Metadata** - Full notes and `#tags` in tree output
 - ✅ **AI-Friendly** - Enhanced descriptions prevent tool selection confusion
 - ✅ **Professional Output** - Clean, readable task hierarchies
 
@@ -292,17 +295,17 @@ filter_tasks {
 # List your custom perspectives
 list_custom_perspectives {"format": "detailed"}
 
-# Access a custom perspective with hierarchy
+# Access a custom perspective with project tree
 get_custom_perspective_tasks {
   "perspectiveName": "Today Review",
-  "showHierarchy": true,
+  "displayMode": "project_tree",
   "hideCompleted": true
 }
 
 # Quick flat view of weekly planning
 get_custom_perspective_tasks {
   "perspectiveName": "Weekly Planning",
-  "showHierarchy": false
+  "displayMode": "flat"
 }
 ```
 

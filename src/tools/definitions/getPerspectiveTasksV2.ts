@@ -13,7 +13,10 @@ export const schema = z.object({
   
   hideCompleted: z.boolean().optional().default(true).describe("是否隐藏已完成和已放弃的任务（默认: true）"),
   
-  limit: z.number().optional().default(100).describe("返回任务的最大数量（默认: 100，设为 0 表示无限制）")
+  limit: z.number().optional().default(100).describe("返回任务的最大数量（默认: 100，设为 0 表示无限制）"),
+
+  displayMode: z.enum(['project_tree', 'task_tree', 'flat']).optional().default('project_tree')
+    .describe("展示模式：project_tree（按项目+子任务树），task_tree（全局任务树），flat（平铺列表）")
 });
 
 export type GetPerspectiveTasksV2Params = z.infer<typeof schema>;
@@ -42,7 +45,8 @@ export async function handler(params: GetPerspectiveTasksV2Params) {
       totalTasks: result.tasks?.length || 0,
       options: {
         hideCompleted: params.hideCompleted,
-        limit: params.limit
+        limit: params.limit,
+        displayMode: result.displayMode || params.displayMode
       },
       metadata: {
         timestamp: new Date().toISOString(),
@@ -50,6 +54,14 @@ export async function handler(params: GetPerspectiveTasksV2Params) {
         engine: "OmniFocus 4.2+ archivedFilterRules"
       }
     };
+
+    if (result.projectTree) {
+      response.projectTree = result.projectTree;
+    }
+
+    if (result.taskTree) {
+      response.taskTree = result.taskTree;
+    }
 
     // 如果有任务，添加汇总信息
     if (result.tasks && result.tasks.length > 0) {
@@ -59,7 +71,10 @@ export async function handler(params: GetPerspectiveTasksV2Params) {
         tasksWithDeferDate: result.tasks.filter(t => t.deferDate).length,
         tasksWithPlannedDate: result.tasks.filter(t => t.plannedDate).length,
         projectTasks: result.tasks.filter(t => t.projectName).length,
-        inboxTasks: result.tasks.filter(t => !t.projectName).length
+        inboxTasks: result.tasks.filter(t => !t.projectName).length,
+        projectGroupCount: result.summary?.projectGroupCount ?? 0,
+        rootTaskCount: result.summary?.rootTaskCount ?? 0,
+        nestedTaskCount: result.summary?.nestedTaskCount ?? 0
       };
       
       response.summary = summary;

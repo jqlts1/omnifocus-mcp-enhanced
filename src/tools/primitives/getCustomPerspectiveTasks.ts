@@ -1,168 +1,220 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import {
+  buildPerspectiveTaskTree,
+  PerspectiveDisplayMode,
+  PerspectiveProjectGroup,
+  PerspectiveTaskNode
+} from './perspectiveTaskTree.js';
 
 export interface GetCustomPerspectiveTasksOptions {
   perspectiveName: string;
   hideCompleted?: boolean;
   limit?: number;
+  displayMode?: PerspectiveDisplayMode;
+  // Legacy params retained for compatibility with existing callers.
   showHierarchy?: boolean;
   groupByProject?: boolean;
 }
 
 export async function getCustomPerspectiveTasks(options: GetCustomPerspectiveTasksOptions): Promise<string> {
-  const { perspectiveName, hideCompleted = true, limit = 1000, showHierarchy = false, groupByProject = true } = options;
+  const {
+    perspectiveName,
+    hideCompleted = true,
+    limit = 1000,
+    displayMode = 'project_tree'
+  } = options;
 
   if (!perspectiveName) {
-    return "❌ **错误**: 透视名称不能为空";
+    return '❌ **错误**: 透视名称不能为空';
   }
 
   try {
-    // Execute the get custom perspective tasks script
     const result = await executeOmniFocusScript('@getCustomPerspectiveTasks.js', {
-      perspectiveName: perspectiveName
+      perspectiveName
     });
 
-    // 处理各种可能的返回类型（避免之前的错误）
-    let data: any;
-
-    if (typeof result === 'string') {
-      try {
-        data = JSON.parse(result);
-      } catch (parseError) {
-        throw new Error(`解析字符串结果失败: ${result}`);
-      }
-    } else if (typeof result === 'object' && result !== null) {
-      data = result;
-    } else {
-      throw new Error(`脚本执行返回了无效的结果类型: ${typeof result}, 值: ${result}`);
-    }
-
-    // 检查是否有错误
+    const data = parseScriptResult(result);
     if (!data.success) {
       throw new Error(data.error || 'Unknown error occurred');
     }
 
-    // 处理taskMap数据（新的层级结构）
-    const taskMap = data.taskMap || {};
-    const allTasks = Object.values(taskMap);
+    const allTasks = Object.values(data.taskMap || {}) as any[];
+    const tree = buildPerspectiveTaskTree(allTasks, {
+      hideCompleted,
+      inboxLabel: '收件箱'
+    });
 
-    // 过滤已完成任务（如果需要）
-    let filteredTasks = allTasks;
-    if (hideCompleted) {
-      filteredTasks = allTasks.filter((task: any) => !task.completed);
-    }
-
-    if (filteredTasks.length === 0) {
+    if (tree.flatTasks.length === 0) {
       return `**透视任务：${perspectiveName}**\n\n暂无${hideCompleted ? '未完成' : ''}任务。`;
     }
 
-    // 根据显示模式选择不同的输出格式
-    if (showHierarchy) {
-      return formatHierarchicalTasks(perspectiveName, taskMap, hideCompleted);
-    } else if (groupByProject) {
-      return formatGroupedByProject(perspectiveName, filteredTasks, limit, data.count);
-    } else {
-      return formatFlatTasks(perspectiveName, filteredTasks, limit, data.count);
+    if (displayMode === 'task_tree') {
+      return formatTaskTree(perspectiveName, tree.rootTasks, tree.flatTasks.length, data.count || tree.flatTasks.length);
     }
 
+    if (displayMode === 'flat') {
+      return formatFlatTasks(perspectiveName, tree.flatTasks, limit, data.count || tree.flatTasks.length);
+    }
+
+    return formatProjectTree(perspectiveName, tree.projectGroups, tree.flatTasks.length, data.count || tree.flatTasks.length);
   } catch (error) {
     console.error('Error in getCustomPerspectiveTasks:', error);
     return `❌ **错误**: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
 
-// 格式化层级任务显示
-function formatHierarchicalTasks(perspectiveName: string, taskMap: any, hideCompleted: boolean): string {
-  const header = `**透视任务：${perspectiveName}** (层级视图)\n\n`;
-
-  // 找到所有根任务（parent为null的任务）
-  const rootTasks = Object.values(taskMap).filter((task: any) => task.parent === null);
-
-  // 过滤已完成任务
-  const filteredRootTasks = hideCompleted
-    ? rootTasks.filter((task: any) => !task.completed)
-    : rootTasks;
-
-  if (filteredRootTasks.length === 0) {
-    return header + `暂无${hideCompleted ? '未完成' : ''}根任务。`;
+function parseScriptResult(result: unknown): any {
+  if (typeof result === 'string') {
+    try {
+      return JSON.parse(result);
+    } catch (_error) {
+      throw new Error(`解析字符串结果失败: ${result}`);
+    }
   }
 
-  // 递归渲染任务树
-  const taskTreeLines: string[] = [];
+  if (typeof result === 'object' && result !== null) {
+    return result;
+  }
 
-  filteredRootTasks.forEach((rootTask: any, index: number) => {
-    const isLast = index === filteredRootTasks.length - 1;
-    renderTaskTree(rootTask, taskMap, hideCompleted, '', isLast, taskTreeLines);
+  throw new Error(`脚本执行返回了无效的结果类型: ${typeof result}, 值: ${result}`);
+}
+
+function formatProjectTree(
+  perspectiveName: string,
+  groups: PerspectiveProjectGroup[],
+  visibleCount: number,
+  totalCount: number
+): string {
+  const lines: string[] = [];
+  lines.push(`## 透视任务：${perspectiveName}`);
+  lines.push('');
+  lines.push(`**模式：项目树** · 可见任务 ${visibleCount}`);
+
+  groups.forEach((group) => {
+    const heading = group.projectName === '收件箱' ? '### 📥 收件箱' : `### 📁 ${group.projectName}`;
+    lines.push('');
+    lines.push(heading);
+    lines.push('');
+    renderTaskNodes(group.rootTasks, lines, '', false);
   });
 
-  return header + taskTreeLines.join('\n');
+  if (totalCount > visibleCount) {
+    lines.push('');
+    lines.push(`💡 共找到 ${totalCount} 个任务，当前显示 ${visibleCount} 个。`);
+  }
+
+  return lines.join('\n');
 }
 
-// 递归渲染任务树
-function renderTaskTree(task: any, taskMap: any, hideCompleted: boolean, prefix: string, isLast: boolean, lines: string[]): void {
-  // 当前任务的树状前缀
-  const currentPrefix = prefix + (isLast ? '└─ ' : '├─ ');
+function formatTaskTree(
+  perspectiveName: string,
+  rootTasks: PerspectiveTaskNode[],
+  visibleCount: number,
+  totalCount: number
+): string {
+  const lines: string[] = [];
+  lines.push(`## 透视任务：${perspectiveName}`);
+  lines.push('');
+  lines.push(`**模式：任务树** · 可见任务 ${visibleCount}`);
+  lines.push('');
+  renderTaskNodes(rootTasks, lines, '', true);
 
-  // 渲染当前任务
-  let taskLine = currentPrefix + formatTaskName(task);
-  lines.push(taskLine);
+  if (totalCount > visibleCount) {
+    lines.push('');
+    lines.push(`💡 共找到 ${totalCount} 个任务，当前显示 ${visibleCount} 个。`);
+  }
 
-  // 添加任务详细信息（缩进显示）
-  const detailPrefix = prefix + (isLast ? '   ' : '│  ');
-  const taskDetails = formatTaskDetails(task);
-  if (taskDetails.length > 0) {
-    taskDetails.forEach(detail => {
+  return lines.join('\n');
+}
+
+function formatFlatTasks(
+  perspectiveName: string,
+  tasks: PerspectiveTaskNode[],
+  limit: number,
+  totalCount: number
+): string {
+  const displayTasks = limit > 0 ? tasks.slice(0, limit) : tasks;
+
+  const lines: string[] = [];
+  lines.push(`## 透视任务：${perspectiveName}`);
+  lines.push('');
+  lines.push(`**模式：平铺列表** · 显示 ${displayTasks.length} / ${tasks.length}`);
+  lines.push('');
+
+  displayTasks.forEach((task, index) => {
+    lines.push(`${index + 1}. ${formatTaskTitle(task)}`);
+    formatTaskDetails(task, true).forEach((detail) => {
+      lines.push(`   ${detail}`);
+    });
+    lines.push('');
+  });
+
+  if (totalCount > displayTasks.length) {
+    lines.push(`💡 共找到 ${totalCount} 个任务，当前显示 ${displayTasks.length} 个。`);
+  }
+
+  return lines.join('\n').trimEnd();
+}
+
+function renderTaskNodes(
+  tasks: PerspectiveTaskNode[],
+  lines: string[],
+  prefix: string,
+  includeProject: boolean,
+  ancestry: Set<string> = new Set()
+): void {
+  tasks.forEach((task, index) => {
+    const isLast = index === tasks.length - 1;
+    const branchPrefix = prefix + (isLast ? '└─ ' : '├─ ');
+    const detailPrefix = prefix + (isLast ? '   ' : '│  ');
+
+    lines.push(branchPrefix + formatTaskTitle(task));
+    formatTaskDetails(task, includeProject).forEach((detail) => {
       lines.push(detailPrefix + detail);
     });
-  }
 
-  // 处理子任务
-  if (task.children && task.children.length > 0) {
-    const childTasks = task.children
-      .map((childId: string) => taskMap[childId])
-      .filter((child: any) => child && (!hideCompleted || !child.completed));
+    if (task.children.length === 0) {
+      return;
+    }
 
-    childTasks.forEach((childTask: any, index: number) => {
-      const isLastChild = index === childTasks.length - 1;
-      const childPrefix = prefix + (isLast ? '   ' : '│  ');
-      renderTaskTree(childTask, taskMap, hideCompleted, childPrefix, isLastChild, lines);
-    });
-  }
+    if (ancestry.has(task.id)) {
+      lines.push(detailPrefix + '⚠️ 检测到循环引用，已停止展开');
+      return;
+    }
+
+    const nextAncestry = new Set(ancestry);
+    nextAncestry.add(task.id);
+    const nextPrefix = prefix + (isLast ? '   ' : '│  ');
+    renderTaskNodes(task.children, lines, nextPrefix, includeProject, nextAncestry);
+  });
 }
 
-// 格式化任务名称
-function formatTaskName(task: any): string {
-  let name = `**${task.name}**`;
-  if (task.completed) {
-    name = `~~${name}~~ [完成]`;
-  } else if (task.flagged) {
-    name = `[重要] ${name}`;
-  }
-  return name;
+function formatTaskTitle(task: PerspectiveTaskNode): string {
+  const statusIcon = task.completed || task.dropped ? '✅' : (task.flagged ? '🔶' : '○');
+  const tags = task.displayTags.length > 0 ? ` ${task.displayTags.join(' ')}` : '';
+  return `${statusIcon} **${task.name}**${tags}`;
 }
 
-// 格式化任务详细信息
-function formatTaskDetails(task: any): string[] {
+function formatTaskDetails(task: PerspectiveTaskNode, includeProject: boolean): string[] {
   const details: string[] = [];
 
-  if (task.project) {
-    details.push(`项目: ${task.project}`);
-  }
-
-  if (task.tags && task.tags.length > 0) {
-    details.push(`标签: ${task.tags.join(', ')}`);
+  if (includeProject && task.projectName) {
+    details.push(`项目: ${task.projectName}`);
   }
 
   if (task.dueDate) {
-    const dueDate = new Date(task.dueDate).toLocaleDateString();
-    details.push(`截止: ${dueDate}`);
+    details.push(`截止: ${formatDate(task.dueDate)}`);
+  }
+
+  if (task.deferDate) {
+    details.push(`推迟: ${formatDate(task.deferDate)}`);
   }
 
   if (task.plannedDate) {
-    const plannedDate = new Date(task.plannedDate).toLocaleDateString();
-    details.push(`计划: ${plannedDate}`);
+    details.push(`计划: ${formatDate(task.plannedDate)}`);
   }
 
-  if (task.estimatedMinutes) {
+  if (typeof task.estimatedMinutes === 'number') {
     const hours = Math.floor(task.estimatedMinutes / 60);
     const minutes = task.estimatedMinutes % 60;
     if (hours > 0) {
@@ -172,156 +224,21 @@ function formatTaskDetails(task: any): string[] {
     }
   }
 
-  if (task.note && task.note.trim()) {
-    const notePreview = task.note.trim().substring(0, 60);
-    details.push(`备注: ${notePreview}${task.note.length > 60 ? '...' : ''}`);
+  const note = task.note.trim();
+  if (note.length > 0) {
+    const noteLines = note.split(/\r?\n/);
+    noteLines.forEach((line, index) => {
+      details.push(index === 0 ? `备注: ${line}` : `      ${line}`);
+    });
   }
 
   return details;
 }
 
-// 格式化平铺任务显示（保持原有功能）
-function formatFlatTasks(perspectiveName: string, tasks: any[], limit: number, totalCount: number): string {
-  // 限制任务数量
-  let displayTasks = tasks;
-  if (limit && limit > 0) {
-    displayTasks = tasks.slice(0, limit);
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
   }
-
-  // 生成任务列表
-  const taskList = displayTasks.map((task: any, index: number) => {
-    let taskText = `${index + 1}. **${task.name}**`;
-
-    if (task.project) {
-      taskText += `\n   项目: ${task.project}`;
-    }
-
-    if (task.tags && task.tags.length > 0) {
-      taskText += `\n   标签: ${task.tags.join(', ')}`;
-    }
-
-    if (task.dueDate) {
-      const dueDate = new Date(task.dueDate).toLocaleDateString();
-      taskText += `\n   截止: ${dueDate}`;
-    }
-
-    if (task.plannedDate) {
-      const plannedDate = new Date(task.plannedDate).toLocaleDateString();
-      taskText += `\n   计划: ${plannedDate}`;
-    }
-
-    if (task.flagged) {
-      taskText += `\n   [重要]`;
-    }
-
-    if (task.estimatedMinutes) {
-      const hours = Math.floor(task.estimatedMinutes / 60);
-      const minutes = task.estimatedMinutes % 60;
-      if (hours > 0) {
-        taskText += `\n   预估: ${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`;
-      } else {
-        taskText += `\n   预估: ${minutes}m`;
-      }
-    }
-
-    if (task.note && task.note.trim()) {
-      const notePreview = task.note.trim().substring(0, 100);
-      taskText += `\n   备注: ${notePreview}${task.note.length > 100 ? '...' : ''}`;
-    }
-
-    return taskText;
-  }).join('\n\n');
-
-  const header = `**透视任务：${perspectiveName}** (${displayTasks.length}个任务)\n\n`;
-  const footer = totalCount > displayTasks.length ? `\n\n提示: 共找到 ${totalCount} 个任务，显示 ${displayTasks.length} 个` : '';
-
-  return header + taskList + footer;
-}
-
-// 按项目分组格式化任务显示
-function formatGroupedByProject(perspectiveName: string, tasks: any[], limit: number, totalCount: number): string {
-  // 限制任务数量
-  let displayTasks = tasks;
-  if (limit && limit > 0) {
-    displayTasks = tasks.slice(0, limit);
-  }
-
-  // 按项目分组
-  const projectGroups: Map<string, any[]> = new Map();
-  const noProjectTasks: any[] = [];
-
-  displayTasks.forEach((task: any) => {
-    if (task.project) {
-      const projectName = task.project;
-      if (!projectGroups.has(projectName)) {
-        projectGroups.set(projectName, []);
-      }
-      projectGroups.get(projectName)!.push(task);
-    } else {
-      noProjectTasks.push(task);
-    }
-  });
-
-  // 生成按项目分组的输出
-  const lines: string[] = [];
-
-  // 输出有项目的任务
-  projectGroups.forEach((projectTasks, projectName) => {
-    lines.push(`\n### 📁 ${projectName}`);
-    lines.push('');
-    projectTasks.forEach((task: any) => {
-      lines.push(formatTaskForGroup(task));
-    });
-  });
-
-  // 输出没有项目的任务（收件箱任务）
-  if (noProjectTasks.length > 0) {
-    lines.push(`\n### 📥 收件箱`);
-    lines.push('');
-    noProjectTasks.forEach((task: any) => {
-      lines.push(formatTaskForGroup(task));
-    });
-  }
-
-  const header = `## 透视任务：${perspectiveName}\n\n**共 ${displayTasks.length} 个任务，${projectGroups.size} 个项目**`;
-  const footer = totalCount > displayTasks.length ? `\n\n---\n💡 *共找到 ${totalCount} 个任务，显示 ${displayTasks.length} 个*` : '';
-
-  return header + lines.join('\n') + footer;
-}
-
-// 格式化单个任务（用于分组视图）
-function formatTaskForGroup(task: any): string {
-  // 任务状态图标
-  const statusIcon = task.completed ? '✅' : (task.flagged ? '🔶' : '○');
-
-  let taskLine = `- ${statusIcon} **${task.name}**`;
-
-  // 添加标签
-  if (task.tags && task.tags.length > 0) {
-    taskLine += ` \`${task.tags.join('` `')}\``;
-  }
-
-  // 添加截止日期
-  if (task.dueDate) {
-    const dueDate = new Date(task.dueDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-    taskLine += ` 📅 ${dueDate}`;
-  }
-
-  if (task.plannedDate) {
-    const plannedDate = new Date(task.plannedDate).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-    taskLine += ` 🗓 ${plannedDate}`;
-  }
-
-  // 添加预估时间
-  if (task.estimatedMinutes) {
-    const hours = Math.floor(task.estimatedMinutes / 60);
-    const minutes = task.estimatedMinutes % 60;
-    if (hours > 0) {
-      taskLine += ` ⏱️ ${hours}h${minutes > 0 ? `${minutes}m` : ''}`;
-    } else {
-      taskLine += ` ⏱️ ${minutes}m`;
-    }
-  }
-
-  return taskLine;
+  return date.toLocaleDateString('zh-CN');
 }

@@ -1,7 +1,7 @@
 {
   "name": "omnifocus-mcp-enhanced",
   "type": "module",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "description": "🚀 NEW: Native Custom Perspective Access! Enhanced MCP server with OmniFocus custom perspective support, hierarchical task display, AI-optimized tool selection, and comprehensive task management",
   "main": "dist/server.js",
   "bin": {

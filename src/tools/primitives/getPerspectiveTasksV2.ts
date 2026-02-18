@@ -1,4 +1,10 @@
 import { PerspectiveEngine, TaskItem } from '../../utils/perspectiveEngine.js';
+import {
+  buildPerspectiveTaskTree,
+  PerspectiveDisplayMode,
+  PerspectiveProjectGroup,
+  PerspectiveTaskNode
+} from './perspectiveTaskTree.js';
 
 // 基于 OmniFocus 4.2+ 新 API 的透视访问接口
 
@@ -6,11 +12,20 @@ export interface GetPerspectiveTasksV2Params {
   perspectiveName: string;
   hideCompleted?: boolean;
   limit?: number;
+  displayMode?: PerspectiveDisplayMode;
 }
 
 export interface GetPerspectiveTasksV2Result {
   success: boolean;
   tasks?: TaskItem[];
+  displayMode?: PerspectiveDisplayMode;
+  projectTree?: PerspectiveProjectGroup[];
+  taskTree?: PerspectiveTaskNode[];
+  summary?: {
+    projectGroupCount: number;
+    rootTaskCount: number;
+    nestedTaskCount: number;
+  };
   perspectiveInfo?: {
     name: string;
     rulesCount: number;
@@ -31,11 +46,13 @@ export interface GetPerspectiveTasksV2Result {
 export async function getPerspectiveTasksV2(
   params: GetPerspectiveTasksV2Params
 ): Promise<GetPerspectiveTasksV2Result> {
+  const displayMode = params.displayMode || 'project_tree';
   
   console.log(`[PerspectiveV2] 开始获取透视 "${params.perspectiveName}" 的任务`);
   console.log(`[PerspectiveV2] 参数:`, {
     hideCompleted: params.hideCompleted,
-    limit: params.limit
+    limit: params.limit,
+    displayMode
   });
 
   try {
@@ -73,10 +90,23 @@ export async function getPerspectiveTasksV2(
       });
     }
 
+    const displayTree = buildPerspectiveTaskTree((result.tasks || []) as any[], {
+      hideCompleted: params.hideCompleted !== false,
+      inboxLabel: '收件箱'
+    });
+
     return {
       success: true,
       tasks: result.tasks,
-      perspectiveInfo: result.perspectiveInfo
+      perspectiveInfo: result.perspectiveInfo,
+      displayMode,
+      projectTree: displayMode === 'project_tree' ? displayTree.projectGroups : undefined,
+      taskTree: displayMode === 'task_tree' ? displayTree.rootTasks : undefined,
+      summary: {
+        projectGroupCount: displayTree.projectGroups.length,
+        rootTaskCount: displayTree.rootTasks.length,
+        nestedTaskCount: Math.max(displayTree.flatTasks.length - displayTree.rootTasks.length, 0)
+      }
     };
 
   } catch (error: any) {
