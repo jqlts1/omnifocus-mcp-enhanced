@@ -152,28 +152,31 @@ filter_tasks {
 # 🌟 新功能：列出所有自定义透视
 list_custom_perspectives {"format": "detailed"}
 
-# 🌳 新功能：从自定义透视获取任务，支持树状显示
+# 🌳 新功能：项目树视图（默认）
 get_custom_perspective_tasks {
   "perspectiveName": "今日工作安排",  # 您的自定义透视名称
-  "showHierarchy": true,            # 启用树状显示
+  "displayMode": "project_tree",    # project_tree | task_tree | flat
   "hideCompleted": true
 }
 
-# 不同透视的示例
+# 全局任务树（等价于旧参数 showHierarchy=true）
 get_custom_perspective_tasks {
   "perspectiveName": "今日复盘",
-  "showHierarchy": true
+  "displayMode": "task_tree"
 }
 
+# 平铺视图（等价于旧参数 groupByProject=false）
 get_custom_perspective_tasks {
   "perspectiveName": "本周项目",
-  "showHierarchy": false  # 平铺显示
+  "displayMode": "flat"
 }
 ```
 
 **功能强大的原因：**
 - ✅ **原生集成** - 直接使用 OmniFocus `Perspective.Custom` API
 - ✅ **树状结构** - 使用 ├─、└─ 符号显示父子任务关系
+- ✅ **项目优先分组** - 先按项目分组，再展示子任务层级
+- ✅ **信息表达清晰** - 任务树中默认展示完整备注与 `#标签`
 - ✅ **AI 友好** - 增强的描述防止工具选择混淆
 - ✅ **专业输出** - 清晰、可读的任务层级
 
@@ -288,17 +291,17 @@ filter_tasks {
 # 列出您的自定义透视
 list_custom_perspectives {"format": "detailed"}
 
-# 访问带层级的自定义透视
+# 访问带项目树的自定义透视
 get_custom_perspective_tasks {
   "perspectiveName": "今日复盘",
-  "showHierarchy": true,
+  "displayMode": "project_tree",
   "hideCompleted": true
 }
 
 # 快速查看周计划的平铺视图
 get_custom_perspective_tasks {
   "perspectiveName": "本周项目",
-  "showHierarchy": false
+  "displayMode": "flat"
 }
 ```
 
