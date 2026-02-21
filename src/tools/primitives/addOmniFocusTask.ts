@@ -1,5 +1,5 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
-import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
+import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -46,10 +46,10 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
-  // Convert ISO dates to AppleScript format
-  const dueDate = params.dueDate ? formatDateForAppleScript(params.dueDate) : '';
-  const deferDate = params.deferDate ? formatDateForAppleScript(params.deferDate) : '';
-  const plannedDate = params.plannedDate ? formatDateForAppleScript(params.plannedDate) : '';
+  // Generate locale-independent AppleScript date construction code
+  const dueDateCode = params.dueDate ? appleScriptDateCode('dueDateVal', params.dueDate) : '';
+  const deferDateCode = params.deferDate ? appleScriptDateCode('deferDateVal', params.deferDate) : '';
+  const plannedDateCode = params.plannedDate ? appleScriptDateCode('plannedDateVal', params.plannedDate) : '';
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
@@ -58,9 +58,15 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
   const tagAssignmentScript = buildTagAssignmentScript(tags, 'newTask');
 
+  // Build date preamble BEFORE the tell block (date ops fail inside OmniFocus scope)
+  let datePreamble = '';
+  if (dueDateCode) datePreamble += dueDateCode + '\n';
+  if (deferDateCode) datePreamble += deferDateCode + '\n';
+  if (plannedDateCode) datePreamble += plannedDateCode + '\n';
+
   // Construct AppleScript with error handling
   let script = `
-  try
+  ${datePreamble}try
     tell application "OmniFocus"
       tell front document
         -- Determine the container (parent task, project, or inbox)
@@ -95,9 +101,9 @@ function generateAppleScript(params: AddOmniFocusTaskParams): string {
         
         -- Set task properties
         ${note ? `set note of newTask to "${note}"` : ''}
-        ${dueDate ? `set due date of newTask to date "${dueDate}"` : ''}
-        ${deferDate ? `set defer date of newTask to date "${deferDate}"` : ''}
-        ${plannedDate ? `set planned date of newTask to date "${plannedDate}"` : ''}
+        ${dueDateCode ? `set due date of newTask to dueDateVal` : ''}
+        ${deferDateCode ? `set defer date of newTask to deferDateVal` : ''}
+        ${plannedDateCode ? `set planned date of newTask to plannedDateVal` : ''}
         ${flagged ? `set flagged of newTask to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newTask to ${estimatedMinutes}` : ''}
         

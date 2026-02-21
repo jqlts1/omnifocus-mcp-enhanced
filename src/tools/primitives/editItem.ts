@@ -1,5 +1,5 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
-import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
+import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -46,9 +46,21 @@ function generateAppleScript(params: EditItemParams): string {
     return `return "{\\\"success\\\":false,\\\"error\\\":\\\"Either id or name must be provided\\\"}"`;
   }
 
+  // Build date preamble BEFORE the tell block (date ops fail inside OmniFocus scope)
+  let datePreamble = '';
+  if (params.newDueDate !== undefined && params.newDueDate !== '') {
+    datePreamble += appleScriptDateCode('newDueDateVal', params.newDueDate) + '\n';
+  }
+  if (params.newDeferDate !== undefined && params.newDeferDate !== '') {
+    datePreamble += appleScriptDateCode('newDeferDateVal', params.newDeferDate) + '\n';
+  }
+  if (params.newPlannedDate !== undefined && params.newPlannedDate !== '') {
+    datePreamble += appleScriptDateCode('newPlannedDateVal', params.newPlannedDate) + '\n';
+  }
+
   // Construct AppleScript with error handling
   let script = `
-  try
+  ${datePreamble}try
     tell application "OmniFocus"
       tell front document
         -- Find the item to edit
@@ -118,10 +130,9 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "due date"
 `;
     } else {
-      const formattedDueDate = formatDateForAppleScript(params.newDueDate);
       script += `
-          -- Update due date
-          set due date of foundItem to date "${formattedDueDate}"
+          -- Update due date (variable constructed before tell block)
+          set due date of foundItem to newDueDateVal
           set end of changedProperties to "due date"
 `;
     }
@@ -135,10 +146,9 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "defer date"
 `;
     } else {
-      const formattedDeferDate = formatDateForAppleScript(params.newDeferDate);
       script += `
-          -- Update defer date
-          set defer date of foundItem to date "${formattedDeferDate}"
+          -- Update defer date (variable constructed before tell block)
+          set defer date of foundItem to newDeferDateVal
           set end of changedProperties to "defer date"
 `;
     }
@@ -152,10 +162,9 @@ function generateAppleScript(params: EditItemParams): string {
           set end of changedProperties to "planned date"
 `;
     } else {
-      const formattedPlannedDate = formatDateForAppleScript(params.newPlannedDate);
       script += `
-          -- Update planned date
-          set planned date of foundItem to date "${formattedPlannedDate}"
+          -- Update planned date (variable constructed before tell block)
+          set planned date of foundItem to newPlannedDateVal
           set end of changedProperties to "planned date"
 `;
     }

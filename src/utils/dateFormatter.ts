@@ -52,3 +52,41 @@ export function formatDateForAppleScript(isoDate: string): string {
 
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Generate AppleScript code that constructs a date from an ISO string.
+ * Uses numeric components to avoid locale-dependent date string parsing.
+ *
+ * IMPORTANT: The generated code must be placed BEFORE any "tell application"
+ * block, because AppleScript date property access (set day/month/year of)
+ * fails inside OmniFocus's tell scope with error -1723.
+ *
+ * @param varName AppleScript variable name for the constructed date
+ * @param isoDate ISO date string (e.g., "2026-02-28" or "2026-02-28T12:00:00")
+ * @returns AppleScript code snippet that creates the date in the given variable
+ */
+export function appleScriptDateCode(varName: string, isoDate: string): string {
+  if (!isoDate || isoDate.trim() === '') {
+    throw new Error('Date string cannot be empty');
+  }
+
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) {
+    throw new Error(`Invalid date string: ${isoDate}`);
+  }
+
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+
+  // Set day to 1 first to avoid invalid intermediate dates
+  // (e.g., current date is Jan 31, setting month to Feb would fail)
+  return `set ${varName} to current date
+set day of ${varName} to 1
+set year of ${varName} to ${year}
+set month of ${varName} to ${month}
+set day of ${varName} to ${day}
+set hours of ${varName} to 0
+set minutes of ${varName} to 0
+set seconds of ${varName} to 0`;
+}
