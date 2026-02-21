@@ -192,21 +192,29 @@ function generateAppleScript(params: EditItemParams): string {
     if (params.newStatus !== undefined) {
       if (params.newStatus === 'completed') {
         script += `
-          -- Mark task as completed
-          set completed of foundItem to true
+          -- Mark task as completed using OmniJS (AppleScript 'set completed' is broken for project tasks)
+          set taskId to id of foundItem
+          tell application "OmniFocus"
+            evaluate javascript "var t = flattenedTasks.find(function(task){ return task.id.primaryKey === '" & taskId & "'; }); if(t){ t.markComplete(); 'ok'; } else { 'not found'; }"
+          end tell
           set end of changedProperties to "status (completed)"
 `;
       } else if (params.newStatus === 'dropped') {
         script += `
-          -- Mark task as dropped
-          set dropped of foundItem to true
+          -- Mark task as dropped using OmniJS
+          set taskId to id of foundItem
+          tell application "OmniFocus"
+            evaluate javascript "var t = flattenedTasks.find(function(task){ return task.id.primaryKey === '" & taskId & "'; }); if(t){ t.taskStatus = Task.Status.Dropped; 'ok'; } else { 'not found'; }"
+          end tell
           set end of changedProperties to "status (dropped)"
 `;
       } else if (params.newStatus === 'incomplete') {
         script += `
-          -- Mark task as incomplete
-          set completed of foundItem to false
-          set dropped of foundItem to false
+          -- Mark task as incomplete using OmniJS
+          set taskId to id of foundItem
+          tell application "OmniFocus"
+            evaluate javascript "var t = flattenedTasks.find(function(task){ return task.id.primaryKey === '" & taskId & "'; }); if(t){ t.taskStatus = Task.Status.Available; 'ok'; } else { 'not found'; }"
+          end tell
           set end of changedProperties to "status (incomplete)"
 `;
       }
