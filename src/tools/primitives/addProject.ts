@@ -1,5 +1,5 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
-import { formatDateForAppleScript } from '../../utils/dateFormatter.js';
+import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -18,14 +18,15 @@ export interface AddProjectParams {
 /**
  * Generate pure AppleScript for project creation
  */
-function generateAppleScript(params: AddProjectParams): string {
+export function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
-  // Convert ISO dates to AppleScript format
-  const dueDate = params.dueDate ? formatDateForAppleScript(params.dueDate) : '';
-  const deferDate = params.deferDate ? formatDateForAppleScript(params.deferDate) : '';
-  const plannedDate = params.plannedDate ? formatDateForAppleScript(params.plannedDate) : '';
+  // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
+  const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
+  const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
+  const plannedDateCode = params.plannedDate ? appleScriptDateCode(params.plannedDate, 'plannedDateValue') : '';
+  const datePreamble = [dueDateCode, deferDateCode, plannedDateCode].filter(Boolean).join('\n');
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
@@ -53,6 +54,7 @@ function generateAppleScript(params: AddProjectParams): string {
   // Construct AppleScript with error handling
   let script = `
   try
+${datePreamble}
     tell application "OmniFocus"
       tell front document
         -- Determine the container (root or folder)
@@ -71,9 +73,9 @@ function generateAppleScript(params: AddProjectParams): string {
         
         -- Set project properties
         ${note ? `set note of newProject to "${note}"` : ''}
-        ${dueDate ? `set due date of newProject to date "${dueDate}"` : ''}
-        ${deferDate ? `set defer date of newProject to date "${deferDate}"` : ''}
-        ${plannedDate ? `set planned date of newProject to date "${plannedDate}"` : ''}
+        ${params.dueDate ? `set due date of newProject to dueDateValue` : ''}
+        ${params.deferDate ? `set defer date of newProject to deferDateValue` : ''}
+        ${params.plannedDate ? `set planned date of newProject to plannedDateValue` : ''}
         ${flagged ? `set flagged of newProject to true` : ''}
         ${estimatedMinutes ? `set estimated minutes of newProject to ${estimatedMinutes}` : ''}
         ${`set sequential of newProject to ${sequential}`}
