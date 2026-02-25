@@ -286,19 +286,12 @@ function generateFilterConditions(entity: string, filters: any): string {
 
     if (filters.noteContains) {
       const escaped = escapeJXAString(filters.noteContains.toLowerCase());
-      conditions.push(`
-        const noteStrForContains = item.note || "";
-        if (!noteStrForContains.toLowerCase().includes("${escaped}")) return false;
-      `);
+      conditions.push(`if (!(item.note || "").toLowerCase().includes("${escaped}")) return false;`);
     }
 
     if (filters.keyword) {
       const escaped = escapeJXAString(filters.keyword.toLowerCase());
-      conditions.push(`
-        const kwName = (item.name || "").toLowerCase();
-        const kwNote = (item.note || "").toLowerCase();
-        if (!kwName.includes("${escaped}") && !kwNote.includes("${escaped}")) return false;
-      `);
+      conditions.push(`if (!(item.name || "").toLowerCase().includes("${escaped}") && !(item.note || "").toLowerCase().includes("${escaped}")) return false;`);
     }
   }
 
@@ -326,19 +319,12 @@ function generateFilterConditions(entity: string, filters: any): string {
 
     if (filters.noteContains) {
       const escaped = escapeJXAString(filters.noteContains.toLowerCase());
-      conditions.push(`
-        const noteStrForContains = item.note || "";
-        if (!noteStrForContains.toLowerCase().includes("${escaped}")) return false;
-      `);
+      conditions.push(`if (!(item.note || "").toLowerCase().includes("${escaped}")) return false;`);
     }
 
     if (filters.keyword) {
       const escaped = escapeJXAString(filters.keyword.toLowerCase());
-      conditions.push(`
-        const kwName = (item.name || "").toLowerCase();
-        const kwNote = (item.note || "").toLowerCase();
-        if (!kwName.includes("${escaped}") && !kwNote.includes("${escaped}")) return false;
-      `);
+      conditions.push(`if (!(item.name || "").toLowerCase().includes("${escaped}") && !(item.note || "").toLowerCase().includes("${escaped}")) return false;`);
     }
   }
 
