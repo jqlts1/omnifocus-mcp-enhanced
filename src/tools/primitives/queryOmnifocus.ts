@@ -17,6 +17,9 @@ export interface QueryOmnifocusParams {
     dueOn?: number;
     deferOn?: number;
     plannedOn?: number;
+    nameContains?: string;
+    noteContains?: string;
+    keyword?: string;
   };
   fields?: string[];
   limit?: number;
@@ -195,11 +198,12 @@ function generateFilterConditions(entity: string, filters: any): string {
 
   if (entity === 'tasks') {
     if (filters.projectName) {
+      const escaped = escapeJXAString(filters.projectName.toLowerCase());
       conditions.push(`
         if (item.containingProject) {
           const projectName = item.containingProject.name.toLowerCase();
-          if (!projectName.includes("${filters.projectName.toLowerCase()}")) return false;
-        } else if ("${filters.projectName.toLowerCase()}" !== "inbox") {
+          if (!projectName.includes("${escaped}")) return false;
+        } else if ("${escaped}" !== "inbox") {
           return false;
         }
       `);
@@ -274,6 +278,28 @@ function generateFilterConditions(entity: string, filters: any): string {
         conditions.push(`if (item.inInbox) return false;`);
       }
     }
+
+    if (filters.nameContains) {
+      const escaped = escapeJXAString(filters.nameContains.toLowerCase());
+      conditions.push(`if (!item.name || !item.name.toLowerCase().includes("${escaped}")) return false;`);
+    }
+
+    if (filters.noteContains) {
+      const escaped = escapeJXAString(filters.noteContains.toLowerCase());
+      conditions.push(`
+        const noteStrForContains = item.note || "";
+        if (!noteStrForContains.toLowerCase().includes("${escaped}")) return false;
+      `);
+    }
+
+    if (filters.keyword) {
+      const escaped = escapeJXAString(filters.keyword.toLowerCase());
+      conditions.push(`
+        const kwName = (item.name || "").toLowerCase();
+        const kwNote = (item.note || "").toLowerCase();
+        if (!kwName.includes("${escaped}") && !kwNote.includes("${escaped}")) return false;
+      `);
+    }
   }
 
   if (entity === 'projects') {
@@ -291,6 +317,35 @@ function generateFilterConditions(entity: string, filters: any): string {
         `projectStatusMap[item.status] === "${status}"`
       ).join(' || ');
       conditions.push(`if (!(${statusCondition})) return false;`);
+    }
+
+    if (filters.nameContains) {
+      const escaped = escapeJXAString(filters.nameContains.toLowerCase());
+      conditions.push(`if (!item.name || !item.name.toLowerCase().includes("${escaped}")) return false;`);
+    }
+
+    if (filters.noteContains) {
+      const escaped = escapeJXAString(filters.noteContains.toLowerCase());
+      conditions.push(`
+        const noteStrForContains = item.note || "";
+        if (!noteStrForContains.toLowerCase().includes("${escaped}")) return false;
+      `);
+    }
+
+    if (filters.keyword) {
+      const escaped = escapeJXAString(filters.keyword.toLowerCase());
+      conditions.push(`
+        const kwName = (item.name || "").toLowerCase();
+        const kwNote = (item.note || "").toLowerCase();
+        if (!kwName.includes("${escaped}") && !kwNote.includes("${escaped}")) return false;
+      `);
+    }
+  }
+
+  if (entity === 'folders') {
+    if (filters.nameContains) {
+      const escaped = escapeJXAString(filters.nameContains.toLowerCase());
+      conditions.push(`if (!item.name || !item.name.toLowerCase().includes("${escaped}")) return false;`);
     }
   }
 
@@ -442,4 +497,12 @@ function generateFieldMapping(entity: string, fields?: string[]): string {
       ${mappings}
     };
   `;
+}
+
+function escapeJXAString(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
 }
