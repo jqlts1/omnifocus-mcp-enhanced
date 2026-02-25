@@ -19,7 +19,10 @@ export const schema = z.object({
     inbox: z.boolean().optional().describe("Filter tasks by inbox status. true = only inbox tasks (no project), false = only tasks in a project"),
     dueOn: z.number().optional().describe("Returns items due on exactly this day. 0 = today, 1 = tomorrow, etc."),
     deferOn: z.number().optional().describe("Returns items with defer date on exactly this day. 0 = today, 1 = tomorrow, etc."),
-    plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc.")
+    plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc."),
+    nameContains: z.string().optional().describe("Search items by name. CASE-INSENSITIVE PARTIAL MATCHING - 'compress' matches 'Agent Session Compression', 'File Compressor', etc. Works for tasks, projects, and folders"),
+    noteContains: z.string().optional().describe("Search items by note content. CASE-INSENSITIVE PARTIAL MATCHING. Works for tasks and projects"),
+    keyword: z.string().optional().describe("Full-text search across name AND note. CASE-INSENSITIVE. Matches if EITHER name or note contains the keyword. Works for tasks and projects"),
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
 
   fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
@@ -132,6 +135,9 @@ function formatFilters(filters: any): string {
   if (filters.dueOn !== undefined) parts.push(`due on day +${filters.dueOn}`);
   if (filters.deferOn !== undefined) parts.push(`defer on day +${filters.deferOn}`);
   if (filters.plannedOn !== undefined) parts.push(`planned on day +${filters.plannedOn}`);
+  if (filters.nameContains) parts.push(`name contains: "${filters.nameContains}"`);
+  if (filters.noteContains) parts.push(`note contains: "${filters.noteContains}"`);
+  if (filters.keyword) parts.push(`keyword: "${filters.keyword}"`);
   return parts.join(', ');
 }
 
