@@ -91,3 +91,18 @@ export interface OmnifocusTag {
   allowsNextAction: boolean;
   tasks: string[]; // Task IDs
 }
+
+export interface OmnifocusPerspective {
+  id: string;
+  name: string;
+  type: 'builtin' | 'custom';
+  isBuiltIn: boolean;
+  canModify: boolean;
+  filterRules?: {
+    availability?: string[];
+    tags?: string[];
+    projects?: string[];
+    flagged?: boolean;
+    dueWithin?: number;
+  };
+}

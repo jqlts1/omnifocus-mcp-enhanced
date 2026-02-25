@@ -9,6 +9,13 @@ import { existsSync } from 'fs';
 
 const execAsync = promisify(exec);
 
+// Optional logger integration
+let scriptLogger: any = null;
+
+export function setScriptLogger(logger: any): void {
+  scriptLogger = logger;
+}
+
 /**
  * Safely execute AppleScript by writing to a temp file
  * This avoids shell escaping issues with quotes and special characters
