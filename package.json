@@ -1,12 +1,16 @@
 {
-  "name": "omnifocus-mcp-enhanced",
+  "name": "omnifocus-mcp-pro",
   "type": "module",
-  "version": "1.6.7",
-  "description": "🚀 NEW: Native Custom Perspective Access! Enhanced MCP server with OmniFocus custom perspective support, hierarchical task display, AI-optimized tool selection, and comprehensive task management",
+  "version": "2.0.0",
+  "description": "Pro OmniFocus MCP server — 19 tools, unified query engine, MCP Resources, GTD workflow support, custom perspectives, and text search. macOS only.",
   "main": "dist/server.js",
   "bin": {
-    "omnifocus-mcp-enhanced": "./cli.cjs"
+    "omnifocus-mcp-pro": "./cli.cjs"
   },
+  "files": [
+    "dist/",
+    "cli.cjs"
+  ],
   "scripts": {
     "build": "tsc && npm run copy-files && chmod 755 dist/server.js",
     "copy-files": "mkdir -p dist/utils/omnifocusScripts && cp src/utils/omnifocusScripts/*.js dist/utils/omnifocusScripts/",
@@ -25,29 +29,24 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jqlts1/omnifocus-mcp-enhanced.git"
+    "url": "https://github.com/darrenyao/omnifocus-mcp-enhanced.git"
   },
-  "homepage": "https://github.com/jqlts1/omnifocus-mcp-enhanced",
+  "homepage": "https://github.com/darrenyao/omnifocus-mcp-enhanced",
   "keywords": [
     "omnifocus",
     "mcp",
+    "model-context-protocol",
     "claude",
+    "ai-agent",
     "task-management",
-    "ai",
-    "subtasks",
-    "enhanced",
+    "gtd",
     "productivity",
     "macos",
     "perspective",
-    "perspective-api",
-    "archivedfillterrules",
-    "omnifocus-4.2",
-    "breakthrough",
-    "killer-feature"
+    "omnifocus-automation"
   ],
   "author": {
-    "name": "jqlts1",
-    "email": "jqlts1@github.com"
+    "name": "darrenyao"
   },
   "engines": {
     "node": ">=18.0.0"
