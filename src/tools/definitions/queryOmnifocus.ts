@@ -20,9 +20,9 @@ export const schema = z.object({
     dueOn: z.number().optional().describe("Returns items due on exactly this day. 0 = today, 1 = tomorrow, etc."),
     deferOn: z.number().optional().describe("Returns items with defer date on exactly this day. 0 = today, 1 = tomorrow, etc."),
     plannedOn: z.number().optional().describe("Returns tasks with planned date on exactly this day. 0 = today, 1 = tomorrow, etc."),
-    nameContains: z.string().optional().describe("Search items by name. CASE-INSENSITIVE PARTIAL MATCHING - 'compress' matches 'Agent Session Compression', 'File Compressor', etc. Works for tasks, projects, and folders"),
-    noteContains: z.string().optional().describe("Search items by note content. CASE-INSENSITIVE PARTIAL MATCHING. Works for tasks and projects"),
-    keyword: z.string().optional().describe("Full-text search across name AND note. CASE-INSENSITIVE. Matches if EITHER name or note contains the keyword. Works for tasks and projects"),
+    nameContains: z.string().min(1).optional().describe("Search items by name. CASE-INSENSITIVE PARTIAL MATCHING - 'compress' matches 'Agent Session Compression', 'File Compressor', etc. Works for tasks, projects, and folders"),
+    noteContains: z.string().min(1).optional().describe("Search items by note content. CASE-INSENSITIVE PARTIAL MATCHING. Works for tasks and projects"),
+    keyword: z.string().min(1).optional().describe("Full-text search across name AND note. CASE-INSENSITIVE. Matches if EITHER name or note contains the keyword. Works for tasks and projects"),
   }).optional().describe("Optional filters to narrow results. ALL filters combine with AND logic (must match all). Within array filters (tags, status) OR logic applies"),
 
   fields: z.array(z.string()).optional().describe("Specific fields to return (reduces response size). TASK FIELDS: id, name, note, flagged, taskStatus, dueDate, deferDate, plannedDate, effectiveDueDate, effectiveDeferDate, effectivePlannedDate, completionDate, estimatedMinutes, tagNames, tags, projectName, projectId, parentId, childIds, hasChildren, sequential, completedByChildren, inInbox, modificationDate (or modified), creationDate (or added). PROJECT FIELDS: id, name, status, note, folderName, folderID, sequential, dueDate, deferDate, effectiveDueDate, effectiveDeferDate, completedByChildren, containsSingletonActions, taskCount, tasks, modificationDate, creationDate. FOLDER FIELDS: id, name, path, parentFolderID, status, projectCount, projects, subfolders. NOTE: Date fields use 'added' and 'modified' in OmniFocus API"),
@@ -130,6 +130,7 @@ function formatFilters(filters: any): string {
   if (filters.flagged !== undefined) parts.push(`flagged: ${filters.flagged}`);
   if (filters.dueWithin) parts.push(`due within ${filters.dueWithin} days`);
   if (filters.deferredUntil) parts.push(`deferred becoming available within ${filters.deferredUntil} days`);
+  if (filters.plannedWithin !== undefined) parts.push(`planned within ${filters.plannedWithin} days`);
   if (filters.hasNote !== undefined) parts.push(`has note: ${filters.hasNote}`);
   if (filters.inbox !== undefined) parts.push(`inbox: ${filters.inbox}`);
   if (filters.dueOn !== undefined) parts.push(`due on day +${filters.dueOn}`);
