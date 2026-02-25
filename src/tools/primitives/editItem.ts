@@ -25,6 +25,11 @@ export interface EditItemParams {
   addTags?: string[];           // Tags to add to the task
   removeTags?: string[];        // Tags to remove from the task
   replaceTags?: string[];       // Tags to replace all existing tags with
+  newProjectId?: string;        // Move task to a new project by ID
+  newProjectName?: string;      // Move task to a new project by name
+  newParentTaskId?: string;     // Move task under a new parent task by ID
+  newParentTaskName?: string;   // Move task under a new parent task by name
+  moveToInbox?: boolean;        // Move task to inbox
 
   // Project-specific fields
   newSequential?: boolean;      // Whether the project should be sequential
@@ -32,14 +37,84 @@ export interface EditItemParams {
   newProjectStatus?: ProjectStatus; // New status for projects
 }
 
+function hasTaskMoveTarget(params: EditItemParams): boolean {
+  return Boolean(
+    params.newProjectId ||
+    params.newProjectName ||
+    params.newParentTaskId ||
+    params.newParentTaskName ||
+    params.moveToInbox === true
+  );
+}
+
+/**
+ * Validate edit parameters before script generation.
+ */
+export function validateEditItemParams(params: EditItemParams): { valid: boolean; error?: string } {
+  if (!params.id && !params.name) {
+    return {
+      valid: false,
+      error: 'Either id or name must be provided'
+    };
+  }
+
+  const hasMoveTarget = hasTaskMoveTarget(params);
+
+  if (params.itemType !== 'task' && hasMoveTarget) {
+    return {
+      valid: false,
+      error: 'Task move parameters are only supported when itemType is "task".'
+    };
+  }
+
+  if (params.itemType === 'task') {
+    if (params.newProjectId && params.newProjectName) {
+      return {
+        valid: false,
+        error: 'Cannot specify both newProjectId and newProjectName. Please use only one.'
+      };
+    }
+
+    if (params.newParentTaskId && params.newParentTaskName) {
+      return {
+        valid: false,
+        error: 'Cannot specify both newParentTaskId and newParentTaskName. Please use only one.'
+      };
+    }
+
+    const destinationTypeCount = [
+      params.newProjectId || params.newProjectName ? 1 : 0,
+      params.newParentTaskId || params.newParentTaskName ? 1 : 0,
+      params.moveToInbox === true ? 1 : 0
+    ].reduce((sum, val) => sum + val, 0);
+
+    if (destinationTypeCount > 1) {
+      return {
+        valid: false,
+        error: 'Invalid destination selection: specify exactly one destination type (project, parent task, or inbox).'
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 /**
  * Generate pure AppleScript for item editing
  */
 export function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || ''; // Escape quotes and backslashes
+  const id = params.id?.replace(/['"\\]/g, '\\$&') || '';
   const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
   const itemType = params.itemType;
+  const listName = itemType === 'task' ? 'flattened tasks' : 'flattened projects';
+  const singularTypeLabel = itemType === 'task' ? 'task' : 'project';
+
+  const newProjectId = params.newProjectId?.replace(/['"\\]/g, '\\$&') || '';
+  const newProjectName = params.newProjectName?.replace(/['"\\]/g, '\\$&') || '';
+  const newParentTaskId = params.newParentTaskId?.replace(/['"\\]/g, '\\$&') || '';
+  const newParentTaskName = params.newParentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+
   const datePreambleParts: string[] = [];
 
   if (params.newDueDate !== undefined && params.newDueDate !== '') {
@@ -68,7 +143,6 @@ ${datePreamble}
         set foundItem to missing value
 `;
 
-  // Add ID search if provided
   if (id) {
     script += `
         -- Try to find by ID first
@@ -78,21 +152,18 @@ ${datePreamble}
 `;
   }
 
-  // Add name search if provided (and no ID or as fallback)
-  if (!id && name) {
+  if (name) {
     script += `
-        -- Find by name
-        try
-          set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where name = "${name}"
-        end try
-`;
-  } else if (id && name) {
-    script += `
-        -- If ID search failed, try to find by name as fallback
+        -- Resolve by name with duplicate protection
         if foundItem is missing value then
-          try
-            set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where name = "${name}"
-          end try
+          set nameMatches to (${listName} where name = "${name}")
+          set nameMatchCount to count of nameMatches
+
+          if nameMatchCount = 1 then
+            set foundItem to item 1 of nameMatches
+          else if nameMatchCount > 1 then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous ${singularTypeLabel} name: ${name}. Multiple matches found; please use id.\\\"}"
+          end if
         end if
 `;
   }
@@ -105,6 +176,103 @@ ${datePreamble}
           set itemId to id of foundItem as string
           set changedProperties to {}
 `;
+
+  if (itemType === 'task' && hasTaskMoveTarget(params)) {
+    if (params.moveToInbox === true) {
+      script += `
+          -- Move task to inbox first (before property edits)
+          move foundItem to end of inbox tasks
+          set end of changedProperties to "moved (inbox)"
+`;
+    } else if (params.newProjectId || params.newProjectName) {
+      if (params.newProjectId) {
+        script += `
+          -- Resolve destination project by ID
+          set destinationProject to missing value
+          try
+            set destinationProject to first flattened project where id = "${newProjectId}"
+          end try
+
+          if destinationProject is missing value then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with ID: ${newProjectId}\\\"}"
+          end if
+
+          -- Move task to destination project first (before property edits)
+          move foundItem to end of tasks of destinationProject
+          set end of changedProperties to "moved (project)"
+`;
+      } else {
+        script += `
+          -- Resolve destination project by name with duplicate protection
+          set destinationProjects to (flattened projects where name = "${newProjectName}")
+          set destinationProjectCount to count of destinationProjects
+
+          if destinationProjectCount = 0 then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with name: ${newProjectName}\\\"}"
+          else if destinationProjectCount > 1 then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination project name: ${newProjectName}. Multiple matches found; please use project id.\\\"}"
+          end if
+
+          set destinationProject to item 1 of destinationProjects
+
+          -- Move task to destination project first (before property edits)
+          move foundItem to end of tasks of destinationProject
+          set end of changedProperties to "moved (project)"
+`;
+      }
+    } else if (params.newParentTaskId || params.newParentTaskName) {
+      if (params.newParentTaskId) {
+        script += `
+          -- Resolve destination parent task by ID
+          set destinationParentTask to missing value
+          try
+            set destinationParentTask to first flattened task where id = "${newParentTaskId}"
+          end try
+
+          if destinationParentTask is missing value then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with ID: ${newParentTaskId}\\\"}"
+          end if
+`;
+      } else {
+        script += `
+          -- Resolve destination parent task by name with duplicate protection
+          set destinationParentTasks to (flattened tasks where name = "${newParentTaskName}")
+          set destinationParentTaskCount to count of destinationParentTasks
+
+          if destinationParentTaskCount = 0 then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with name: ${newParentTaskName}\\\"}"
+          else if destinationParentTaskCount > 1 then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination parent task name: ${newParentTaskName}. Multiple matches found; please use parent task id.\\\"}"
+          end if
+
+          set destinationParentTask to item 1 of destinationParentTasks
+`;
+      }
+
+      script += `
+          -- Prevent cycles: destination parent cannot be this task or any descendant of this task
+          set cursorTask to destinationParentTask
+          repeat while cursorTask is not missing value
+            if (id of cursorTask as string) is itemId then
+              return "{\\\"success\\\":false,\\\"error\\\":\\\"Invalid move target: cannot move a task into itself or its descendants.\\\"}"
+            end if
+
+            set nextCursorTask to missing value
+            try
+              set cursorContainer to container of cursorTask
+              if class of cursorContainer is task then
+                set nextCursorTask to cursorContainer
+              end if
+            end try
+            set cursorTask to nextCursorTask
+          end repeat
+
+          -- Move task under destination parent first (before property edits)
+          move foundItem to end of tasks of destinationParentTask
+          set end of changedProperties to "moved (parent task)"
+`;
+    }
+  }
 
   // Common property updates for both tasks and projects
   if (params.newName !== undefined) {
@@ -124,7 +292,7 @@ ${datePreamble}
   }
 
   if (params.newDueDate !== undefined) {
-    if (params.newDueDate === "") {
+    if (params.newDueDate === '') {
       script += `
           -- Clear due date
           set due date of foundItem to missing value
@@ -140,7 +308,7 @@ ${datePreamble}
   }
 
   if (params.newDeferDate !== undefined) {
-    if (params.newDeferDate === "") {
+    if (params.newDeferDate === '') {
       script += `
           -- Clear defer date
           set defer date of foundItem to missing value
@@ -156,7 +324,7 @@ ${datePreamble}
   }
 
   if (params.newPlannedDate !== undefined) {
-    if (params.newPlannedDate === "") {
+    if (params.newPlannedDate === '') {
       script += `
           -- Clear planned date
           set planned date of foundItem to missing value
@@ -215,17 +383,17 @@ ${datePreamble}
 
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
       script += `
           -- Replace all tags
           set tagNames to {${tagsList}}
           set existingTags to tags of foundItem
-          
+
           -- First clear all existing tags
           repeat with existingTag in existingTags
             remove existingTag from tags of foundItem
           end repeat
-          
+
           -- Then add new tags
           repeat with tagName in tagNames
             set tagObj to missing value
@@ -242,7 +410,7 @@ ${datePreamble}
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.addTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
         script += `
           -- Add tags
           set tagNames to {${tagsList}}
@@ -262,7 +430,7 @@ ${datePreamble}
 
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(", ");
+        const tagsList = params.removeTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
         script += `
           -- Remove tags
           set tagNames to {${tagsList}}
@@ -311,12 +479,12 @@ ${datePreamble}
           try
             set destFolder to first flattened folder where name = "${folderName}"
           end try
-          
+
           if destFolder is missing value then
             -- Create the folder if it doesn't exist
             set destFolder to make new folder with properties {name:"${folderName}"}
           end if
-          
+
           -- Move project to the folder
           move foundItem to destFolder
           set end of changedProperties to "folder"
@@ -333,7 +501,7 @@ ${datePreamble}
               set changedPropsText to changedPropsText & ", "
             end if
           end repeat
-          
+
           -- Return success with details
           return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\",\\\"changedProperties\\\":\\"" & changedPropsText & "\\"}"
         else
@@ -361,20 +529,28 @@ export async function editItem(params: EditItemParams): Promise<{
   error?: string
 }> {
   try {
+    const validation = validateEditItemParams(params);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: validation.error
+      };
+    }
+
     // Generate AppleScript
     const script = generateAppleScript(params);
 
-    console.error("Executing AppleScript for editing...");
+    console.error('Executing AppleScript for editing...');
     console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
 
     // Log a preview of the script for debugging (first few lines)
     const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-    console.error("AppleScript preview:\n", scriptPreview);
+    console.error('AppleScript preview:\n', scriptPreview);
 
     // Execute AppleScript using temp file (avoids shell escaping issues)
     const stdout = await executeAppleScript(script);
 
-    console.error("AppleScript stdout:", stdout);
+    console.error('AppleScript stdout:', stdout);
 
     // Parse the result
     try {
@@ -389,23 +565,23 @@ export async function editItem(params: EditItemParams): Promise<{
         error: result.error
       };
     } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
+      console.error('Error parsing AppleScript result:', parseError);
       return {
         success: false,
         error: `Failed to parse result: ${stdout}`
       };
     }
   } catch (error: any) {
-    console.error("Error in editItem execution:", error);
+    console.error('Error in editItem execution:', error);
 
     // Include more detailed error information
     if (error.message && error.message.includes('syntax error')) {
-      console.error("This appears to be an AppleScript syntax error. Review the script generation logic.");
+      console.error('This appears to be an AppleScript syntax error. Review the script generation logic.');
     }
 
     return {
       success: false,
-      error: error?.message || "Unknown error in editItem"
+      error: error?.message || 'Unknown error in editItem'
     };
   }
-} 
+}

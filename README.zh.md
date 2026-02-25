@@ -217,24 +217,27 @@ get_custom_perspective_tasks {
 2. **add_omnifocus_task** - 创建任务（增强子任务支持）
 3. **add_project** - 创建项目
 4. **remove_item** - 删除任务或项目
-5. **edit_item** - 编辑任务或项目
-6. **batch_add_items** - 批量添加（增强子任务支持）
-7. **batch_remove_items** - 批量删除
-8. **get_task_by_id** - 查询任务信息
+5. **edit_item** - 编辑任务或项目（现已支持任务转移：项目/父任务/Inbox）
+6. **move_task** - 将已有任务转移到项目/父任务/Inbox
+7. **batch_add_items** - 批量添加（增强子任务支持）
+8. **batch_remove_items** - 批量删除
+9. **get_task_by_id** - 查询任务信息
 
 ### 🔍 内置透视工具
-9. **get_inbox_tasks** - 收件箱透视
-10. **get_flagged_tasks** - 已标记透视
-11. **get_forecast_tasks** - 预测透视（包含截止/推迟/计划日期任务数据）
-12. **get_tasks_by_tag** - 基于标签的过滤
-13. **filter_tasks** - 无限组合的终极过滤
+10. **get_inbox_tasks** - 收件箱透视
+11. **get_flagged_tasks** - 已标记透视
+12. **get_forecast_tasks** - 预测透视（包含截止/推迟/计划日期任务数据）
+13. **get_tasks_by_tag** - 基于标签的过滤
+14. **filter_tasks** - 无限组合的终极过滤
 
 ### 🌟 自定义透视工具（新功能）
-14. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
-15. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
+15. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
+16. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
 
 ### 📊 分析与跟踪
-16. **get_today_completed_tasks** - 查看今日完成的任务
+17. **get_today_completed_tasks** - 查看今日完成的任务
+
+批量转移功能后续计划（Roadmap）：[docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md)
 
 ## 🚀 快速开始示例
 
@@ -265,6 +268,27 @@ add_omnifocus_task {
   "parentTaskName": "启动产品活动",
   "estimatedMinutes": 240,
   "flagged": true
+}
+```
+
+### 任务转移操作
+```bash
+# 转移到项目
+move_task {
+  "id": "task-id-123",
+  "targetProjectName": "规划"
+}
+
+# 转移到父任务下
+move_task {
+  "id": "task-id-123",
+  "targetParentTaskId": "parent-task-id-456"
+}
+
+# 转移回 Inbox
+move_task {
+  "id": "task-id-123",
+  "targetInbox": true
 }
 ```
 

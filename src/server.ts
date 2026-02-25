@@ -9,6 +9,7 @@ import * as addOmniFocusTaskTool from './tools/definitions/addOmniFocusTask.js';
 import * as addProjectTool from './tools/definitions/addProject.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as editItemTool from './tools/definitions/editItem.js';
+import * as moveTaskTool from './tools/definitions/moveTask.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as getTaskByIdTool from './tools/definitions/getTaskById.js';
@@ -64,6 +65,13 @@ server.tool(
   "Edit a task or project in OmniFocus",
   editItemTool.schema.shape,
   editItemTool.handler
+);
+
+server.tool(
+  "move_task",
+  "Move an existing task to a project, parent task, or inbox",
+  moveTaskTool.schema.shape,
+  moveTaskTool.handler
 );
 
 server.tool(

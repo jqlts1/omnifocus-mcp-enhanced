@@ -17,6 +17,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 
 ## 🆕 Latest Release
 
+- **v1.6.8** - Added stable task move support via `move_task` and `edit_item` (`newProjectId/newProjectName/newParentTaskId/newParentTaskName/moveToInbox`) with duplicate-name protection and cycle-prevention checks.
 - **v1.6.6** - Added full Planned Date support (create/edit/read/filter/sort/export), including `plannedDate`/`newPlannedDate` and updated task displays.
 
 ## ✨ Key Features
@@ -221,24 +222,27 @@ Efficiently manage multiple tasks:
 2. **add_omnifocus_task** - Create tasks (enhanced with subtask support)
 3. **add_project** - Create projects
 4. **remove_item** - Delete tasks or projects
-5. **edit_item** - Edit tasks or projects
-6. **batch_add_items** - Bulk add (enhanced with subtask support)
-7. **batch_remove_items** - Bulk remove
-8. **get_task_by_id** - Query task information
+5. **edit_item** - Edit tasks or projects (now supports task moves: project/parent/inbox)
+6. **move_task** - Move an existing task to project/parent task/inbox
+7. **batch_add_items** - Bulk add (enhanced with subtask support)
+8. **batch_remove_items** - Bulk remove
+9. **get_task_by_id** - Query task information
 
 ### 🔍 Built-in Perspective Tools
-9. **get_inbox_tasks** - Inbox perspective
-10. **get_flagged_tasks** - Flagged perspective
-11. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
-12. **get_tasks_by_tag** - Tag-based filtering
-13. **filter_tasks** - Ultimate filtering with unlimited combinations
+10. **get_inbox_tasks** - Inbox perspective
+11. **get_flagged_tasks** - Flagged perspective
+12. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
+13. **get_tasks_by_tag** - Tag-based filtering
+14. **filter_tasks** - Ultimate filtering with unlimited combinations
 
 ### 🌟 Custom Perspective Tools (NEW)
-14. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
-15. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
+15. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
+16. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
 
 ### 📊 Analytics & Tracking
-16. **get_today_completed_tasks** - View today's completed tasks
+17. **get_today_completed_tasks** - View today's completed tasks
+
+Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
 
 ## 🚀 Quick Start Examples
 
@@ -269,6 +273,43 @@ add_omnifocus_task {
   "parentTaskName": "Launch Product Campaign",
   "estimatedMinutes": 240,
   "flagged": true
+}
+```
+
+### Task Move Operations
+```bash
+# Move task to a project
+move_task {
+  "id": "task-id-123",
+  "targetProjectName": "Planning"
+}
+
+# Move task under another task
+move_task {
+  "id": "task-id-123",
+  "targetParentTaskId": "parent-task-id-456"
+}
+
+# Move task back to inbox
+move_task {
+  "id": "task-id-123",
+  "targetInbox": true
+}
+```
+
+Task move safety rules:
+- Name lookups fail fast on duplicates and ask you to use IDs.
+- Destination must be exactly one type: project OR parent task OR inbox.
+- Moving a task into itself/its descendants is blocked to prevent cycles.
+
+You can also move with `edit_item` and combine move + field updates:
+```bash
+edit_item {
+  "itemType": "task",
+  "id": "task-id-123",
+  "newProjectName": "Planning",
+  "newName": "Review tmux workflow",
+  "newFlagged": true
 }
 ```
 

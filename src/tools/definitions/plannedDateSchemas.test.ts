@@ -54,6 +54,18 @@ test('edit_item schema preserves newPlannedDate', () => {
   assert.equal(parsed.newPlannedDate, '2026-02-14');
 });
 
+test('edit_item schema supports task move destination fields', () => {
+  const parsed = editItemSchema.parse({
+    itemType: 'task',
+    id: 'abc',
+    newProjectId: 'project-1',
+    moveToInbox: false
+  }) as any;
+
+  assert.equal(parsed.newProjectId, 'project-1');
+  assert.equal(parsed.moveToInbox, false);
+});
+
 test('filter_tasks schema supports planned date filters and sorting', () => {
   const parsed = filterTasksSchema.parse({
     plannedToday: true,
