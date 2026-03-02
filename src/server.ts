@@ -62,7 +62,7 @@ server.tool(
 
 server.tool(
   "edit_item",
-  "Edit a task or project in OmniFocus",
+  "Edit a task or project in OmniFocus. Supports: rename, set/clear dates (due, defer, planned), flag/unflag, set status (complete, drop, reopen), add/remove/replace tags, set estimated minutes, move to different project/parent task/inbox.",
   editItemTool.schema.shape,
   editItemTool.handler
 );

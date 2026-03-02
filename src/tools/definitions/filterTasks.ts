@@ -29,8 +29,8 @@ export const schema = z.object({
   exactTagMatch: z.boolean().optional().describe("Set to true for exact tag name match, false for partial (default: false)"),
 
   // 📅 截止日期过滤
-  dueBefore: z.string().optional().describe("Show tasks due before this date (ISO format: YYYY-MM-DD)"),
-  dueAfter: z.string().optional().describe("Show tasks due after this date (ISO format: YYYY-MM-DD)"),
+  dueBefore: z.string().optional().describe("Show tasks due before this date in full ISO 8601 format with timezone (e.g., 2026-03-05T09:00:00-06:00)"),
+  dueAfter: z.string().optional().describe("Show tasks due after this date in full ISO 8601 format with timezone (e.g., 2026-03-05T09:00:00-06:00)"),
   dueToday: z.boolean().optional().describe("Show tasks due today"),
   dueThisWeek: z.boolean().optional().describe("Show tasks due this week"),
   dueThisMonth: z.boolean().optional().describe("Show tasks due this month"),

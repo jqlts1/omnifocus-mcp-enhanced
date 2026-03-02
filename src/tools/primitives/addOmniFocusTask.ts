@@ -46,7 +46,7 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
   const note = params.note
-    ? params.note.replace(/['"\\]/g, '\\$&').replace(/\n/g, '" & return & "')
+    ? params.note.replace(/['"\\]/g, '\\$&').replace(/\r\n|\r|\n/g, '" & return & "')
     : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
   const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
@@ -59,6 +59,11 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
   const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
   const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  // JSON-safe versions: additional escaping so " and \ survive AppleScript interpretation into valid JSON
+  const nameJson = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const projectNameJson = projectName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const parentTaskIdJson = parentTaskId.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const parentTaskNameJson = parentTaskName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const tagAssignmentScript = buildTagAssignmentScript(tags, 'newTask');
 
   // Construct AppleScript with error handling
@@ -74,7 +79,7 @@ ${datePreamble}
             set theParentTask to first flattened task where id = "${parentTaskId}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theParentTask
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with ID: ${parentTaskId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with ID: ${parentTaskIdJson}\\\"}"
           end try
         else if "${parentTaskName}" is not "" then
           -- Create subtask using parent task name
@@ -82,7 +87,7 @@ ${datePreamble}
             set theParentTask to first flattened task where name = "${parentTaskName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theParentTask
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with name: ${parentTaskName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with name: ${parentTaskNameJson}\\\"}"
           end try
         else if "${projectName}" is not "" then
           -- Use specified project
@@ -90,7 +95,7 @@ ${datePreamble}
             set theProject to first flattened project where name = "${projectName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectNameJson}\\\"}"
           end try
         else
           -- Use inbox of the document
@@ -112,7 +117,7 @@ ${datePreamble}
         ${tagAssignmentScript}
         
         -- Return success with task ID
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
+        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${nameJson}\\"}"
       end tell
     end tell
   on error errorMessage
