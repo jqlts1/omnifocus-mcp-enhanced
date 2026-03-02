@@ -3,7 +3,7 @@ import { getTasksByTag } from '../primitives/getTasksByTag.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  tagName: z.string().describe("Name of the tag to filter tasks by"),
+  tagName: z.string().max(200).describe("Name of the tag to filter tasks by"),
   hideCompleted: z.boolean().optional().describe("Set to false to show completed tasks with this tag (default: true)"),
   exactMatch: z.boolean().optional().describe("Set to true for exact tag name match, false for partial (default: false)")
 });

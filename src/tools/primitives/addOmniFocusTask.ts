@@ -1,5 +1,6 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
+import { sanitizeForAppleScript } from '../../utils/sanitize.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -22,7 +23,7 @@ export function buildTagAssignmentScript(tags: string[], targetVar: string): str
   }
 
   return tags.map(tag => {
-    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+    const sanitizedTag = sanitizeForAppleScript(tag);
     return `
           try
             set theTag to missing value
@@ -44,8 +45,8 @@ export function buildTagAssignmentScript(tags: string[], targetVar: string): str
  */
 export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = sanitizeForAppleScript(params.name);
+  const note = params.note ? sanitizeForAppleScript(params.note) : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
   const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
   const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
@@ -54,9 +55,9 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName ? sanitizeForAppleScript(params.projectName) : '';
+  const parentTaskId = params.parentTaskId ? sanitizeForAppleScript(params.parentTaskId) : '';
+  const parentTaskName = params.parentTaskName ? sanitizeForAppleScript(params.parentTaskName) : '';
   const tagAssignmentScript = buildTagAssignmentScript(tags, 'newTask');
 
   // Construct AppleScript with error handling
@@ -161,8 +162,10 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     // Generate AppleScript
     const script = generateAppleScript(params);
 
-    console.error("Generated AppleScript:");
-    console.error(script);
+    if (process.env.DEBUG) {
+      console.error("Generated AppleScript:");
+      console.error(script);
+    }
     console.error("Executing AppleScript...");
 
     // Execute AppleScript using temp file (avoids shell escaping issues)

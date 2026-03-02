@@ -6,28 +6,28 @@ import { executeJXA } from './scriptExecution.js';
 export interface PerspectiveRule {
   // 可用性规则
   actionAvailability?: 'firstAvailable' | 'available' | 'remaining' | 'completed' | 'dropped';
-  
+
   // 状态规则
   actionStatus?: 'due' | 'flagged';
-  
+
   // 标签规则
   actionHasAnyOfTags?: string[];
   actionHasAllOfTags?: string[];
   actionHasTagWithStatus?: 'remaining' | 'onHold' | 'dropped' | 'active' | 'stalled';
-  
+
   // 日期规则
   actionHasDueDate?: boolean;
   actionHasDeferDate?: boolean;
   actionDateIsToday?: boolean;
   actionDateIsYesterday?: boolean;
   actionDateIsTomorrow?: boolean;
-  
+
   // 项目规则
   actionIsProject?: boolean;
   actionIsGroup?: boolean;
   actionHasNoProject?: boolean;
   actionIsInSingleActionsList?: boolean;
-  
+
   // 其他规则
   actionRepeats?: boolean;
   actionHasDuration?: boolean;
@@ -67,6 +67,8 @@ export interface TaskItem {
   };
 }
 
+const DEBUG = !!process.env.DEBUG;
+
 /**
  * OmniFocus 透视引擎
  * 使用 OmniFocus 4.2+ 新 API 实现真正的透视访问
@@ -74,7 +76,7 @@ export interface TaskItem {
 export class PerspectiveEngine {
   private tagIdToNameCache: Map<string, string> = new Map();
   private tagNameToIdCache: Map<string, string> = new Map();
-  
+
   /**
    * 获取透视筛选后的任务
    */
@@ -93,7 +95,7 @@ export class PerspectiveEngine {
   }> {
     try {
       // 直接从OmniFocus透视获取筛选后的任务
-      console.log(`[DEBUG] 直接从OmniFocus透视 "${perspectiveName}" 获取任务...`);
+      if (DEBUG) console.log(`[DEBUG] 直接从OmniFocus透视 "${perspectiveName}" 获取任务...`);
       const filteredTasks = await this.getTasksFromPerspective(perspectiveName);
 
       // 应用额外选项筛选
@@ -101,7 +103,7 @@ export class PerspectiveEngine {
       if (options.hideCompleted !== false) {
         finalTasks = finalTasks.filter(task => !task.completed && !task.dropped);
       }
-      
+
       if (options.limit && options.limit > 0) {
         finalTasks = finalTasks.slice(0, options.limit);
       }
@@ -136,23 +138,23 @@ export class PerspectiveEngine {
       const script = `
         (function() {
           var app = Application('OmniFocus');
-          
+
           try {
             var version = app.version();
             var supportsNewAPI = false;
-            
+
             // 简单检查 - 尝试访问文档
             var doc = app.defaultDocument;
             if (doc) {
               // 基础API可用
               supportsNewAPI = true;
             }
-            
+
             return JSON.stringify({
               version: version,
               supportsNewAPI: supportsNewAPI
             });
-            
+
           } catch (error) {
             return JSON.stringify({
               version: "unknown",
@@ -181,31 +183,36 @@ export class PerspectiveEngine {
 
   /**
    * 获取透视配置
+   * perspectiveName is passed via JSON variable to prevent JXA injection.
    */
   private async getPerspectiveConfig(perspectiveName: string): Promise<PerspectiveConfig | null> {
+    const safeArgs = JSON.stringify({ perspectiveName });
     const script = `
       (function() {
+        var __args = JSON.parse(${JSON.stringify(safeArgs)});
+        var __perspectiveName = __args.perspectiveName;
+
         var app = Application('OmniFocus');
         var doc = app.defaultDocument;
-        
+
         try {
           // 获取所有透视
           var perspectives = doc.flattenedPerspectives;
           var targetPerspective = null;
-          
+
           // 查找指定名称的透视
           for (var i = 0; i < perspectives.length; i++) {
             var perspective = perspectives[i];
-            if (perspective.name() === "${perspectiveName}") {
+            if (perspective.name() === __perspectiveName) {
               targetPerspective = perspective;
               break;
             }
           }
-          
+
           if (!targetPerspective) {
             return JSON.stringify({ error: "透视未找到" });
           }
-          
+
           // 尝试获取透视配置（新API）
           var result = {
             name: targetPerspective.name(),
@@ -213,7 +220,7 @@ export class PerspectiveEngine {
             archivedFilterRules: [],
             archivedTopLevelFilterAggregation: 'all'
           };
-          
+
           // 检查是否支持新API
           try {
             if (targetPerspective.archivedFilterRules) {
@@ -227,9 +234,9 @@ export class PerspectiveEngine {
             result.archivedFilterRules = [{ "actionAvailability": "available" }];
             result.archivedTopLevelFilterAggregation = 'all';
           }
-          
+
           return JSON.stringify(result);
-          
+
         } catch (error) {
           return JSON.stringify({ error: "获取透视配置失败: " + error.message });
         }
@@ -239,7 +246,7 @@ export class PerspectiveEngine {
     try {
       const result = await executeJXA(script);
       let parsed;
-      
+
       if (Array.isArray(result) && result.length > 0) {
         parsed = typeof result[0] === 'string' ? JSON.parse(result[0]) : result[0];
       } else if (typeof result === 'string') {
@@ -247,12 +254,12 @@ export class PerspectiveEngine {
       } else {
         return null;
       }
-      
+
       if (parsed.error) {
         console.error('获取透视配置失败:', parsed.error);
         return null;
       }
-      
+
       return parsed;
     } catch (error) {
       console.error('获取透视配置执行失败:', error);
@@ -262,75 +269,56 @@ export class PerspectiveEngine {
 
   /**
    * 直接从OmniFocus透视获取任务
+   * perspectiveName is passed via JSON variable to prevent JXA injection.
    */
   private async getTasksFromPerspective(perspectiveName: string): Promise<TaskItem[]> {
+    const safeArgs = JSON.stringify({ perspectiveName });
     const script = `
       (function() {
+        var __args = JSON.parse(${JSON.stringify(safeArgs)});
+        var __perspectiveName = __args.perspectiveName;
+
         var app = Application('OmniFocus');
         var doc = app.defaultDocument;
-        
+
         try {
           // 尝试通过透视名称直接获取任务
           // 注意：这里我们模拟一个真实的透视查询
           var tasks = doc.flattenedTasks;
           var result = [];
-          
-          console.log("透视名称:", "${perspectiveName}");
-          console.log("总任务数:", tasks.length);
-          
-          // 对于"今日复盘"，我们应该获取已完成的任务
-          var maxTasks = Math.min(50, tasks.length);
-          var foundCount = 0;
-          
-          for (var i = 0; i < maxTasks && foundCount < 15; i++) {
+
+          for (var i = 0; i < tasks.length; i++) {
             var task = tasks[i];
-            
-            // 简单的筛选逻辑：如果是"今日复盘"，获取已完成的任务
-            var shouldInclude = false;
-            if ("${perspectiveName}" === "今日复盘") {
-              shouldInclude = task.completed();
-            } else {
-              // 其他透视默认获取未完成任务
-              shouldInclude = !task.completed() && !task.dropped();
-            }
-            
-            if (shouldInclude) {
-              var taskInfo = {
-                id: task.id(),
-                name: task.name(),
-                note: "",
-                completed: task.completed(),
-                dropped: task.dropped(),
-                flagged: task.flagged(),
-                estimatedMinutes: 0,
-                tags: [],
-                containingProjectInfo: null,
-                parentTaskInfo: null
-              };
-              
-              // 尝试获取项目信息
-              try {
-                if (task.containingProject && task.containingProject()) {
-                  var project = task.containingProject();
-                  taskInfo.containingProjectInfo = {
-                    name: project.name(),
-                    id: project.id(),
-                    status: project.status ? project.status() : "active"
-                  };
-                }
-              } catch (projError) {
-                console.log("获取项目信息失败:", projError.message);
+
+            var taskInfo = {
+              id: task.id(),
+              name: task.name(),
+              note: "",
+              completed: task.completed(),
+              dropped: task.dropped(),
+              flagged: task.flagged(),
+              estimatedMinutes: 0,
+              tags: [],
+              containingProjectInfo: null,
+              parentTaskInfo: null
+            };
+
+            try {
+              if (task.containingProject && task.containingProject()) {
+                var project = task.containingProject();
+                taskInfo.containingProjectInfo = {
+                  name: project.name(),
+                  id: project.id(),
+                  status: project.status ? project.status() : "active"
+                };
               }
-              
-              result.push(taskInfo);
-              foundCount++;
-              console.log("添加任务:", foundCount, task.name());
-            }
+            } catch (projError) {}
+
+            result.push(taskInfo);
           }
-          
-          console.log("筛选结果:", foundCount);
+
           return JSON.stringify(result);
-          
+
         } catch (error) {
           console.log("透视查询失败:", error.message);
           return JSON.stringify({ error: "透视查询失败: " + error.message });
@@ -339,31 +327,33 @@ export class PerspectiveEngine {
     `;
 
     try {
-      console.log(`[DEBUG] 从透视 "${perspectiveName}" 获取任务...`);
+      if (DEBUG) console.log(`[DEBUG] 从透视 "${perspectiveName}" 获取任务...`);
       const result = await executeJXA(script);
-      console.log('[DEBUG] 透视查询结果类型:', typeof result);
-      console.log('[DEBUG] 透视查询结果:', JSON.stringify(result).substring(0, 200));
-      
+      if (DEBUG) {
+        console.log('[DEBUG] 透视查询结果类型:', typeof result);
+        console.log('[DEBUG] 透视查询结果:', JSON.stringify(result).substring(0, 200));
+      }
+
       // 简化处理：executeJXA 应该直接返回任务数组
       let tasks = result;
-      
+
       // 检查是否有错误
       if (tasks && typeof tasks === 'object' && !Array.isArray(tasks) && (tasks as any).error) {
         console.error('透视查询错误:', (tasks as any).error);
         return [];
       }
-      
+
       // 确保是数组
       if (!Array.isArray(tasks)) {
-        console.log('[DEBUG] 透视查询返回结果不是数组，类型:', typeof tasks);
+        if (DEBUG) console.log('[DEBUG] 透视查询返回结果不是数组，类型:', typeof tasks);
         return [];
       }
-      
-      console.log(`[DEBUG] 从透视成功获取 ${tasks.length} 个任务`);
-      
+
+      if (DEBUG) console.log(`[DEBUG] 从透视成功获取 ${tasks.length} 个任务`);
+
       // 构建标签缓存
       this.buildTagCache(tasks);
-      
+
       // 转换为标准格式
       return tasks.map((task: any) => this.normalizeTask(task));
     } catch (error) {
@@ -380,20 +370,20 @@ export class PerspectiveEngine {
       (function() {
         var app = Application('OmniFocus');
         var doc = app.defaultDocument;
-        
+
         try {
           var tasks = doc.flattenedTasks;
           var result = [];
-          
+
           // 限制获取前50个任务以避免性能问题
           var maxTasks = Math.min(50, tasks.length);
           console.log("找到任务数量:", tasks.length);
           console.log("准备获取任务数量:", maxTasks);
-          
+
           for (var i = 0; i < maxTasks; i++) {
             var task = tasks[i];
             console.log("处理任务:", i, task.name());
-            
+
             // 简化的任务信息
             var taskInfo = {
               id: task.id(),
@@ -407,13 +397,13 @@ export class PerspectiveEngine {
               containingProjectInfo: null,
               parentTaskInfo: null
             };
-            
+
             result.push(taskInfo);
           }
-          
+
           console.log("返回结果:", result.length);
           return JSON.stringify(result);
-          
+
         } catch (error) {
           console.log("脚本错误:", error.message);
           return JSON.stringify({ error: "获取任务失败: " + error.message });
@@ -422,31 +412,33 @@ export class PerspectiveEngine {
     `;
 
     try {
-      console.log('[DEBUG] 执行JXA脚本...');
+      if (DEBUG) console.log('[DEBUG] 执行JXA脚本...');
       const result = await executeJXA(script);
-      console.log('[DEBUG] JXA脚本执行结果类型:', typeof result);
-      console.log('[DEBUG] JXA脚本执行结果:', JSON.stringify(result).substring(0, 200));
-      
+      if (DEBUG) {
+        console.log('[DEBUG] JXA脚本执行结果类型:', typeof result);
+        console.log('[DEBUG] JXA脚本执行结果:', JSON.stringify(result).substring(0, 200));
+      }
+
       // 简化处理：executeJXA 应该直接返回任务数组
       let tasks = result;
-      
+
       // 检查是否有错误
       if (tasks && typeof tasks === 'object' && !Array.isArray(tasks) && (tasks as any).error) {
         console.error('脚本执行错误:', (tasks as any).error);
         return [];
       }
-      
+
       // 确保是数组
       if (!Array.isArray(tasks)) {
-        console.log('[DEBUG] 返回结果不是数组，类型:', typeof tasks);
+        if (DEBUG) console.log('[DEBUG] 返回结果不是数组，类型:', typeof tasks);
         return [];
       }
-      
-      console.log(`[DEBUG] 成功解析 ${tasks.length} 个任务`);
-      
+
+      if (DEBUG) console.log(`[DEBUG] 成功解析 ${tasks.length} 个任务`);
+
       // 构建标签缓存
       this.buildTagCache(tasks);
-      
+
       // 转换为标准格式
       return tasks.map((task: any) => this.normalizeTask(task));
     } catch (error) {
@@ -469,7 +461,7 @@ export class PerspectiveEngine {
 
     return tasks.filter(task => {
       const ruleResults = rules.map(rule => this.evaluateRule(task, rule));
-      
+
       switch (aggregation) {
         case 'all':
           return ruleResults.every(result => result);
@@ -554,7 +546,7 @@ export class PerspectiveEngine {
     if (!task.deferDate) {
       return true;
     }
-    
+
     const now = new Date();
     const deferDate = new Date(task.deferDate);
     return now >= deferDate;
@@ -581,7 +573,7 @@ export class PerspectiveEngine {
     if (!tagIds || tagIds.length === 0) {
       return true;
     }
-    
+
     const taskTagIds = task.tags.map(tag => {
       if (typeof tag === 'string') {
         return tag;
@@ -600,7 +592,7 @@ export class PerspectiveEngine {
     if (!tagIds || tagIds.length === 0) {
       return true;
     }
-    
+
     const taskTagIds = task.tags.map(tag => {
       if (typeof tag === 'string') {
         return tag;
@@ -618,10 +610,10 @@ export class PerspectiveEngine {
   private checkDateIsToday(task: TaskItem): boolean {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     // 检查 due date
     if (task.dueDate) {
       const dueDate = new Date(task.dueDate);
@@ -629,7 +621,7 @@ export class PerspectiveEngine {
         return true;
       }
     }
-    
+
     // 检查 defer date
     if (task.deferDate) {
       const deferDate = new Date(task.deferDate);
@@ -637,7 +629,7 @@ export class PerspectiveEngine {
         return true;
       }
     }
-    
+
     return false;
   }
 
