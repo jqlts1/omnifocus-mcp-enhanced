@@ -15,6 +15,13 @@
 
 Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native custom perspective access**, hierarchical task display, AI-optimized tool selection, and comprehensive task management. Perfect integration with Claude AI for intelligent workflows.
 
+## Fork Changes
+
+This is a personal fork of [jqlts1/omnifocus-mcp-enhanced](https://github.com/jqlts1/omnifocus-mcp-enhanced) with the following fixes:
+
+- **Fix task completion for inbox and repeating tasks** — Upstream uses `set completed of foundItem to true` in AppleScript, which fails on inbox tasks and tasks in repeating projects. Changed to `mark complete` / `mark incomplete` commands which work for all task types. (Relates to [#14](https://github.com/jqlts1/omnifocus-mcp-enhanced/issues/14))
+- **Display task IDs in output** — `filter_tasks` and `get_inbox_tasks` now include the task ID in brackets after the task name (e.g., `Task Name [abc123]`), making it possible to reference tasks by ID for edits and completions.
+
 ## 🆕 Latest Release
 
 - **v1.6.8** - Added stable task move support via `move_task` and `edit_item` (`newProjectId/newProjectName/newParentTaskId/newParentTaskName/moveToInbox`) with duplicate-name protection and cycle-prevention checks.
