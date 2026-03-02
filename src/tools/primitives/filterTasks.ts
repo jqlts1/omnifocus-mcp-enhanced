@@ -481,7 +481,8 @@ function formatTask(task: any): string {
   const flagSymbol = task.flagged ? '🚩 ' : '';
   const statusEmoji = getStatusEmoji(task.taskStatus);
 
-  output += `${statusEmoji} ${flagSymbol}${task.name}`;
+  const idStr = task.id ? ` [${task.id}]` : '';
+  output += `${statusEmoji} ${flagSymbol}${task.name}${idStr}`;
 
   // 日期信息
   const dateInfo: string[] = [];
