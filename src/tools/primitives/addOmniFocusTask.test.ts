@@ -11,6 +11,37 @@ test('buildTagAssignmentScript creates missing tags before assignment', () => {
   assert.match(script, /add theTag to tags of newTask/);
 });
 
+test('generateAppleScript JSON-escapes quotes in error return strings', () => {
+  const script = generateAppleScript({
+    name: 'Test Task',
+    projectName: 'My "Quoted" Project'
+  });
+
+  // The error string should use the JSON-safe variable (\\\" not just \")
+  // so that a " in the project name doesn't break JSON parsing
+  assert.match(script, /Project not found: My \\\\\\"Quoted\\\\\\" Project/);
+});
+
+test('generateAppleScript JSON-escapes quotes in success return string', () => {
+  const script = generateAppleScript({
+    name: 'My "Quoted" Task'
+  });
+
+  // The success return name should use JSON-safe escaping
+  assert.match(script, /name.*My \\\\\\"Quoted\\\\\\" Task/);
+});
+
+test('generateAppleScript handles carriage returns in notes', () => {
+  const script = generateAppleScript({
+    name: 'CR Test',
+    note: 'line1\r\nline2\rline3\nline4'
+  });
+
+  // All \r\n, \r, and \n should be converted to AppleScript return concatenation
+  assert.doesNotMatch(script, /line1\\r/);
+  assert.match(script, /line1" & return & "line2" & return & "line3" & return & "line4/);
+});
+
 test('generateAppleScript builds date variables before OmniFocus tell block', () => {
   const script = generateAppleScript({
     name: 'Task with dates',
