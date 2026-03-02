@@ -114,6 +114,13 @@ export function generateAppleScript(params: EditItemParams): string {
   const newProjectName = params.newProjectName?.replace(/['"\\]/g, '\\$&') || '';
   const newParentTaskId = params.newParentTaskId?.replace(/['"\\]/g, '\\$&') || '';
   const newParentTaskName = params.newParentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  // JSON-safe versions: additional escaping so " and \ survive AppleScript interpretation into valid JSON
+  const jsonEsc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const nameJson = jsonEsc(name);
+  const newProjectIdJson = jsonEsc(newProjectId);
+  const newProjectNameJson = jsonEsc(newProjectName);
+  const newParentTaskIdJson = jsonEsc(newParentTaskId);
+  const newParentTaskNameJson = jsonEsc(newParentTaskName);
 
   const datePreambleParts: string[] = [];
 
@@ -162,7 +169,7 @@ ${datePreamble}
           if nameMatchCount = 1 then
             set foundItem to item 1 of nameMatches
           else if nameMatchCount > 1 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous ${singularTypeLabel} name: ${name}. Multiple matches found; please use id.\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous ${singularTypeLabel} name: ${nameJson}. Multiple matches found; please use id.\\\"}"
           end if
         end if
 `;
@@ -194,7 +201,7 @@ ${datePreamble}
           end try
 
           if destinationProject is missing value then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with ID: ${newProjectId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with ID: ${newProjectIdJson}\\\"}"
           end if
 
           -- Move task to destination project first (before property edits)
@@ -208,9 +215,9 @@ ${datePreamble}
           set destinationProjectCount to count of destinationProjects
 
           if destinationProjectCount = 0 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with name: ${newProjectName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with name: ${newProjectNameJson}\\\"}"
           else if destinationProjectCount > 1 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination project name: ${newProjectName}. Multiple matches found; please use project id.\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination project name: ${newProjectNameJson}. Multiple matches found; please use project id.\\\"}"
           end if
 
           set destinationProject to item 1 of destinationProjects
@@ -230,7 +237,7 @@ ${datePreamble}
           end try
 
           if destinationParentTask is missing value then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with ID: ${newParentTaskId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with ID: ${newParentTaskIdJson}\\\"}"
           end if
 `;
       } else {
@@ -240,9 +247,9 @@ ${datePreamble}
           set destinationParentTaskCount to count of destinationParentTasks
 
           if destinationParentTaskCount = 0 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with name: ${newParentTaskName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with name: ${newParentTaskNameJson}\\\"}"
           else if destinationParentTaskCount > 1 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination parent task name: ${newParentTaskName}. Multiple matches found; please use parent task id.\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination parent task name: ${newParentTaskNameJson}. Multiple matches found; please use parent task id.\\\"}"
           end if
 
           set destinationParentTask to item 1 of destinationParentTasks
@@ -284,9 +291,12 @@ ${datePreamble}
   }
 
   if (params.newNote !== undefined) {
+    const escapedNote = params.newNote
+      .replace(/['"\\]/g, '\\$&')
+      .replace(/\r\n|\r|\n/g, '" & return & "');
     script += `
           -- Update note
-          set note of foundItem to "${params.newNote.replace(/['"\\]/g, '\\$&')}"
+          set note of foundItem to "${escapedNote}"
           set end of changedProperties to "note"
 `;
   }
@@ -362,7 +372,7 @@ ${datePreamble}
       if (params.newStatus === 'completed') {
         script += `
           -- Mark task as completed
-          set completed of foundItem to true
+          mark complete foundItem
           set end of changedProperties to "status (completed)"
 `;
       } else if (params.newStatus === 'dropped') {
@@ -374,8 +384,7 @@ ${datePreamble}
       } else if (params.newStatus === 'incomplete') {
         script += `
           -- Mark task as incomplete
-          set completed of foundItem to false
-          set dropped of foundItem to false
+          mark incomplete foundItem
           set end of changedProperties to "status (incomplete)"
 `;
       }

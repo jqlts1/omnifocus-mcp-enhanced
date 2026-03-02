@@ -21,7 +21,9 @@ export interface AddProjectParams {
 export function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
   const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const note = params.note
+    ? params.note.replace(/['"\\]/g, '\\$&').replace(/\r\n|\r|\n/g, '" & return & "')
+    : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
   const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
   const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
@@ -31,6 +33,9 @@ export function generateAppleScript(params: AddProjectParams): string {
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
   const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  // JSON-safe versions: additional escaping so " and \ survive AppleScript interpretation into valid JSON
+  const nameJson = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const folderNameJson = folderName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const sequential = params.sequential === true;
   const tagAssignmentScript = tags.length > 0
     ? tags.map(tag => {
@@ -67,7 +72,7 @@ ${datePreamble}
             set theFolder to first flattened folder where name = "${folderName}"
             set newProject to make new project with properties {name:"${name}"} at end of projects of theFolder
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${folderName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${folderNameJson}\\\"}"
           end try
         end if
         
@@ -87,7 +92,7 @@ ${datePreamble}
         ${tagAssignmentScript}
         
         -- Return success with project ID
-        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
+        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${nameJson}\\"}"
       end tell
     end tell
   on error errorMessage

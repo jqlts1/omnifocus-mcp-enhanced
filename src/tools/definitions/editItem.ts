@@ -10,9 +10,9 @@ export const schema = z.object({
   // Common editable fields
   newName: z.string().optional().describe("New name for the item"),
   newNote: z.string().optional().describe("New note for the item"),
-  newDueDate: z.string().optional().describe("New due date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
-  newDeferDate: z.string().optional().describe("New defer date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
-  newPlannedDate: z.string().optional().describe("New planned date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
+  newDueDate: z.string().optional().describe("Due date in full ISO 8601 format with timezone (e.g., 2026-03-05T09:00:00-06:00). Bare dates like YYYY-MM-DD will display on the wrong day. Set to empty string to clear."),
+  newDeferDate: z.string().optional().describe("Defer date in full ISO 8601 format with timezone (e.g., 2026-03-05T09:00:00-06:00). Bare dates like YYYY-MM-DD will display on the wrong day. Set to empty string to clear."),
+  newPlannedDate: z.string().optional().describe("Planned date in full ISO 8601 format with timezone (e.g., 2026-03-05T09:00:00-06:00). Bare dates like YYYY-MM-DD will display on the wrong day. Set to empty string to clear."),
   newFlagged: z.boolean().optional().describe("Set flagged status (set to false for no flag, true for flag)"),
   newEstimatedMinutes: z.number().optional().describe("New estimated minutes"),
 

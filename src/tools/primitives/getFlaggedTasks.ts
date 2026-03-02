@@ -67,7 +67,8 @@ export async function getFlaggedTasks(options: GetFlaggedTasksOptions = {}): Pro
               const statusStr = task.taskStatus !== 'Available' ? ` (${task.taskStatus})` : '';
               const estimateStr = task.estimatedMinutes ? ` ⏱${task.estimatedMinutes}m` : '';
               
-              output += `• 🚩 ${task.name}${dueDateStr}${deferDateStr}${plannedDateStr}${statusStr}${estimateStr}\n`;
+              const idStr = task.id ? ` [${task.id}]` : '';
+              output += `• 🚩 ${task.name}${idStr}${dueDateStr}${deferDateStr}${plannedDateStr}${statusStr}${estimateStr}\n`;
               
               if (task.note && task.note.trim()) {
                 output += `  📝 ${task.note.trim()}\n`;

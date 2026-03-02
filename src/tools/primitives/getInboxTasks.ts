@@ -39,8 +39,9 @@ export async function getInboxTasks(options: GetInboxTasksOptions = {}): Promise
             const dueDateStr = task.dueDate ? ` [DUE: ${new Date(task.dueDate).toLocaleDateString()}]` : '';
             const plannedDateStr = task.plannedDate ? ` [PLAN: ${new Date(task.plannedDate).toLocaleDateString()}]` : '';
             const statusStr = task.taskStatus !== 'Available' ? ` (${task.taskStatus})` : '';
+            const idStr = task.id ? ` [${task.id}]` : '';
 
-            output += `${index + 1}. ${flagSymbol}${task.name}${dueDateStr}${plannedDateStr}${statusStr}\n`;
+            output += `${index + 1}. ${flagSymbol}${task.name}${idStr}${dueDateStr}${plannedDateStr}${statusStr}\n`;
 
             if (task.note && task.note.trim()) {
               output += `   📝 ${task.note.trim()}\n`;

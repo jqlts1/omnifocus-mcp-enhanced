@@ -87,6 +87,39 @@ test('generateAppleScript protects against moving task under itself or descendan
   assert.match(script, /move foundItem to end of tasks of destinationParentTask/);
 });
 
+test('generateAppleScript JSON-escapes quotes in error return strings', () => {
+  const script = generateAppleScript({
+    name: 'My "Quoted" Task',
+    itemType: 'task',
+    newFlagged: true
+  });
+
+  // Ambiguous name error should use JSON-safe escaping
+  assert.match(script, /Ambiguous task name: My \\\\\\"Quoted\\\\\\" Task/);
+});
+
+test('generateAppleScript JSON-escapes quotes in move error strings', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newProjectName: 'My "Quoted" Project'
+  });
+
+  assert.match(script, /Destination project not found with name: My \\\\\\"Quoted\\\\\\" Project/);
+  assert.match(script, /Ambiguous destination project name: My \\\\\\"Quoted\\\\\\" Project/);
+});
+
+test('generateAppleScript handles carriage returns in notes', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newNote: 'line1\r\nline2\rline3\nline4'
+  });
+
+  assert.doesNotMatch(script, /line1\\r/);
+  assert.match(script, /line1" & return & "line2" & return & "line3" & return & "line4/);
+});
+
 test('generateAppleScript supports moving task to inbox', () => {
   const script = generateAppleScript({
     id: 'task-123',

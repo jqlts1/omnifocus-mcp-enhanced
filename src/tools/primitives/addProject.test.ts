@@ -2,6 +2,33 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { generateAppleScript } from './addProject.js';
 
+test('addProject JSON-escapes quotes in error return strings', () => {
+  const script = generateAppleScript({
+    name: 'Test Project',
+    folderName: 'My "Quoted" Folder'
+  });
+
+  assert.match(script, /Folder not found: My \\\\\\"Quoted\\\\\\" Folder/);
+});
+
+test('addProject JSON-escapes quotes in success return string', () => {
+  const script = generateAppleScript({
+    name: 'My "Quoted" Project'
+  });
+
+  assert.match(script, /name.*My \\\\\\"Quoted\\\\\\" Project/);
+});
+
+test('addProject handles carriage returns in notes', () => {
+  const script = generateAppleScript({
+    name: 'CR Test',
+    note: 'line1\r\nline2\rline3\nline4'
+  });
+
+  assert.doesNotMatch(script, /line1\\r/);
+  assert.match(script, /line1" & return & "line2" & return & "line3" & return & "line4/);
+});
+
 test('addProject date handling uses preamble variables outside OmniFocus tell block', () => {
   const script = generateAppleScript({
     name: 'Project with dates',
