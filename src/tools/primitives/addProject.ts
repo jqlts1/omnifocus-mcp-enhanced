@@ -1,5 +1,6 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
+import { sanitizeForAppleScript } from '../../utils/sanitize.js';
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -20,8 +21,8 @@ export interface AddProjectParams {
  */
 export function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = sanitizeForAppleScript(params.name);
+  const note = params.note ? sanitizeForAppleScript(params.note) : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
   const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
   const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
@@ -30,11 +31,11 @@ export function generateAppleScript(params: AddProjectParams): string {
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName ? sanitizeForAppleScript(params.folderName) : '';
   const sequential = params.sequential === true;
   const tagAssignmentScript = tags.length > 0
     ? tags.map(tag => {
-      const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+      const sanitizedTag = sanitizeForAppleScript(tag);
       return `
           try
             set theTag to missing value

@@ -9,11 +9,11 @@ import { getPerspectiveTasksV2 } from '../primitives/getPerspectiveTasksV2.js';
 // - 无需手动配置筛选条件
 
 export const schema = z.object({
-  perspectiveName: z.string().describe("透视名称。使用你在 OmniFocus 中创建的自定义透视名称，如 '今日工作安排'、'今日复盘' 等"),
-  
+  perspectiveName: z.string().max(500).describe("透视名称。使用你在 OmniFocus 中创建的自定义透视名称，如 '今日工作安排'、'今日复盘' 等"),
+
   hideCompleted: z.boolean().optional().default(true).describe("是否隐藏已完成和已放弃的任务（默认: true）"),
-  
-  limit: z.number().optional().default(100).describe("返回任务的最大数量（默认: 100，设为 0 表示无限制）"),
+
+  limit: z.number().int().min(0).max(10000).optional().default(100).describe("返回任务的最大数量（默认: 100，设为 0 表示无限制）"),
 
   displayMode: z.enum(['project_tree', 'task_tree', 'flat']).optional().default('project_tree')
     .describe("展示模式：project_tree（按项目+子任务树），task_tree（全局任务树），flat（平铺列表）")

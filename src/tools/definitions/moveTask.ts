@@ -3,12 +3,12 @@ import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.j
 import { moveTask, MoveTaskParams } from '../primitives/moveTask.js';
 
 export const schema = z.object({
-  id: z.string().optional().describe('The ID of the task to move'),
-  name: z.string().optional().describe('The name of the task to move (fallback if ID not provided)'),
-  targetProjectId: z.string().optional().describe('Destination project ID'),
-  targetProjectName: z.string().optional().describe('Destination project name (errors on duplicate names)'),
-  targetParentTaskId: z.string().optional().describe('Destination parent task ID'),
-  targetParentTaskName: z.string().optional().describe('Destination parent task name (errors on duplicate names)'),
+  id: z.string().max(200).optional().describe('The ID of the task to move'),
+  name: z.string().max(500).optional().describe('The name of the task to move (fallback if ID not provided)'),
+  targetProjectId: z.string().max(200).optional().describe('Destination project ID'),
+  targetProjectName: z.string().max(500).optional().describe('Destination project name (errors on duplicate names)'),
+  targetParentTaskId: z.string().max(200).optional().describe('Destination parent task ID'),
+  targetParentTaskName: z.string().max(500).optional().describe('Destination parent task name (errors on duplicate names)'),
   targetInbox: z.boolean().optional().describe('Move task to inbox')
 });
 

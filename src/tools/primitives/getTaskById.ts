@@ -1,4 +1,5 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
+import { sanitizeForAppleScript } from '../../utils/sanitize.js';
 
 // Interface for task lookup parameters
 export interface GetTaskByIdParams {
@@ -30,8 +31,8 @@ export interface TaskInfo {
  * Generate AppleScript to get task information by ID or name
  */
 function generateGetTaskScript(params: GetTaskByIdParams): string {
-  const taskId = params.taskId?.replace(/['"\\]/g, '\\$&') || '';
-  const taskName = params.taskName?.replace(/['"\\]/g, '\\$&') || '';
+  const taskId = params.taskId ? sanitizeForAppleScript(params.taskId) : '';
+  const taskName = params.taskName ? sanitizeForAppleScript(params.taskName) : '';
 
   let script = `
   try

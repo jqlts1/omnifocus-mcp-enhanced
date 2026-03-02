@@ -1,5 +1,6 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
+import { sanitizeForAppleScript } from '../../utils/sanitize.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -104,16 +105,16 @@ export function validateEditItemParams(params: EditItemParams): { valid: boolean
  */
 export function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || '';
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id ? sanitizeForAppleScript(params.id) : '';
+  const name = params.name ? sanitizeForAppleScript(params.name) : '';
   const itemType = params.itemType;
   const listName = itemType === 'task' ? 'flattened tasks' : 'flattened projects';
   const singularTypeLabel = itemType === 'task' ? 'task' : 'project';
 
-  const newProjectId = params.newProjectId?.replace(/['"\\]/g, '\\$&') || '';
-  const newProjectName = params.newProjectName?.replace(/['"\\]/g, '\\$&') || '';
-  const newParentTaskId = params.newParentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const newParentTaskName = params.newParentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const newProjectId = params.newProjectId ? sanitizeForAppleScript(params.newProjectId) : '';
+  const newProjectName = params.newProjectName ? sanitizeForAppleScript(params.newProjectName) : '';
+  const newParentTaskId = params.newParentTaskId ? sanitizeForAppleScript(params.newParentTaskId) : '';
+  const newParentTaskName = params.newParentTaskName ? sanitizeForAppleScript(params.newParentTaskName) : '';
 
   const datePreambleParts: string[] = [];
 
@@ -278,7 +279,7 @@ ${datePreamble}
   if (params.newName !== undefined) {
     script += `
           -- Update name
-          set name of foundItem to "${params.newName.replace(/['"\\]/g, '\\$&')}"
+          set name of foundItem to "${sanitizeForAppleScript(params.newName)}"
           set end of changedProperties to "name"
 `;
   }
@@ -286,7 +287,7 @@ ${datePreamble}
   if (params.newNote !== undefined) {
     script += `
           -- Update note
-          set note of foundItem to "${params.newNote.replace(/['"\\]/g, '\\$&')}"
+          set note of foundItem to "${sanitizeForAppleScript(params.newNote)}"
           set end of changedProperties to "note"
 `;
   }
@@ -383,7 +384,7 @@ ${datePreamble}
 
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
+      const tagsList = params.replaceTags.map(tag => `"${sanitizeForAppleScript(tag)}"`).join(', ');
       script += `
           -- Replace all tags
           set tagNames to {${tagsList}}
@@ -410,7 +411,7 @@ ${datePreamble}
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
+        const tagsList = params.addTags.map(tag => `"${sanitizeForAppleScript(tag)}"`).join(', ');
         script += `
           -- Add tags
           set tagNames to {${tagsList}}
@@ -430,7 +431,7 @@ ${datePreamble}
 
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
+        const tagsList = params.removeTags.map(tag => `"${sanitizeForAppleScript(tag)}"`).join(', ');
         script += `
           -- Remove tags
           set tagNames to {${tagsList}}
@@ -472,7 +473,7 @@ ${datePreamble}
 
     // Move to a new folder
     if (params.newFolderName !== undefined) {
-      const folderName = params.newFolderName.replace(/['"\\]/g, '\\$&');
+      const folderName = sanitizeForAppleScript(params.newFolderName);
       script += `
           -- Move to new folder
           set destFolder to missing value
@@ -540,12 +541,12 @@ export async function editItem(params: EditItemParams): Promise<{
     // Generate AppleScript
     const script = generateAppleScript(params);
 
-    console.error('Executing AppleScript for editing...');
-    console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
-
-    // Log a preview of the script for debugging (first few lines)
-    const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
-    console.error('AppleScript preview:\n', scriptPreview);
+    if (process.env.DEBUG) {
+      console.error('Executing AppleScript for editing...');
+      console.error(`Item type: ${params.itemType}, ID: ${params.id || 'not provided'}, Name: ${params.name || 'not provided'}`);
+      const scriptPreview = script.split('\n').slice(0, 10).join('\n') + '\n...';
+      console.error('AppleScript preview:\n', scriptPreview);
+    }
 
     // Execute AppleScript using temp file (avoids shell escaping issues)
     const stdout = await executeAppleScript(script);

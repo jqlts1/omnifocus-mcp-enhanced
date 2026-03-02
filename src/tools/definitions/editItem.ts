@@ -3,33 +3,33 @@ import { editItem, EditItemParams } from '../primitives/editItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  id: z.string().optional().describe("The ID of the task or project to edit"),
-  name: z.string().optional().describe("The name of the task or project to edit (as fallback if ID not provided)"),
+  id: z.string().max(200).optional().describe("The ID of the task or project to edit"),
+  name: z.string().max(500).optional().describe("The name of the task or project to edit (as fallback if ID not provided)"),
   itemType: z.enum(['task', 'project']).describe("Type of item to edit ('task' or 'project')"),
 
   // Common editable fields
-  newName: z.string().optional().describe("New name for the item"),
-  newNote: z.string().optional().describe("New note for the item"),
-  newDueDate: z.string().optional().describe("New due date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
-  newDeferDate: z.string().optional().describe("New defer date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
-  newPlannedDate: z.string().optional().describe("New planned date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
+  newName: z.string().max(500).optional().describe("New name for the item"),
+  newNote: z.string().max(10000).optional().describe("New note for the item"),
+  newDueDate: z.string().max(50).optional().describe("New due date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
+  newDeferDate: z.string().max(50).optional().describe("New defer date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
+  newPlannedDate: z.string().max(50).optional().describe("New planned date in ISO format (YYYY-MM-DD or full ISO date); set to empty string to clear"),
   newFlagged: z.boolean().optional().describe("Set flagged status (set to false for no flag, true for flag)"),
-  newEstimatedMinutes: z.number().optional().describe("New estimated minutes"),
+  newEstimatedMinutes: z.number().int().min(0).max(525600).optional().describe("New estimated minutes"),
 
   // Task-specific fields
   newStatus: z.enum(['incomplete', 'completed', 'dropped']).optional().describe("New status for tasks (incomplete, completed, dropped)"),
-  addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
-  removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
-  replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),
-  newProjectId: z.string().optional().describe("For tasks: move task to this project ID"),
-  newProjectName: z.string().optional().describe("For tasks: move task to this project name (errors on duplicate names)"),
-  newParentTaskId: z.string().optional().describe("For tasks: move task under this parent task ID"),
-  newParentTaskName: z.string().optional().describe("For tasks: move task under this parent task name (errors on duplicate names)"),
+  addTags: z.array(z.string().max(200)).max(50).optional().describe("Tags to add to the task"),
+  removeTags: z.array(z.string().max(200)).max(50).optional().describe("Tags to remove from the task"),
+  replaceTags: z.array(z.string().max(200)).max(50).optional().describe("Tags to replace all existing tags with"),
+  newProjectId: z.string().max(200).optional().describe("For tasks: move task to this project ID"),
+  newProjectName: z.string().max(500).optional().describe("For tasks: move task to this project name (errors on duplicate names)"),
+  newParentTaskId: z.string().max(200).optional().describe("For tasks: move task under this parent task ID"),
+  newParentTaskName: z.string().max(500).optional().describe("For tasks: move task under this parent task name (errors on duplicate names)"),
   moveToInbox: z.boolean().optional().describe("For tasks: move task to inbox"),
 
   // Project-specific fields
   newSequential: z.boolean().optional().describe("Whether the project should be sequential"),
-  newFolderName: z.string().optional().describe("New folder to move the project to"),
+  newFolderName: z.string().max(500).optional().describe("New folder to move the project to"),
   newProjectStatus: z.enum(['active', 'completed', 'dropped', 'onHold']).optional().describe("New status for projects")
 });
 

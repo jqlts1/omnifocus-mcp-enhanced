@@ -3,8 +3,8 @@ import { getTaskById, GetTaskByIdParams } from '../primitives/getTaskById.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  taskId: z.string().optional().describe("The ID of the task to retrieve"),
-  taskName: z.string().optional().describe("The name of the task to retrieve (alternative to taskId)")
+  taskId: z.string().max(200).optional().describe("The ID of the task to retrieve"),
+  taskName: z.string().max(500).optional().describe("The name of the task to retrieve (alternative to taskId)")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {

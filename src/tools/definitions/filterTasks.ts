@@ -24,50 +24,50 @@ export const schema = z.object({
   perspective: PerspectiveEnum.optional().describe("Limit search to specific perspective: inbox, flagged, all tasks"),
 
   // 📁 项目/标签过滤
-  projectFilter: z.string().optional().describe("Filter by project name (partial match)"),
-  tagFilter: z.union([z.string(), z.array(z.string())]).optional().describe("Filter by tag name(s). Can be single tag or array of tags"),
+  projectFilter: z.string().max(500).optional().describe("Filter by project name (partial match)"),
+  tagFilter: z.union([z.string().max(200), z.array(z.string().max(200)).max(50)]).optional().describe("Filter by tag name(s). Can be single tag or array of tags"),
   exactTagMatch: z.boolean().optional().describe("Set to true for exact tag name match, false for partial (default: false)"),
 
   // 📅 截止日期过滤
-  dueBefore: z.string().optional().describe("Show tasks due before this date (ISO format: YYYY-MM-DD)"),
-  dueAfter: z.string().optional().describe("Show tasks due after this date (ISO format: YYYY-MM-DD)"),
+  dueBefore: z.string().max(50).optional().describe("Show tasks due before this date (ISO format: YYYY-MM-DD)"),
+  dueAfter: z.string().max(50).optional().describe("Show tasks due after this date (ISO format: YYYY-MM-DD)"),
   dueToday: z.boolean().optional().describe("Show tasks due today"),
   dueThisWeek: z.boolean().optional().describe("Show tasks due this week"),
   dueThisMonth: z.boolean().optional().describe("Show tasks due this month"),
   overdue: z.boolean().optional().describe("Show overdue tasks only"),
 
   // 🚀 推迟日期过滤
-  deferBefore: z.string().optional().describe("Show tasks with defer date before this date (ISO format: YYYY-MM-DD)"),
-  deferAfter: z.string().optional().describe("Show tasks with defer date after this date (ISO format: YYYY-MM-DD)"),
+  deferBefore: z.string().max(50).optional().describe("Show tasks with defer date before this date (ISO format: YYYY-MM-DD)"),
+  deferAfter: z.string().max(50).optional().describe("Show tasks with defer date after this date (ISO format: YYYY-MM-DD)"),
   deferToday: z.boolean().optional().describe("Show tasks deferred to today"),
   deferThisWeek: z.boolean().optional().describe("Show tasks deferred to this week"),
   deferAvailable: z.boolean().optional().describe("Show tasks whose defer date has passed (now available)"),
 
   // 🗓 计划日期过滤
-  plannedBefore: z.string().optional().describe("Show tasks planned before this date (ISO format: YYYY-MM-DD)"),
-  plannedAfter: z.string().optional().describe("Show tasks planned after this date (ISO format: YYYY-MM-DD)"),
+  plannedBefore: z.string().max(50).optional().describe("Show tasks planned before this date (ISO format: YYYY-MM-DD)"),
+  plannedAfter: z.string().max(50).optional().describe("Show tasks planned after this date (ISO format: YYYY-MM-DD)"),
   plannedToday: z.boolean().optional().describe("Show tasks planned for today"),
   plannedThisWeek: z.boolean().optional().describe("Show tasks planned for this week"),
   plannedThisMonth: z.boolean().optional().describe("Show tasks planned for this month"),
 
   // ✅ 完成日期过滤
-  completedBefore: z.string().optional().describe("Show tasks completed before this date (ISO format: YYYY-MM-DD)"),
-  completedAfter: z.string().optional().describe("Show tasks completed after this date (ISO format: YYYY-MM-DD)"),
+  completedBefore: z.string().max(50).optional().describe("Show tasks completed before this date (ISO format: YYYY-MM-DD)"),
+  completedAfter: z.string().max(50).optional().describe("Show tasks completed after this date (ISO format: YYYY-MM-DD)"),
   completedToday: z.boolean().optional().describe("Show tasks completed today"),
   completedThisWeek: z.boolean().optional().describe("Show tasks completed this week"),
   completedThisMonth: z.boolean().optional().describe("Show tasks completed this month"),
 
   // 🚩 其他维度
   flagged: z.boolean().optional().describe("Filter by flagged status"),
-  searchText: z.string().optional().describe("Search in task names and notes"),
+  searchText: z.string().max(500).optional().describe("Search in task names and notes"),
   hasEstimate: z.boolean().optional().describe("Filter tasks that have time estimates"),
-  estimateMin: z.number().optional().describe("Minimum estimated minutes"),
-  estimateMax: z.number().optional().describe("Maximum estimated minutes"),
+  estimateMin: z.number().int().min(0).max(525600).optional().describe("Minimum estimated minutes"),
+  estimateMax: z.number().int().min(0).max(525600).optional().describe("Maximum estimated minutes"),
   hasNote: z.boolean().optional().describe("Filter tasks that have notes"),
   inInbox: z.boolean().optional().describe("Filter tasks in inbox"),
 
   // 📊 输出控制
-  limit: z.number().max(1000).optional().describe("Maximum number of tasks to return (default: 100)"),
+  limit: z.number().int().min(1).max(10000).optional().describe("Maximum number of tasks to return (default: 100)"),
   sortBy: z.enum(["name", "dueDate", "deferDate", "plannedDate", "completedDate", "flagged", "project"]).optional().describe("Sort results by field"),
   sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort order (default: asc)")
 });

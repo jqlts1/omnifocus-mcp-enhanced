@@ -3,15 +3,15 @@ import { addProject, AddProjectParams } from '../primitives/addProject.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  name: z.string().describe("The name of the project"),
-  note: z.string().optional().describe("Additional notes for the project"),
-  dueDate: z.string().optional().describe("The due date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
-  deferDate: z.string().optional().describe("The defer date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
-  plannedDate: z.string().optional().describe("The planned date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
+  name: z.string().max(500).describe("The name of the project"),
+  note: z.string().max(10000).optional().describe("Additional notes for the project"),
+  dueDate: z.string().max(50).optional().describe("The due date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
+  deferDate: z.string().max(50).optional().describe("The defer date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
+  plannedDate: z.string().max(50).optional().describe("The planned date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
   flagged: z.boolean().optional().describe("Whether the project is flagged or not"),
-  estimatedMinutes: z.number().optional().describe("Estimated time to complete the project, in minutes"),
-  tags: z.array(z.string()).optional().describe("Tags to assign to the project"),
-  folderName: z.string().optional().describe("The name of the folder to add the project to (will add to root if not specified)"),
+  estimatedMinutes: z.number().int().min(0).max(525600).optional().describe("Estimated time to complete the project, in minutes"),
+  tags: z.array(z.string().max(200)).max(50).optional().describe("Tags to assign to the project"),
+  folderName: z.string().max(500).optional().describe("The name of the folder to add the project to (will add to root if not specified)"),
   sequential: z.boolean().optional().describe("Whether tasks in the project should be sequential (default: false)")
 });
 

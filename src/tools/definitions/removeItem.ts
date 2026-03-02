@@ -3,8 +3,8 @@ import { removeItem, RemoveItemParams } from '../primitives/removeItem.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  id: z.string().optional().describe("The ID of the task or project to remove"),
-  name: z.string().optional().describe("The name of the task or project to remove (as fallback if ID not provided)"),
+  id: z.string().max(200).optional().describe("The ID of the task or project to remove"),
+  name: z.string().max(500).optional().describe("The name of the task or project to remove (as fallback if ID not provided)"),
   itemType: z.enum(['task', 'project']).describe("Type of item to remove ('task' or 'project')")
 });
 
