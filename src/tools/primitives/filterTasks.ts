@@ -130,6 +130,12 @@ function matchesTagFilter(task: any, tagFilters: string[], exactTagMatch: boolea
 function shouldApplyClientSideFilters(options: FilterTasksOptions): boolean {
   return Boolean(
     options.tagFilter ||
+    options.dueToday ||
+    options.dueThisWeek ||
+    options.dueThisMonth ||
+    options.overdue ||
+    options.dueBefore ||
+    options.dueAfter ||
     options.deferToday ||
     options.deferThisWeek ||
     options.deferAvailable ||
@@ -189,6 +195,56 @@ function sortTasks(tasks: any[], sortBy: string, sortOrder: 'asc' | 'desc'): any
 
 export function applyClientSideFilters(tasks: any[], options: FilterTasksOptions): any[] {
   let filteredTasks = tasks;
+
+  // Due date filters
+  if (options.dueToday) {
+    filteredTasks = filteredTasks.filter(task => {
+      const dueDate = parseDate(task?.dueDate);
+      return dueDate ? isDateInTodayRange(dueDate) : false;
+    });
+  }
+
+  if (options.dueThisWeek) {
+    filteredTasks = filteredTasks.filter(task => {
+      const dueDate = parseDate(task?.dueDate);
+      return dueDate ? isDateInCurrentWeek(dueDate) : false;
+    });
+  }
+
+  if (options.dueThisMonth) {
+    filteredTasks = filteredTasks.filter(task => {
+      const dueDate = parseDate(task?.dueDate);
+      return dueDate ? isDateInCurrentMonth(dueDate) : false;
+    });
+  }
+
+  if (options.overdue) {
+    const now = new Date();
+    filteredTasks = filteredTasks.filter(task => {
+      const dueDate = parseDate(task?.dueDate);
+      return dueDate ? dueDate < now : false;
+    });
+  }
+
+  if (options.dueBefore) {
+    const dueBefore = parseDate(options.dueBefore);
+    if (dueBefore) {
+      filteredTasks = filteredTasks.filter(task => {
+        const dueDate = parseDate(task?.dueDate);
+        return dueDate ? dueDate < dueBefore : false;
+      });
+    }
+  }
+
+  if (options.dueAfter) {
+    const dueAfter = parseDate(options.dueAfter);
+    if (dueAfter) {
+      filteredTasks = filteredTasks.filter(task => {
+        const dueDate = parseDate(task?.dueDate);
+        return dueDate ? dueDate > dueAfter : false;
+      });
+    }
+  }
 
   if (options.tagFilter) {
     const exactTagMatch = options.exactTagMatch ?? false;

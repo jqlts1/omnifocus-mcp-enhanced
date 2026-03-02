@@ -14,6 +14,7 @@ See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/
 - **Handle carriage returns in notes** — Note processing now handles `\r\n` (Windows), `\r` (old Mac), and `\n` (Unix) line endings, not just `\n`. Prevents broken AppleScript from clipboard-pasted or API-sourced text.
 - **Fix getTodayCompletedTasks output** — Literal `\n` characters in template strings replaced with actual newlines. Chinese UI strings and locale replaced with English.
 - **Expand edit_item tool description** — Description now lists all capabilities (rename, dates, flags, status, tags, move, etc.) so the LLM knows what the tool can do without guessing.
+- **Fix all due-date filters being silently ignored** — `dueToday`, `dueThisWeek`, `dueThisMonth`, `overdue`, `dueBefore`, and `dueAfter` were never wired up. The OmniJS script didn't extract them, and the TypeScript client-side filter layer didn't include them. All six filters now work via client-side filtering. Tested: `dueToday: true` correctly returns all tasks due today (previously returned unfiltered results).
 
 ## Original README
 
