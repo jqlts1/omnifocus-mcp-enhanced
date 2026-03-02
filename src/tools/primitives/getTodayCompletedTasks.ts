@@ -99,7 +99,8 @@ function formatCompletedTask(task: any): string {
   // 任务基本信息
   const flagSymbol = task.flagged ? '🚩 ' : '';
   
-  output += `✅ ${flagSymbol}${task.name}`;
+  const idStr = task.id ? ` [${task.id}]` : '';
+  output += `✅ ${flagSymbol}${task.name}${idStr}`;
   
   // 完成时间
   if (task.completedDate) {

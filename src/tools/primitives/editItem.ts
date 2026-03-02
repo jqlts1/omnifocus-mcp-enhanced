@@ -284,9 +284,12 @@ ${datePreamble}
   }
 
   if (params.newNote !== undefined) {
+    const escapedNote = params.newNote
+      .replace(/['"\\]/g, '\\$&')
+      .replace(/\n/g, '" & return & "');
     script += `
           -- Update note
-          set note of foundItem to "${params.newNote.replace(/['"\\]/g, '\\$&')}"
+          set note of foundItem to "${escapedNote}"
           set end of changedProperties to "note"
 `;
   }
