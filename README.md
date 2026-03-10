@@ -1,8 +1,35 @@
 # OmniFocus MCP Enhanced (Fork)
 
-Personal fork of [jqlts1/omnifocus-mcp-enhanced](https://github.com/jqlts1/omnifocus-mcp-enhanced) v1.6.8.
+Fork of [jqlts1/omnifocus-mcp-enhanced](https://github.com/jqlts1/omnifocus-mcp-enhanced) with bug fixes for date handling, task completion, AppleScript escaping, and due-date filtering. All Chinese comments translated to English. 57 unit tests.
 
-See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/main/README.md) for full documentation, installation, tool reference, and examples.
+See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/main/README.md) for full tool reference and examples.
+
+## Installation
+
+Requires macOS with OmniFocus 4 and Node.js 18+.
+
+```bash
+git clone https://github.com/psufka/omnifocus-mcp-enhanced.git
+cd omnifocus-mcp-enhanced
+npm install
+npm run build
+npm test  # 57 tests, all should pass
+```
+
+Add to your Claude Code MCP config (`~/.claude.json`):
+
+```json
+{
+  "mcpServers": {
+    "omnifocus": {
+      "command": "node",
+      "args": ["/path/to/omnifocus-mcp-enhanced/dist/server.js"]
+    }
+  }
+}
+```
+
+Restart Claude Code to pick up the new server.
 
 ## Fork Changes
 
@@ -30,7 +57,7 @@ See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/
 - **Test suite wired up** — `npm test` now runs 57 unit tests via `tsx`. Previously just echoed "passed".
 - **Regression tests for time preservation** — 3 new tests covering the dateFormatter fix (full ISO, non-zero minutes/seconds, date-only defaults to midnight).
 - **Temp file paths quoted in exec calls** — `osascript` invocations now quote the temp file path, preventing potential issues with spaces in paths.
-- **Version synced** — `server.ts` version now matches `package.json` (1.6.8).
+- **Version synced** — `server.ts` version now matches `package.json`.
 - **Repository URL updated** — Points to this fork.
 
 ## Known Limitations

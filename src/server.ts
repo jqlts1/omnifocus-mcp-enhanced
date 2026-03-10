@@ -28,7 +28,7 @@ import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPer
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.6.8"
+  version: "1.7.0"
 });
 
 // Register tools
