@@ -1,6 +1,6 @@
 # OmniFocus MCP Enhanced (Fork)
 
-Fork of [jqlts1/omnifocus-mcp-enhanced](https://github.com/jqlts1/omnifocus-mcp-enhanced) with bug fixes for date handling, task completion, AppleScript escaping, and due-date filtering. All Chinese comments translated to English. 57 unit tests.
+Fork of [jqlts1/omnifocus-mcp-enhanced](https://github.com/jqlts1/omnifocus-mcp-enhanced) with bug fixes for date handling, task completion, AppleScript escaping, and due-date filtering. All Chinese comments translated to English.
 
 See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/main/README.md) for full tool reference and examples.
 
