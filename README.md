@@ -10,23 +10,10 @@ Requires macOS with OmniFocus 4 and Node.js 18+.
 
 ```bash
 git clone https://github.com/psufka/omnifocus-mcp-enhanced-fork.git
-cd omnifocus-mcp-enhanced
-npm install
-npm run build
-npm test  # 57 tests, all should pass
-```
-
-Add to your Claude Code MCP config (`~/.claude.json`):
-
-```json
-{
-  "mcpServers": {
-    "omnifocus": {
-      "command": "node",
-      "args": ["/path/to/omnifocus-mcp-enhanced/dist/server.js"]
-    }
-  }
-}
+cd omnifocus-mcp-enhanced-fork
+npm install && npm run build
+npm test  # all tests should pass
+claude mcp add omnifocus -- node "$(pwd)/dist/server.js"
 ```
 
 Restart Claude Code to pick up the new server.
