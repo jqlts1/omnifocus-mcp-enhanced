@@ -1,13 +1,13 @@
-// 最简单的调试脚本
+// Minimal debug script
 (() => {
   try {
-    // 获取参数
+    // Get injected arguments
     const args = typeof injectedArgs !== 'undefined' ? injectedArgs : {};
-    
-    // 获取所有任务
+
+    // Get all tasks
     const allTasks = flattenedTasks;
-    
-    // 基本信息
+
+    // Basic info
     const result = {
       success: true,
       totalTasks: allTasks.length,
@@ -16,9 +16,9 @@
       firstTaskStatus: allTasks.length > 0 ? allTasks[0].taskStatus : null,
       completedStatusValue: Task.Status.Completed
     };
-    
+
     return JSON.stringify(result);
-    
+
   } catch (error) {
     return JSON.stringify({
       success: false,

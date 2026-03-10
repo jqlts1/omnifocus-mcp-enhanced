@@ -12,7 +12,7 @@ test('buildPerspectiveTaskTree groups by project and preserves nested children',
     { id: 'i1', name: 'Inbox Root', project: null, parent: null, tags: ['home'], note: 'line1\nline2', completed: false },
   ];
 
-  const tree = buildPerspectiveTaskTree(tasks as any[], { hideCompleted: true, inboxLabel: '收件箱' });
+  const tree = buildPerspectiveTaskTree(tasks as any[], { hideCompleted: true, inboxLabel: 'Inbox' });
   assert.equal(tree.rootTasks.length, 3);
 
   const alpha = tree.projectGroups.find((group) => group.projectName === 'Alpha');
@@ -26,7 +26,7 @@ test('buildPerspectiveTaskTree groups by project and preserves nested children',
   assert.deepEqual(alpha!.rootTasks[0].displayTags, ['#focus']);
   assert.equal(alpha!.rootTasks[0].note, 'parent note');
 
-  const inbox = tree.projectGroups.find((group) => group.projectName === '收件箱');
+  const inbox = tree.projectGroups.find((group) => group.projectName === 'Inbox');
   assert.ok(inbox);
   assert.equal(inbox!.rootTasks.length, 1);
   assert.equal(inbox!.rootTasks[0].id, 'i1');

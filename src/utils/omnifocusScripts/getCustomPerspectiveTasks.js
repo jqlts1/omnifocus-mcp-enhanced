@@ -1,28 +1,28 @@
-// 通过自定义透视名称获取任务（支持层级关系）
-// 基于用户提供的优秀代码改进
+// Get tasks from a custom perspective by name (supports hierarchical relationships)
+// Based on and improved from user-provided code
 
 (() => {
   try {
-    // 获取注入的参数
+    // Get injected arguments
     const perspectiveName = injectedArgs && injectedArgs.perspectiveName ? injectedArgs.perspectiveName : null;
 
     if (!perspectiveName) {
-      throw new Error("透视名称不能为空");
+      throw new Error("Perspective name cannot be empty");
     }
 
-    // 通过名称获取自定义透视
+    // Look up the custom perspective by name
     let perspective = Perspective.Custom.byName(perspectiveName);
     if (!perspective) {
-      throw new Error(`未找到名为 "${perspectiveName}" 的自定义透视`);
+      throw new Error(`No custom perspective found with name "${perspectiveName}"`);
     }
 
-    // 切换到指定透视
+    // Switch to the specified perspective
     document.windows[0].perspective = perspective;
 
-    // 用于存储所有任务，key为任务ID（支持层级关系）
+    // Map to store all tasks keyed by task ID (supports hierarchical relationships)
     let taskMap = {};
 
-    // 遍历内容树，收集任务信息（含层级关系）
+    // Traverse the content tree to collect task info (including hierarchy)
     let rootNode = document.windows[0].content.rootNode;
 
     function collectTasks(node, parentId) {
@@ -30,7 +30,7 @@
         let t = node.object;
         let id = t.id.primaryKey;
 
-        // 记录任务信息（包含层级关系）
+        // Record task info (including hierarchical relationships)
         taskMap[id] = {
           id: id,
           name: t.name,
@@ -46,11 +46,11 @@
           repetitionRule: t.repetitionRule ? t.repetitionRule.toString() : null,
           creationDate: t.added ? t.added.toISOString() : null,
           completionDate: t.completedDate ? t.completedDate.toISOString() : null,
-          parent: parentId,     // 父任务ID
-          children: [],         // 子任务ID列表，后面补充
+          parent: parentId,     // Parent task ID
+          children: [],         // Child task IDs, populated below
         };
 
-        // 递归收集子任务
+        // Recursively collect child tasks
         node.children.forEach(childNode => {
           if (childNode.object && childNode.object instanceof Task) {
             let childId = childNode.object.id.primaryKey;
@@ -61,20 +61,20 @@
           }
         });
       } else {
-        // 不是任务节点，递归子节点
+        // Not a task node — recurse into children
         node.children.forEach(childNode => collectTasks(childNode, parentId));
       }
     }
 
-    // 开始收集任务（根任务的parent为null）
+    // Start collecting tasks (root tasks have parent = null)
     if (rootNode && rootNode.children) {
       rootNode.children.forEach(node => collectTasks(node, null));
     }
 
-    // 计算任务总数
+    // Count total tasks
     const taskCount = Object.keys(taskMap).length;
 
-    // 返回结果（包含层级结构）
+    // Return result (including hierarchical structure)
     const result = {
       success: true,
       perspectiveName: perspectiveName,
@@ -86,7 +86,7 @@
     return JSON.stringify(result);
 
   } catch (error) {
-    // 错误处理
+    // Error handling
     const errorResult = {
       success: false,
       error: error.message || String(error),

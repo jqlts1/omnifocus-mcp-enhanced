@@ -13,7 +13,7 @@
     "start": "node dist/server.js",
     "dev": "tsc -w",
     "prepublishOnly": "npm run build",
-    "test": "echo \"Test passed - manual testing required with OmniFocus\""
+    "test": "npx tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
@@ -25,9 +25,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jqlts1/omnifocus-mcp-enhanced.git"
+    "url": "https://github.com/psufka/omnifocus-mcp-enhanced.git"
   },
-  "homepage": "https://github.com/jqlts1/omnifocus-mcp-enhanced",
+  "homepage": "https://github.com/psufka/omnifocus-mcp-enhanced",
   "keywords": [
     "omnifocus",
     "mcp",

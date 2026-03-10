@@ -6,7 +6,7 @@ import {
   PerspectiveTaskNode
 } from './perspectiveTaskTree.js';
 
-// 基于 OmniFocus 4.2+ 新 API 的透视访问接口
+// Perspective access interface based on the OmniFocus 4.2+ new API
 
 export interface GetPerspectiveTasksV2Params {
   perspectiveName: string;
@@ -35,51 +35,51 @@ export interface GetPerspectiveTasksV2Result {
 }
 
 /**
- * 获取透视筛选后的任务 - V2版本
- * 使用 OmniFocus 4.2+ 新的 archivedFilterRules API
- * 
- * 主要优势：
- * - 100% 准确性：获取真正透视筛选后的任务，而非全量数据
- * - 零配置：直接使用用户现有的透视设置
- * - 完整支持：支持所有 27 种筛选规则类型和 3 种聚合方式
+ * Retrieve filtered tasks from a perspective - V2
+ * Uses the OmniFocus 4.2+ new archivedFilterRules API
+ *
+ * Key advantages:
+ * - 100% accuracy: fetches tasks truly filtered by the perspective, not the full dataset
+ * - Zero configuration: uses the user's existing perspective settings directly
+ * - Full support: supports all 27 filter rule types and 3 aggregation modes
  */
 export async function getPerspectiveTasksV2(
   params: GetPerspectiveTasksV2Params
 ): Promise<GetPerspectiveTasksV2Result> {
   const displayMode = params.displayMode || 'project_tree';
-  
-  console.log(`[PerspectiveV2] 开始获取透视 "${params.perspectiveName}" 的任务`);
-  console.log(`[PerspectiveV2] 参数:`, {
+
+  console.log(`[PerspectiveV2] Fetching tasks for perspective "${params.perspectiveName}"`);
+  console.log(`[PerspectiveV2] Params:`, {
     hideCompleted: params.hideCompleted,
     limit: params.limit,
     displayMode
   });
 
   try {
-    // 创建透视引擎实例
+    // Create a perspective engine instance
     const engine = new PerspectiveEngine();
-    
-    // 执行透视筛选
+
+    // Execute perspective filtering
     const result = await engine.getFilteredTasks(params.perspectiveName, {
       hideCompleted: params.hideCompleted,
       limit: params.limit
     });
 
     if (!result.success) {
-      console.error(`[PerspectiveV2] 执行失败:`, result.error);
+      console.error(`[PerspectiveV2] Execution failed:`, result.error);
       return {
         success: false,
         error: result.error
       };
     }
 
-    console.log(`[PerspectiveV2] 执行成功`);
-    console.log(`[PerspectiveV2] 透视信息:`, result.perspectiveInfo);
-    console.log(`[PerspectiveV2] 筛选到 ${result.tasks?.length || 0} 个任务`);
+    console.log(`[PerspectiveV2] Execution succeeded`);
+    console.log(`[PerspectiveV2] Perspective info:`, result.perspectiveInfo);
+    console.log(`[PerspectiveV2] Filtered to ${result.tasks?.length || 0} tasks`);
 
-    // 记录详细的任务信息用于调试
+    // Log detailed task info for debugging
     if (result.tasks && result.tasks.length > 0) {
-      console.log(`[PerspectiveV2] 任务示例:`, {
+      console.log(`[PerspectiveV2] Sample task:`, {
         first: {
           name: result.tasks[0].name,
           flagged: result.tasks[0].flagged,
@@ -92,7 +92,7 @@ export async function getPerspectiveTasksV2(
 
     const displayTree = buildPerspectiveTaskTree((result.tasks || []) as any[], {
       hideCompleted: params.hideCompleted !== false,
-      inboxLabel: '收件箱'
+      inboxLabel: 'Inbox'
     });
 
     return {
@@ -110,11 +110,11 @@ export async function getPerspectiveTasksV2(
     };
 
   } catch (error: any) {
-    console.error(`[PerspectiveV2] 透视引擎异常:`, error);
-    
+    console.error(`[PerspectiveV2] Perspective engine exception:`, error);
+
     return {
       success: false,
-      error: `透视引擎执行异常: ${error.message || '未知错误'}`
+      error: `Perspective engine exception: ${error.message || 'Unknown error'}`
     };
   }
 }

@@ -1,31 +1,31 @@
-// 修复版本的 filter_tasks
+// Fixed version of filter_tasks
 (() => {
   try {
-    // 获取参数
+    // Get injected arguments
     const args = typeof injectedArgs !== 'undefined' ? injectedArgs : {};
-    
+
     const filters = {
       taskStatus: args.taskStatus || null,
-      perspective: args.perspective || "all", 
+      perspective: args.perspective || "all",
       flagged: args.flagged !== undefined ? args.flagged : null,
-      
-      // 完成日期过滤器
+
+      // Completion date filters
       completedToday: args.completedToday || false,
       completedYesterday: args.completedYesterday || false,
       completedThisWeek: args.completedThisWeek || false,
       completedThisMonth: args.completedThisMonth || false,
       completedBefore: args.completedBefore || null,
       completedAfter: args.completedAfter || null,
-      
-      // 其他过滤器
+
+      // Other filters
       projectFilter: args.projectFilter || null,
       searchText: args.searchText || null,
       limit: args.limit || 100,
       sortBy: args.sortBy || "name",
       sortOrder: args.sortOrder || "asc"
     };
-    
-    // 辅助函数
+
+    // Helper functions
     function getTaskStatus(status) {
       const taskStatusMap = {
         [Task.Status.Available]: "Available",
@@ -65,17 +65,17 @@
       return checkDate >= yesterday && checkDate < today;
     }
     
-    // 获取所有任务
+    // Get all tasks
     const allTasks = flattenedTasks;
-    
-    // 判断是否需要包含完成的任务
-    const wantsCompletedTasks = filters.completedToday || filters.completedYesterday || 
-                               filters.completedThisWeek || filters.completedThisMonth || 
+
+    // Determine whether completed tasks are needed
+    const wantsCompletedTasks = filters.completedToday || filters.completedYesterday ||
+                               filters.completedThisWeek || filters.completedThisMonth ||
                                filters.completedBefore || filters.completedAfter;
-    const includeCompletedByStatus = filters.taskStatus && 
+    const includeCompletedByStatus = filters.taskStatus &&
       (filters.taskStatus.includes("Completed") || filters.taskStatus.includes("Dropped"));
-    
-    // 选择任务集
+
+    // Select the task set
     let availableTasks;
     if (wantsCompletedTasks || includeCompletedByStatus) {
       availableTasks = allTasks;
@@ -86,7 +86,7 @@
       );
     }
     
-    // 应用透视过滤
+    // Apply perspective filter
     let baseTasks = [];
     switch (filters.perspective) {
       case "inbox":
@@ -99,46 +99,46 @@
         baseTasks = availableTasks;
         break;
     }
-    
-    // 应用所有过滤器
+
+    // Apply all filters
     let filteredTasks = baseTasks.filter(task => {
       try {
         const taskStatus = getTaskStatus(task.taskStatus);
-        
-        // 完成任务逻辑
+
+        // Completed task logic
         if (wantsCompletedTasks) {
-          // 只要完成任务
+          // Only include completed tasks
           if (taskStatus !== "Completed") {
             return false;
           }
         } else {
-          // 排除完成任务（除非明确指定状态）
+          // Exclude completed tasks (unless status explicitly requested)
           if (!includeCompletedByStatus && (taskStatus === "Completed" || taskStatus === "Dropped")) {
             return false;
           }
         }
-        
-        // 状态过滤
+
+        // Status filter
         if (filters.taskStatus && filters.taskStatus.length > 0) {
           if (!filters.taskStatus.includes(taskStatus)) {
             return false;
           }
         }
-        
-        // 标记过滤
+
+        // Flagged filter
         if (filters.flagged !== null && task.flagged !== filters.flagged) {
           return false;
         }
-        
-        // 项目过滤
+
+        // Project filter
         if (filters.projectFilter) {
           const projectName = task.containingProject ? task.containingProject.name : '';
           if (!projectName.toLowerCase().includes(filters.projectFilter.toLowerCase())) {
             return false;
           }
         }
-        
-        // 搜索文本过滤
+
+        // Search text filter
         if (filters.searchText) {
           const searchLower = filters.searchText.toLowerCase();
           const taskName = (task.name || '').toLowerCase();
@@ -147,8 +147,8 @@
             return false;
           }
         }
-        
-        // 完成日期过滤
+
+        // Completion date filter
         if (wantsCompletedTasks) {
           if (filters.completedToday && !isToday(task.completionDate)) {
             return false;
@@ -172,7 +172,7 @@
       }
     });
     
-    // 排序
+    // Sort results
     if (filters.sortBy === "completedDate") {
       filteredTasks.sort((a, b) => {
         const dateA = a.completionDate || new Date('1900-01-01');
@@ -189,12 +189,12 @@
       });
     }
     
-    // 限制结果数量
+    // Limit result count
     if (filters.limit && filteredTasks.length > filters.limit) {
       filteredTasks = filteredTasks.slice(0, filters.limit);
     }
-    
-    // 构建返回数据
+
+    // Build return data
     const exportData = {
       exportDate: new Date().toISOString(),
       tasks: [],
@@ -204,7 +204,7 @@
       sortOrder: filters.sortOrder
     };
     
-    // 处理每个任务
+    // Process each task
     filteredTasks.forEach(task => {
       try {
         const taskData = {
@@ -229,7 +229,7 @@
         
         exportData.tasks.push(taskData);
       } catch (taskError) {
-        // 跳过处理错误的任务
+        // Skip tasks that fail to process
       }
     });
     

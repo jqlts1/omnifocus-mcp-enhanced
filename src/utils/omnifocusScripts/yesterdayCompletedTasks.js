@@ -1,64 +1,64 @@
-// 专门获取昨天完成任务的简化脚本
+// Simplified script to retrieve tasks completed yesterday
 (() => {
   try {
-    // 获取参数（如果有的话）
+    // Get arguments if available
     const args = typeof injectedArgs !== 'undefined' ? injectedArgs : {};
     const limit = args.limit || 20;
-    
-    console.log("=== 昨天完成任务查询开始 ===");
-    
-    // 获取所有任务
+
+    console.log("=== Yesterday's completed tasks query starting ===");
+
+    // Get all tasks
     const allTasks = flattenedTasks;
-    console.log(`总任务数: ${allTasks.length}`);
-    
-    // 过滤完成任务
-    const completedTasks = allTasks.filter(task => 
+    console.log(`Total task count: ${allTasks.length}`);
+
+    // Filter completed tasks
+    const completedTasks = allTasks.filter(task =>
       task.taskStatus === Task.Status.Completed
     );
-    console.log(`完成任务数: ${completedTasks.length}`);
-    
-    // 昨天的日期范围
+    console.log(`Completed task count: ${completedTasks.length}`);
+
+    // Date range for yesterday
     const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1); // 往前推一天
+    yesterday.setDate(yesterday.getDate() - 1); // Go back one day
     yesterday.setHours(0, 0, 0, 0);
     const today = new Date(yesterday);
     today.setDate(yesterday.getDate() + 1);
-    
-    console.log(`昨天范围: ${yesterday.toISOString()} 到 ${today.toISOString()}`);
-    
-    // 过滤昨天完成的任务
+
+    console.log(`Yesterday's range: ${yesterday.toISOString()} to ${today.toISOString()}`);
+
+    // Filter tasks completed yesterday
     const yesterdayCompletedTasks = completedTasks.filter(task => {
       if (!task.completionDate) return false;
-      
+
       const completedDate = new Date(task.completionDate);
       return completedDate >= yesterday && completedDate < today;
     });
-    
-    console.log(`昨天完成任务数: ${yesterdayCompletedTasks.length}`);
-    
-    // 获取任务状态映射
+
+    console.log(`Tasks completed yesterday: ${yesterdayCompletedTasks.length}`);
+
+    // Task status mapping
     const statusMap = {
       [Task.Status.Available]: "Available",
       [Task.Status.Blocked]: "Blocked",
-      [Task.Status.Completed]: "Completed", 
+      [Task.Status.Completed]: "Completed",
       [Task.Status.Dropped]: "Dropped",
       [Task.Status.DueSoon]: "DueSoon",
       [Task.Status.Next]: "Next",
       [Task.Status.Overdue]: "Overdue"
     };
-    
-    // 构建导出数据
+
+    // Build export data
     const exportData = {
       exportDate: new Date().toISOString(),
       tasks: [],
       totalCount: completedTasks.length,
       filteredCount: yesterdayCompletedTasks.length,
-      query: "昨天完成的任务"
+      query: "Tasks completed yesterday"
     };
-    
-    // 处理每个昨天完成的任务
+
+    // Process each task completed yesterday
     const tasksToProcess = yesterdayCompletedTasks.slice(0, limit);
-    
+
     tasksToProcess.forEach(task => {
       try {
         const taskData = {
@@ -80,23 +80,23 @@
             name: tag.name
           }))
         };
-        
+
         exportData.tasks.push(taskData);
       } catch (taskError) {
-        console.log(`处理任务出错: ${taskError}`);
+        console.log(`Error processing task: ${taskError}`);
       }
     });
-    
-    console.log(`成功处理 ${exportData.tasks.length} 个昨天完成的任务`);
-    console.log("=== 昨天完成任务查询结束 ===");
-    
+
+    console.log(`Successfully processed ${exportData.tasks.length} tasks completed yesterday`);
+    console.log("=== Yesterday's completed tasks query complete ===");
+
     return JSON.stringify(exportData);
-    
+
   } catch (error) {
-    console.error(`昨天完成任务查询错误: ${error}`);
+    console.error(`Yesterday's completed tasks query error: ${error}`);
     return JSON.stringify({
       success: false,
-      error: `昨天完成任务查询错误: ${error}`
+      error: `Yesterday's completed tasks query error: ${error}`
     });
   }
 })();

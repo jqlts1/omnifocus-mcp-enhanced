@@ -12,9 +12,13 @@ export interface RemoveItemParams {
  */
 function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id?.replace(/["\\]/g, '\\$&') || '';
+  const name = params.name?.replace(/["\\]/g, '\\$&') || '';
   const itemType = params.itemType;
+  const listName = itemType === 'task' ? 'flattened tasks' : 'flattened projects';
+  const singularTypeLabel = itemType === 'task' ? 'task' : 'project';
+  // JSON-safe version: additional escaping so " and \ survive AppleScript interpretation into valid JSON
+  const nameJson = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
   // Verify we have at least one identifier
   if (!id && !name) {
@@ -30,7 +34,6 @@ function generateAppleScript(params: RemoveItemParams): string {
         set foundItem to missing value
 `;
 
-  // Add ID search if provided
   if (id) {
     script += `
         -- Try to find by ID first
@@ -40,21 +43,18 @@ function generateAppleScript(params: RemoveItemParams): string {
 `;
   }
 
-  // Add name search if provided (and no ID or as fallback)
-  if (!id && name) {
+  if (name) {
     script += `
-        -- Find by name
-        try
-          set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where name = "${name}"
-        end try
-`;
-  } else if (id && name) {
-    script += `
-        -- If ID search failed, try to find by name as fallback
+        -- Resolve by name with duplicate protection
         if foundItem is missing value then
-          try
-            set foundItem to first ${itemType === 'task' ? 'flattened task' : 'flattened project'} where name = "${name}"
-          end try
+          set nameMatches to (${listName} where name = "${name}")
+          set nameMatchCount to count of nameMatches
+
+          if nameMatchCount = 1 then
+            set foundItem to item 1 of nameMatches
+          else if nameMatchCount > 1 then
+            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous ${singularTypeLabel} name: ${nameJson}. Multiple matches found; please use id.\\\"}"
+          end if
         end if
 `;
   }

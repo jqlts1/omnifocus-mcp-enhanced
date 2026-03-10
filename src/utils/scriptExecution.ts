@@ -21,7 +21,7 @@ export async function executeAppleScript(script: string): Promise<string> {
     writeFileSync(tempFile, script);
 
     // Execute using osascript with the file path (no shell escaping needed)
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+    const { stdout, stderr } = await execAsync(`osascript "${tempFile}"`);
 
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
@@ -48,7 +48,7 @@ export async function executeJXA(script: string): Promise<any[]> {
     writeFileSync(tempFile, script);
     
     // Execute the script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
+    const { stdout, stderr } = await execAsync(`osascript -l JavaScript "${tempFile}"`);
     
     if (stderr) {
       console.error("Script stderr output:", stderr);
@@ -193,7 +193,7 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     writeFileSync(tempFile, jxaScript);
     
     // Execute the JXA script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
+    const { stdout, stderr } = await execAsync(`osascript -l JavaScript "${tempFile}"`);
     
     // Clean up the temporary file
     unlinkSync(tempFile);

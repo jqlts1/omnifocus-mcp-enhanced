@@ -1,58 +1,58 @@
-// 专门测试完成任务的脚本
+// Script to test completed task retrieval
 (() => {
   try {
-    console.log("=== 完成任务测试脚本开始 ===");
-    
-    // 获取所有任务
+    console.log("=== Completed tasks test script starting ===");
+
+    // Get all tasks
     const allTasks = flattenedTasks;
-    console.log(`总任务数: ${allTasks.length}`);
-    
-    // 过滤完成任务
-    const completedTasks = allTasks.filter(task => 
+    console.log(`Total task count: ${allTasks.length}`);
+
+    // Filter completed tasks
+    const completedTasks = allTasks.filter(task =>
       task.taskStatus === Task.Status.Completed
     );
-    console.log(`完成任务数: ${completedTasks.length}`);
-    
-    // 今天的日期范围
+    console.log(`Completed task count: ${completedTasks.length}`);
+
+    // Date range for today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    
-    console.log(`今天开始: ${today.toISOString()}`);
-    console.log(`明天开始: ${tomorrow.toISOString()}`);
-    
-    // 过滤今天完成的任务
+
+    console.log(`Today starts: ${today.toISOString()}`);
+    console.log(`Tomorrow starts: ${tomorrow.toISOString()}`);
+
+    // Filter tasks completed today
     const todayCompletedTasks = completedTasks.filter(task => {
       if (!task.completionDate) {
-        console.log(`任务 "${task.name}" 没有完成日期`);
+        console.log(`Task "${task.name}" has no completion date`);
         return false;
       }
-      
+
       const completedDate = new Date(task.completionDate);
       const isToday = completedDate >= today && completedDate < tomorrow;
-      
-      console.log(`任务 "${task.name}" 完成日期: ${completedDate.toISOString()}, 是今天: ${isToday}`);
+
+      console.log(`Task "${task.name}" completion date: ${completedDate.toISOString()}, is today: ${isToday}`);
       return isToday;
     });
-    
-    console.log(`今天完成任务数: ${todayCompletedTasks.length}`);
-    
-    // 最近几天的完成任务
+
+    console.log(`Tasks completed today: ${todayCompletedTasks.length}`);
+
+    // Recent completed tasks
     const recentDays = 7;
     const recentDate = new Date();
     recentDate.setDate(recentDate.getDate() - recentDays);
     recentDate.setHours(0, 0, 0, 0);
-    
+
     const recentCompletedTasks = completedTasks.filter(task => {
       if (!task.completionDate) return false;
       const completedDate = new Date(task.completionDate);
       return completedDate >= recentDate;
     });
-    
-    console.log(`最近${recentDays}天完成任务数: ${recentCompletedTasks.length}`);
-    
-    // 输出最近的完成任务
+
+    console.log(`Tasks completed in the last ${recentDays} days: ${recentCompletedTasks.length}`);
+
+    // Build output of recent completed tasks
     const exportData = {
       totalTasks: allTasks.length,
       completedTasks: completedTasks.length,
@@ -61,8 +61,8 @@
       todayTasks: [],
       recentTasks: []
     };
-    
-    // 处理今天的任务
+
+    // Process today's tasks
     todayCompletedTasks.slice(0, 10).forEach(task => {
       exportData.todayTasks.push({
         id: task.id.primaryKey,
@@ -72,8 +72,8 @@
         projectName: task.containingProject ? task.containingProject.name : null
       });
     });
-    
-    // 处理最近的任务
+
+    // Process recent tasks
     recentCompletedTasks.slice(0, 10).forEach(task => {
       exportData.recentTasks.push({
         id: task.id.primaryKey,
@@ -83,14 +83,14 @@
         projectName: task.containingProject ? task.containingProject.name : null
       });
     });
-    
-    console.log("=== 完成任务测试脚本结束 ===");
+
+    console.log("=== Completed tasks test script complete ===");
     return JSON.stringify(exportData, null, 2);
-    
+
   } catch (error) {
-    console.error(`测试完成任务脚本错误: ${error}`);
+    console.error(`Completed tasks test script error: ${error}`);
     return JSON.stringify({
-      error: `测试完成任务脚本错误: ${error}`
+      error: `Completed tasks test script error: ${error}`
     });
   }
 })();

@@ -28,7 +28,7 @@ import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPer
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.6.6"
+  version: "1.6.8"
 });
 
 // Register tools
@@ -150,7 +150,7 @@ server.tool(
 
 server.tool(
   "get_custom_perspective_tasks",
-  "Get tasks from a specific OmniFocus custom perspective by name. Use this when user refers to perspective names like '今日工作安排', '今日复盘', '本周项目' etc. - these are custom views created in OmniFocus, NOT tags. Supports hierarchical tree display of task relationships.",
+  "Get tasks from a specific OmniFocus custom perspective by name. Use this when user refers to perspective names like 'Today', 'Weekly Review', 'This Week' etc. - these are custom views created in OmniFocus, NOT tags. Supports hierarchical tree display of task relationships.",
   getCustomPerspectiveTasksTool.schema.shape,
   getCustomPerspectiveTasksTool.handler
 );

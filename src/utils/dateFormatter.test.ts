@@ -27,6 +27,33 @@ test('appleScriptDateCode builds locale-independent date construction', () => {
   assert.match(code, /set seconds of dueDateValue to 0/);
 });
 
+test('appleScriptDateCode preserves time components from full ISO string', () => {
+  const code = appleScriptDateCode('2026-03-10T17:00:00-05:00', 'dueDateValue');
+
+  assert.match(code, /set year of dueDateValue to 2026/);
+  assert.match(code, /set month of dueDateValue to 3/);
+  assert.match(code, /set day of dueDateValue to 10/);
+  assert.match(code, /set hours of dueDateValue to 17/);
+  assert.match(code, /set minutes of dueDateValue to 0/);
+  assert.match(code, /set seconds of dueDateValue to 0/);
+});
+
+test('appleScriptDateCode preserves non-zero minutes and seconds', () => {
+  const code = appleScriptDateCode('2026-06-15T09:30:45-05:00', 'deferValue');
+
+  assert.match(code, /set hours of deferValue to 9/);
+  assert.match(code, /set minutes of deferValue to 30/);
+  assert.match(code, /set seconds of deferValue to 45/);
+});
+
+test('appleScriptDateCode defaults time to midnight for date-only input', () => {
+  const code = appleScriptDateCode('2026-02-28', 'dueDateValue');
+
+  assert.match(code, /set hours of dueDateValue to 0/);
+  assert.match(code, /set minutes of dueDateValue to 0/);
+  assert.match(code, /set seconds of dueDateValue to 0/);
+});
+
 test('appleScriptDateCode rejects invalid variable names', () => {
   assert.throws(() => appleScriptDateCode('2026-02-28', 'invalid name'));
 });

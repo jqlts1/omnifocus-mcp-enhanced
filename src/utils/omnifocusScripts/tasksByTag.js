@@ -2,7 +2,7 @@
 (() => {
   try {
     // Parameters will be injected by the script execution system
-    const tagName = injectedArgs ? injectedArgs.tagName : "编程"; // Default for testing
+    const tagName = injectedArgs ? injectedArgs.tagName : "coding"; // Default for testing
     const hideCompleted = injectedArgs ? injectedArgs.hideCompleted : true; // Default to true
     const exactMatch = injectedArgs ? injectedArgs.exactMatch : false;
     

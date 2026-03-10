@@ -1,9 +1,9 @@
-// 调试任务状态的脚本
+// Script to debug task status values
 (() => {
   try {
     const allTasks = flattenedTasks;
-    
-    // 获取前5个任务的状态信息
+
+    // Get status info for the first 5 tasks
     const statusInfo = [];
     for (let i = 0; i < Math.min(5, allTasks.length); i++) {
       const task = allTasks[i];
@@ -15,10 +15,10 @@
         isCompleted: task.taskStatus.toString() === "completed"
       });
     }
-    
-    // 检查完成任务的状态
+
+    // Check completed tasks by status string comparison
     const completedTasks = allTasks.filter(task => task.taskStatus.toString() === "completed");
-    
+
     const result = {
       success: true,
       totalTasks: allTasks.length,
@@ -29,16 +29,16 @@
         blocked: Task.Status.Blocked
       },
       statusInfo: statusInfo,
-      // 尝试不同的状态检查方式
+      // Try different ways to check status
       statusTestResults: {
         usingEnum: allTasks.filter(task => task.taskStatus === Task.Status.Completed).length,
         usingString: allTasks.filter(task => task.taskStatus.toString() === "completed").length,
         usingName: allTasks.filter(task => task.taskStatus.name === "completed").length
       }
     };
-    
+
     return JSON.stringify(result, null, 2);
-    
+
   } catch (error) {
     return JSON.stringify({
       success: false,

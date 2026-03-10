@@ -1,22 +1,22 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 
 export interface FilterTasksOptions {
-  // 🎯 任务状态过滤
+  // Task status filter
   taskStatus?: string[];
 
-  // 📍 透视范围
+  // Perspective scope
   perspective?: 'inbox' | 'flagged' | 'all' | 'custom';
 
-  // 💫 自定义透视参数
+  // Custom perspective parameters
   customPerspectiveName?: string;
   customPerspectiveId?: string;
 
-  // 📁 项目/标签过滤
+  // Project/tag filter
   projectFilter?: string;
   tagFilter?: string | string[];
   exactTagMatch?: boolean;
 
-  // 📅 截止日期过滤
+  // Due date filter
   dueBefore?: string;
   dueAfter?: string;
   dueToday?: boolean;
@@ -24,21 +24,21 @@ export interface FilterTasksOptions {
   dueThisMonth?: boolean;
   overdue?: boolean;
 
-  // 🚀 推迟日期过滤
+  // Defer date filter
   deferBefore?: string;
   deferAfter?: string;
   deferToday?: boolean;
   deferThisWeek?: boolean;
   deferAvailable?: boolean;
 
-  // 🗓 计划日期过滤
+  // Planned date filter
   plannedBefore?: string;
   plannedAfter?: string;
   plannedToday?: boolean;
   plannedThisWeek?: boolean;
   plannedThisMonth?: boolean;
 
-  // ✅ 完成日期过滤
+  // Completed date filter
   completedBefore?: string;
   completedAfter?: string;
   completedToday?: boolean;
@@ -46,7 +46,7 @@ export interface FilterTasksOptions {
   completedThisWeek?: boolean;
   completedThisMonth?: boolean;
 
-  // 🚩 其他维度
+  // Other dimensions
   flagged?: boolean;
   searchText?: string;
   hasEstimate?: boolean;
@@ -55,7 +55,7 @@ export interface FilterTasksOptions {
   hasNote?: boolean;
   inInbox?: boolean;
 
-  // 📊 输出控制
+  // Output control
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
@@ -83,9 +83,8 @@ function isDateInTodayRange(date: Date): boolean {
 function isDateInCurrentWeek(date: Date): boolean {
   const today = new Date();
   const currentDay = today.getDay(); // Sunday = 0
-  const mondayOffset = (currentDay + 6) % 7;
   const weekStart = startOfDay(today);
-  weekStart.setDate(today.getDate() - mondayOffset);
+  weekStart.setDate(today.getDate() - currentDay); // Sunday start
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 7);
@@ -348,7 +347,7 @@ export function applyClientSideFilters(tasks: any[], options: FilterTasksOptions
 
 export async function filterTasks(options: FilterTasksOptions = {}): Promise<string> {
   try {
-    // 设置默认值
+    // Set defaults
     const {
       perspective = 'all',
       exactTagMatch = false,
@@ -361,7 +360,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
     const needsClientSideSorting = !['name', 'completedDate'].includes(sortBy);
     const sourceLimit = (needsClientSideFiltering || needsClientSideSorting) ? Math.max(limit * 20, 1000) : limit;
 
-    // 执行常规过滤脚本
+    // Execute filter script
     const result = await executeOmniFocusScript('@filterTasks.js', {
       ...options,
       perspective,
@@ -375,7 +374,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       return result;
     }
 
-    // 如果结果是对象，格式化它
+    // If result is an object, format it
     if (result && typeof result === 'object') {
       const data = result as any;
 
@@ -383,10 +382,10 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
         throw new Error(data.error);
       }
 
-      // 格式化过滤结果
+      // Format filter results
       let output = `# 🔍 FILTERED TASKS\n\n`;
 
-      // 显示过滤条件摘要
+      // Show filter summary
       const filterSummary = buildFilterSummary(options);
       if (filterSummary) {
         output += `**Filter**: ${filterSummary}\n\n`;
@@ -402,7 +401,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
         if (taskCount === 0) {
           output += '🎯 No tasks match your filter criteria.\n';
 
-          // 提供一些建议
+          // Suggestions
           output += '\n**Tips**:\n';
           output += '- Try broadening your search criteria\n';
           output += '- Check if tasks exist in the specified project/tags\n';
@@ -414,7 +413,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
           }
           output += ':\n\n';
 
-          // 按项目分组显示任务
+          // Group tasks by project
           const tasksByProject = groupTasksByProject(limitedTasks);
 
           tasksByProject.forEach((tasks, projectName) => {
@@ -432,7 +431,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
             }
           });
 
-          // 显示排序信息
+          // Sort info
           output += `\n📊 **Sorted by**: ${sortBy} (${sortOrder})\n`;
         }
       } else {
@@ -449,7 +448,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
   }
 }
 
-// 构建过滤条件摘要
+// Build filter summary
 function buildFilterSummary(options: FilterTasksOptions): string {
   const conditions: string[] = [];
 
@@ -513,7 +512,7 @@ function buildFilterSummary(options: FilterTasksOptions): string {
   return conditions.length > 0 ? conditions.join(' | ') : '';
 }
 
-// 按项目分组任务
+// Group tasks by project
 function groupTasksByProject(tasks: any[]): Map<string, any[]> {
   const grouped = new Map<string, any[]>();
 
@@ -529,18 +528,18 @@ function groupTasksByProject(tasks: any[]): Map<string, any[]> {
   return grouped;
 }
 
-// 格式化单个任务
+// Format a single task
 function formatTask(task: any): string {
   let output = '';
 
-  // 任务基本信息
+  // Task basic info
   const flagSymbol = task.flagged ? '🚩 ' : '';
   const statusEmoji = getStatusEmoji(task.taskStatus);
 
   const idStr = task.id ? ` [${task.id}]` : '';
   output += `${statusEmoji} ${flagSymbol}${task.name}${idStr}`;
 
-  // 日期信息
+  // Date info
   const dateInfo: string[] = [];
   if (task.dueDate) {
     const dueDateStr = new Date(task.dueDate).toLocaleDateString();
@@ -567,7 +566,7 @@ function formatTask(task: any): string {
     output += ` [${dateInfo.join(', ')}]`;
   }
 
-  // 其他信息
+  // Additional info
   const additionalInfo: string[] = [];
 
   if (task.taskStatus && task.taskStatus !== 'Available') {
@@ -590,12 +589,12 @@ function formatTask(task: any): string {
 
   output += '\n';
 
-  // 任务备注
+  // Task notes
   if (task.note && task.note.trim()) {
     output += `  📝 ${task.note.trim()}\n`;
   }
 
-  // 标签
+  // Tags
   if (task.tags && task.tags.length > 0) {
     const tagNames = task.tags.map((tag: any) => tag.name).join(', ');
     output += `  🏷 ${tagNames}\n`;
@@ -604,7 +603,7 @@ function formatTask(task: any): string {
   return output;
 }
 
-// 获取状态对应的emoji
+// Get emoji for task status
 function getStatusEmoji(status: string): string {
   const statusMap: { [key: string]: string } = {
     Available: '⚪',

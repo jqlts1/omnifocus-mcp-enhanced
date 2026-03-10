@@ -62,7 +62,7 @@ export function buildPerspectiveTaskTree(
   options: BuildTreeOptions = {}
 ): PerspectiveTaskTreeResult {
   const hideCompleted = options.hideCompleted !== false;
-  const inboxLabel = options.inboxLabel || '收件箱';
+  const inboxLabel = options.inboxLabel || 'Inbox';
 
   const rawById = new Map<string, PerspectiveTaskInput>();
   const orderById = new Map<string, number>();
