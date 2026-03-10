@@ -33,13 +33,6 @@ See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/
 - **Version synced** — `server.ts` version now matches `package.json` (1.6.8).
 - **Repository URL updated** — Points to this fork.
 
-## Running Tests
-
-```bash
-npm test           # runs 57 unit tests
-npm run build      # compile TypeScript + copy JXA scripts
-```
-
 ## Known Limitations
 
 - **JSON injection in AppleScript return strings** — If a task name contains `"` or `\`, the JSON return from AppleScript may be malformed. The error path handles this gracefully (returns raw output as error message). Multi-layer escaping (TypeScript → AppleScript → JSON) makes a clean fix impractical.
