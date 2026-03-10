@@ -71,22 +71,42 @@ export function appleScriptDateCode(isoDate: string, variableName: string): stri
     throw new Error(`Invalid AppleScript variable name: ${variableName}`);
   }
 
-  const normalizedDate = formatDateForAppleScript(isoDate);
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalizedDate);
+  const trimmed = isoDate.trim();
 
-  if (!match) {
-    throw new Error(`Failed to normalize date string: ${isoDate}`);
+  // Extract date components
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (!dateMatch) {
+    throw new Error(`Failed to parse date string: ${isoDate}`);
+  }
+  const [, year, month, day] = dateMatch;
+
+  // Extract time components if present (from full ISO like 2026-03-10T17:00:00-05:00)
+  let hours = 0;
+  let minutes = 0;
+  let seconds = 0;
+  const timeMatch = /T(\d{2}):(\d{2}):(\d{2})/.exec(trimmed);
+  if (timeMatch) {
+    hours = Number(timeMatch[1]);
+    minutes = Number(timeMatch[2]);
+    seconds = Number(timeMatch[3]);
   }
 
-  const [, year, month, day] = match;
+  // Validate date
+  const yr = Number(year);
+  const mo = Number(month);
+  const dy = Number(day);
+  const validator = new Date(yr, mo - 1, dy);
+  if (validator.getFullYear() !== yr || validator.getMonth() !== mo - 1 || validator.getDate() !== dy) {
+    throw new Error(`Invalid date string: ${isoDate}`);
+  }
 
   return `
     set ${variableName} to current date
     set day of ${variableName} to 1
-    set year of ${variableName} to ${Number(year)}
-    set month of ${variableName} to ${Number(month)}
-    set day of ${variableName} to ${Number(day)}
-    set hours of ${variableName} to 0
-    set minutes of ${variableName} to 0
-    set seconds of ${variableName} to 0`;
+    set year of ${variableName} to ${yr}
+    set month of ${variableName} to ${mo}
+    set day of ${variableName} to ${dy}
+    set hours of ${variableName} to ${hours}
+    set minutes of ${variableName} to ${minutes}
+    set seconds of ${variableName} to ${seconds}`;
 }
