@@ -30,8 +30,8 @@ export interface TaskInfo {
  * Generate AppleScript to get task information by ID or name
  */
 function generateGetTaskScript(params: GetTaskByIdParams): string {
-  const taskId = params.taskId?.replace(/['"\\]/g, '\\$&') || '';
-  const taskName = params.taskName?.replace(/['"\\]/g, '\\$&') || '';
+  const taskId = params.taskId?.replace(/["\\]/g, '\\$&') || '';
+  const taskName = params.taskName?.replace(/["\\]/g, '\\$&') || '';
 
   let script = `
   try
