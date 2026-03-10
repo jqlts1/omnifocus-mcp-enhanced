@@ -9,7 +9,7 @@ See the [upstream README](https://github.com/jqlts1/omnifocus-mcp-enhanced/blob/
 Requires macOS with OmniFocus 4 and Node.js 18+.
 
 ```bash
-git clone https://github.com/psufka/omnifocus-mcp-enhanced.git
+git clone https://github.com/psufka/omnifocus-mcp-enhanced-fork.git
 cd omnifocus-mcp-enhanced
 npm install
 npm run build
