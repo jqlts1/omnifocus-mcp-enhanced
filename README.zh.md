@@ -13,6 +13,7 @@
 
 ## 🆕 最新版本
 
+- **v1.6.9** - 新增任务附件支持：`get_task_by_id` 会返回附件元信息，`dump_database` 导出附件/链接元信息，并新增 `read_task_attachment`，可在支持时直接把图片附件作为 MCP 图片内容返回。
 - **v1.6.6** - 新增 Planned Date（计划日期）全链路支持：创建/编辑/读取/过滤/排序/导出，包含 `plannedDate` / `newPlannedDate`。
 
 ## ✨ 核心特性
@@ -33,6 +34,7 @@
 - **📅 时间管理** - 截止日期、推迟日期、计划日期、估时和计划
 - **🏷️ 高级标签** - 基于标签的精确/模糊匹配过滤
 - **🤖 AI 集成** - 与 Claude AI 无缝集成，实现智能工作流
+- **🖼️ 附件感知读取** - 先暴露备注附件和链接文件的元信息，再决定是否让 AI 继续查看附件内容
 
 ## 📦 安装
 
@@ -210,6 +212,25 @@ get_custom_perspective_tasks {
 }
 ```
 
+### 6. 🖼️ 附件查看
+
+先读取任务和附件元信息，再按需打开具体附件：
+
+```bash
+# 读取任务详情和附件元信息
+get_task_by_id {
+  "taskId": "abc123"
+}
+
+# 打开 get_task_by_id 返回的某个附件
+read_task_attachment {
+  "taskId": "abc123",
+  "attachmentId": "embedded-1"
+}
+```
+
+`get_task_by_id` 现在会返回附件 ID、名称、推断出的 MIME 类型、来源（`embedded` 或 `linked`）以及可用时的大小。`read_task_attachment` 会尽量把图片作为 MCP 图片内容直接返回，这样 AI 客户端可以直接查看图片，而不是只能读一段 base64 文本。
+
 ## 🛠️ 完整工具参考
 
 ### 📊 数据库与任务管理
@@ -221,21 +242,22 @@ get_custom_perspective_tasks {
 6. **move_task** - 将已有任务转移到项目/父任务/Inbox
 7. **batch_add_items** - 批量添加（增强子任务支持）
 8. **batch_remove_items** - 批量删除
-9. **get_task_by_id** - 查询任务信息
+9. **get_task_by_id** - 查询任务信息，并返回附件元信息
+10. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
 
 ### 🔍 内置透视工具
-10. **get_inbox_tasks** - 收件箱透视
-11. **get_flagged_tasks** - 已标记透视
-12. **get_forecast_tasks** - 预测透视（包含截止/推迟/计划日期任务数据）
-13. **get_tasks_by_tag** - 基于标签的过滤
-14. **filter_tasks** - 无限组合的终极过滤
+11. **get_inbox_tasks** - 收件箱透视
+12. **get_flagged_tasks** - 已标记透视
+13. **get_forecast_tasks** - 预测透视（包含截止/推迟/计划日期任务数据）
+14. **get_tasks_by_tag** - 基于标签的过滤
+15. **filter_tasks** - 无限组合的终极过滤
 
 ### 🌟 自定义透视工具（新功能）
-15. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
-16. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
+16. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
+17. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
 
 ### 📊 分析与跟踪
-17. **get_today_completed_tasks** - 查看今日完成的任务
+18. **get_today_completed_tasks** - 查看今日完成的任务
 
 批量转移功能后续计划（Roadmap）：[docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md)
 

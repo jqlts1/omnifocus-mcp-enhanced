@@ -13,6 +13,7 @@ import * as moveTaskTool from './tools/definitions/moveTask.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as getTaskByIdTool from './tools/definitions/getTaskById.js';
+import * as readTaskAttachmentTool from './tools/definitions/readTaskAttachment.js';
 import * as getTodayCompletedTasksTool from './tools/definitions/getTodayCompletedTasks.js';
 // Import perspective tools
 import * as getInboxTasksTool from './tools/definitions/getInboxTasks.js';
@@ -28,7 +29,7 @@ import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPer
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.6.6"
+  version: "1.6.9"
 });
 
 // Register tools
@@ -94,6 +95,13 @@ server.tool(
   "Get information about a specific task by ID or name",
   getTaskByIdTool.schema.shape,
   getTaskByIdTool.handler
+);
+
+server.tool(
+  "read_task_attachment",
+  "Read a task attachment reported by get_task_by_id. Images are returned as MCP image content when possible.",
+  readTaskAttachmentTool.schema.shape,
+  readTaskAttachmentTool.handler
 );
 
 server.tool(

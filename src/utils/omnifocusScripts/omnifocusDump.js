@@ -36,6 +36,30 @@
           if (enumObj === null || enumObj === undefined) return null;
           return mapObj[enumObj] || "Unknown";
         }
+
+        function serializeAttachment(wrapper, index) {
+          let preferredFilename = null;
+
+          try {
+            preferredFilename = wrapper.preferredFilename || null;
+          } catch {
+            preferredFilename = null;
+          }
+
+          return {
+            id: `embedded-${index + 1}`,
+            name: preferredFilename || `attachment-${index + 1}`,
+            sizeBytes: null
+          };
+        }
+
+        function serializeLinkedFileURL(fileUrl) {
+          try {
+            return fileUrl.toString();
+          } catch {
+            return null;
+          }
+        }
     
         // Create database export object using Maps for faster lookups
         const exportData = {
@@ -181,7 +205,11 @@
                 projectID: projectID,
                 parentTaskID: task.parent ? task.parent.id.primaryKey : null,
                 children: task.children.map(child => child.id.primaryKey),
-                inInbox: task.inInbox
+                inInbox: task.inInbox,
+                attachments: (task.attachments || []).map((wrapper, index) => serializeAttachment(wrapper, index)),
+                linkedFileURLs: (task.linkedFileURLs || [])
+                  .map(fileUrl => serializeLinkedFileURL(fileUrl))
+                  .filter(Boolean)
               };
     
               // Add task to export

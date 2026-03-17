@@ -1,3 +1,14 @@
+export interface OmnifocusTaskAttachment {
+  id: string;
+  name: string;
+  kind: 'image' | 'pdf' | 'audio' | 'video' | 'archive' | 'text' | 'file';
+  mimeType: string | null;
+  sizeBytes: number | null;
+  source: 'embedded' | 'linked';
+  isImage: boolean;
+  url?: string;
+}
+
 export interface OmnifocusTask {
     id: string;
     name: string;
@@ -36,7 +47,7 @@ export interface OmnifocusTask {
     repetitionMethod: string | null; // Fixed or due-based repetition
     
     // Attachments
-    attachments: any[]; // FileWrapper representations
+    attachments: OmnifocusTaskAttachment[];
     linkedFileURLs: string[];
     
     // Notifications

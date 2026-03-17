@@ -1,5 +1,6 @@
 import { OmnifocusDatabase, OmnifocusTask, OmnifocusProject, OmnifocusFolder, OmnifocusTag } from '../types.js';
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
+import { RawTaskAttachment, normalizeTaskAttachments } from './primitives/taskAttachments.js';
 
 import fs from 'fs';
 // Define interfaces for the data returned from the script
@@ -23,6 +24,8 @@ interface OmnifocusDumpTask {
   parentTaskID: string | null;
   children: string[];
   inInbox: boolean;
+  attachments?: RawTaskAttachment[];
+  linkedFileURLs?: string[];
 }
 
 interface OmnifocusDumpProject {
@@ -133,8 +136,8 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           isRepeating: false, // Not available in the new format
           repetitionMethod: null, // Not available in the new format 
           repetitionRule: null, // Not available in the new format
-          attachments: [], // Default empty array
-          linkedFileURLs: [], // Default empty array
+          attachments: normalizeTaskAttachments(task.attachments, task.linkedFileURLs),
+          linkedFileURLs: task.linkedFileURLs || [],
           notifications: [], // Default empty array
           shouldUseFloatingTimeZone: false // Default value
         };
@@ -200,4 +203,3 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
     throw error;
   }
 }
-

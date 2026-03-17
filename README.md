@@ -17,6 +17,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 
 ## 🆕 Latest Release
 
+- **v1.6.9** - Added task attachment support: `get_task_by_id` now lists attachment metadata, `dump_database` exports attachment/link metadata, and new `read_task_attachment` returns image attachments as MCP image content when possible.
 - **v1.6.8** - Added stable task move support via `move_task` and `edit_item` (`newProjectId/newProjectName/newParentTaskId/newParentTaskName/moveToInbox`) with duplicate-name protection and cycle-prevention checks.
 - **v1.6.6** - Added full Planned Date support (create/edit/read/filter/sort/export), including `plannedDate`/`newPlannedDate` and updated task displays.
 
@@ -38,6 +39,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🤖 AI Integration** - Seamless Claude AI integration for intelligent workflows
+- **🖼️ Attachment-Aware Reads** - Surface note attachments and linked files before deciding whether AI should inspect them
 
 ## 📦 Installation
 
@@ -215,6 +217,25 @@ Efficiently manage multiple tasks:
 }
 ```
 
+### 6. 🖼️ Attachment Inspection
+
+Discover images and linked files on a task first, then read only the attachment you need:
+
+```bash
+# List task details plus attachment metadata
+get_task_by_id {
+  "taskId": "abc123"
+}
+
+# Open an attachment returned by get_task_by_id
+read_task_attachment {
+  "taskId": "abc123",
+  "attachmentId": "embedded-1"
+}
+```
+
+`get_task_by_id` now reports attachment IDs, names, MIME guesses, source (`embedded` vs `linked`), and sizes when available. `read_task_attachment` returns images as MCP image content when possible, so AI clients can inspect the image directly instead of parsing base64 from plain text.
+
 ## 🛠️ Complete Tool Reference
 
 ### 📊 Database & Task Management
@@ -226,21 +247,22 @@ Efficiently manage multiple tasks:
 6. **move_task** - Move an existing task to project/parent task/inbox
 7. **batch_add_items** - Bulk add (enhanced with subtask support)
 8. **batch_remove_items** - Bulk remove
-9. **get_task_by_id** - Query task information
+9. **get_task_by_id** - Query task information, including attachment metadata
+10. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
 
 ### 🔍 Built-in Perspective Tools
-10. **get_inbox_tasks** - Inbox perspective
-11. **get_flagged_tasks** - Flagged perspective
-12. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
-13. **get_tasks_by_tag** - Tag-based filtering
-14. **filter_tasks** - Ultimate filtering with unlimited combinations
+11. **get_inbox_tasks** - Inbox perspective
+12. **get_flagged_tasks** - Flagged perspective
+13. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
+14. **get_tasks_by_tag** - Tag-based filtering
+15. **filter_tasks** - Ultimate filtering with unlimited combinations
 
 ### 🌟 Custom Perspective Tools (NEW)
-15. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
-16. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
+16. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
+17. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
 
 ### 📊 Analytics & Tracking
-17. **get_today_completed_tasks** - View today's completed tasks
+18. **get_today_completed_tasks** - View today's completed tasks
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
 
