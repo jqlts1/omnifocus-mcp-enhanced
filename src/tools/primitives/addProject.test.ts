@@ -22,3 +22,25 @@ test('addProject date handling uses preamble variables outside OmniFocus tell bl
   assert.doesNotMatch(script, /set defer date of newProject to date "/);
   assert.doesNotMatch(script, /set planned date of newProject to date "/);
 });
+
+test('addProject keeps apostrophes and doubles backslashes in text fields', () => {
+  const script = generateAppleScript({
+    name: "Client's \\ Roadmap",
+    note: "Things that didn't work in C:\\Temp"
+  });
+
+  assert.match(script, /name:"Client's \\\\ Roadmap"/);
+  assert.match(script, /set note of newProject to "Things that didn't work in C:\\\\Temp"/);
+  assert.doesNotMatch(script, /\\'/);
+});
+
+test('addProject escapes JSON response values through AppleScript helper', () => {
+  const script = generateAppleScript({
+    name: "Client's \\ Roadmap"
+  });
+
+  assert.match(script, /on jsonEscape\(inputText\)/);
+  assert.match(script, /set projectNameValue to name of newProject/);
+  assert.match(script, /my jsonEscape\(projectId\)/);
+  assert.match(script, /my jsonEscape\(projectNameValue\)/);
+});

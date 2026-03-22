@@ -97,3 +97,41 @@ test('generateAppleScript supports moving task to inbox', () => {
   assert.match(script, /move foundItem to end of inbox tasks/);
   assert.match(script, /set end of changedProperties to "moved \(inbox\)"/);
 });
+
+test('generateAppleScript marks completed tasks with mark complete', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newStatus: 'completed'
+  });
+
+  assert.match(script, /mark complete foundItem/);
+  assert.doesNotMatch(script, /set completed of foundItem to true/);
+});
+
+test('generateAppleScript keeps apostrophes and doubles backslashes in edited text fields', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newName: "Client's \\ follow-up",
+    newNote: "Check Bob's file in C:\\Temp"
+  });
+
+  assert.match(script, /set name of foundItem to "Client's \\\\ follow-up"/);
+  assert.match(script, /set note of foundItem to "Check Bob's file in C:\\\\Temp"/);
+  assert.doesNotMatch(script, /\\'/);
+});
+
+test('generateAppleScript escapes edit responses through AppleScript helper', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newName: "Client's \\ follow-up"
+  });
+
+  assert.match(script, /on jsonEscape\(inputText\)/);
+  assert.match(script, /my jsonEscape\(itemId\)/);
+  assert.match(script, /my jsonEscape\(itemName\)/);
+  assert.match(script, /my jsonEscape\(changedPropsText\)/);
+  assert.match(script, /my jsonEscape\(errorMessage\)/);
+});

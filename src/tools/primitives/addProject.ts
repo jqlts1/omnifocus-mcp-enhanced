@@ -1,5 +1,7 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
+import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
+import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -20,8 +22,8 @@ export interface AddProjectParams {
  */
 export function generateAppleScript(params: AddProjectParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = escapeAppleScriptString(params.name);
+  const note = params.note ? escapeAppleScriptString(params.note) : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
   const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
   const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
@@ -30,11 +32,12 @@ export function generateAppleScript(params: AddProjectParams): string {
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const folderName = params.folderName?.replace(/['"\\]/g, '\\$&') || '';
+  const folderName = params.folderName ? escapeAppleScriptString(params.folderName) : '';
   const sequential = params.sequential === true;
+  const jsonHelpers = buildAppleScriptJsonHelpers();
   const tagAssignmentScript = tags.length > 0
     ? tags.map(tag => {
-      const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+      const sanitizedTag = escapeAppleScriptString(tag);
       return `
           try
             set theTag to missing value
@@ -53,6 +56,7 @@ export function generateAppleScript(params: AddProjectParams): string {
 
   // Construct AppleScript with error handling
   let script = `
+${jsonHelpers}
   try
 ${datePreamble}
     tell application "OmniFocus"
@@ -67,7 +71,7 @@ ${datePreamble}
             set theFolder to first flattened folder where name = "${folderName}"
             set newProject to make new project with properties {name:"${name}"} at end of projects of theFolder
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Folder not found: ${folderName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Folder not found: ${folderName}") & "\\\"}"
           end try
         end if
         
@@ -82,16 +86,17 @@ ${datePreamble}
         
         -- Get the project ID
         set projectId to id of newProject as string
+        set projectNameValue to name of newProject
         
         -- Add tags if provided
         ${tagAssignmentScript}
         
         -- Return success with project ID
-        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & projectId & "\\",\\\"name\\\":\\"${name}\\"}"
+        return "{\\\"success\\\":true,\\\"projectId\\\":\\"" & my jsonEscape(projectId) & "\\",\\\"name\\\":\\"" & my jsonEscape(projectNameValue) & "\\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\\"}"
   end try
   `;
 

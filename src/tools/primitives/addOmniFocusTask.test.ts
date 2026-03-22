@@ -31,3 +31,25 @@ test('generateAppleScript builds date variables before OmniFocus tell block', ()
   assert.doesNotMatch(script, /set defer date of newTask to date "/);
   assert.doesNotMatch(script, /set planned date of newTask to date "/);
 });
+
+test('generateAppleScript keeps apostrophes and doubles backslashes in task text fields', () => {
+  const script = generateAppleScript({
+    name: "Review client's \\ draft",
+    note: "Check Bob's file in C:\\Temp"
+  });
+
+  assert.match(script, /make new inbox task with properties \{name:"Review client's \\\\ draft"\}/);
+  assert.match(script, /set note of newTask to "Check Bob's file in C:\\\\Temp"/);
+  assert.doesNotMatch(script, /\\'/);
+});
+
+test('generateAppleScript escapes JSON response values through AppleScript helper', () => {
+  const script = generateAppleScript({
+    name: "Review client's \\ draft"
+  });
+
+  assert.match(script, /on jsonEscape\(inputText\)/);
+  assert.match(script, /set taskNameValue to name of newTask/);
+  assert.match(script, /my jsonEscape\(taskId\)/);
+  assert.match(script, /my jsonEscape\(taskNameValue\)/);
+});

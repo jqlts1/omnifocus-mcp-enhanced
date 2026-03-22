@@ -1,4 +1,6 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
+import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
+import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
 
 // Interface for item removal parameters
 export interface RemoveItemParams {
@@ -12,9 +14,10 @@ export interface RemoveItemParams {
  */
 function generateAppleScript(params: RemoveItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || ''; // Escape quotes and backslashes
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id ? escapeAppleScriptString(params.id) : '';
+  const name = params.name ? escapeAppleScriptString(params.name) : '';
   const itemType = params.itemType;
+  const jsonHelpers = buildAppleScriptJsonHelpers();
 
   // Verify we have at least one identifier
   if (!id && !name) {
@@ -23,6 +26,7 @@ function generateAppleScript(params: RemoveItemParams): string {
 
   // Construct AppleScript with error handling
   let script = `
+${jsonHelpers}
   try
     tell application "OmniFocus"
       tell front document
@@ -70,7 +74,7 @@ function generateAppleScript(params: RemoveItemParams): string {
           delete foundItem
           
           -- Return success
-          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\"}"
+          return "{\\\"success\\\":true,\\\"id\\\":\\"" & my jsonEscape(itemId) & "\\",\\\"name\\\":\\"" & my jsonEscape(itemName) & "\\\"}"
         else
           -- Item not found
           return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\\"}"
@@ -78,7 +82,7 @@ function generateAppleScript(params: RemoveItemParams): string {
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\\"}"
   end try
   `;
 

@@ -1,5 +1,7 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
+import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
+import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -22,7 +24,7 @@ export function buildTagAssignmentScript(tags: string[], targetVar: string): str
   }
 
   return tags.map(tag => {
-    const sanitizedTag = tag.replace(/['"\\]/g, '\\$&');
+    const sanitizedTag = escapeAppleScriptString(tag);
     return `
           try
             set theTag to missing value
@@ -44,8 +46,8 @@ export function buildTagAssignmentScript(tags: string[], targetVar: string): str
  */
 export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const name = params.name.replace(/['"\\]/g, '\\$&'); // Escape quotes and backslashes
-  const note = params.note?.replace(/['"\\]/g, '\\$&') || '';
+  const name = escapeAppleScriptString(params.name);
+  const note = params.note ? escapeAppleScriptString(params.note) : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
   const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
   const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
@@ -54,13 +56,15 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskId = params.parentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const parentTaskName = params.parentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const projectName = params.projectName ? escapeAppleScriptString(params.projectName) : '';
+  const parentTaskId = params.parentTaskId ? escapeAppleScriptString(params.parentTaskId) : '';
+  const parentTaskName = params.parentTaskName ? escapeAppleScriptString(params.parentTaskName) : '';
+  const jsonHelpers = buildAppleScriptJsonHelpers();
   const tagAssignmentScript = buildTagAssignmentScript(tags, 'newTask');
 
   // Construct AppleScript with error handling
   let script = `
+${jsonHelpers}
   try
 ${datePreamble}
     tell application "OmniFocus"
@@ -72,7 +76,7 @@ ${datePreamble}
             set theParentTask to first flattened task where id = "${parentTaskId}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theParentTask
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with ID: ${parentTaskId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Parent task not found with ID: ${parentTaskId}") & "\\\"}"
           end try
         else if "${parentTaskName}" is not "" then
           -- Create subtask using parent task name
@@ -80,7 +84,7 @@ ${datePreamble}
             set theParentTask to first flattened task where name = "${parentTaskName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theParentTask
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Parent task not found with name: ${parentTaskName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Parent task not found with name: ${parentTaskName}") & "\\\"}"
           end try
         else if "${projectName}" is not "" then
           -- Use specified project
@@ -88,7 +92,7 @@ ${datePreamble}
             set theProject to first flattened project where name = "${projectName}"
             set newTask to make new task with properties {name:"${name}"} at end of tasks of theProject
           on error
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Project not found: ${projectName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Project not found: ${projectName}") & "\\\"}"
           end try
         else
           -- Use inbox of the document
@@ -105,16 +109,17 @@ ${datePreamble}
         
         -- Get the task ID
         set taskId to id of newTask as string
+        set taskNameValue to name of newTask
         
         -- Add tags if provided
         ${tagAssignmentScript}
         
         -- Return success with task ID
-        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & taskId & "\\",\\\"name\\\":\\"${name}\\"}"
+        return "{\\\"success\\\":true,\\\"taskId\\\":\\"" & my jsonEscape(taskId) & "\\",\\\"name\\\":\\"" & my jsonEscape(taskNameValue) & "\\\"}"
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\\"}"
   end try
   `;
 

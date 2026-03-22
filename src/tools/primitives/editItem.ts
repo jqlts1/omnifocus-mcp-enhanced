@@ -1,5 +1,7 @@
 import { executeAppleScript } from '../../utils/scriptExecution.js';
+import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
+import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -104,16 +106,17 @@ export function validateEditItemParams(params: EditItemParams): { valid: boolean
  */
 export function generateAppleScript(params: EditItemParams): string {
   // Sanitize and prepare parameters for AppleScript
-  const id = params.id?.replace(/['"\\]/g, '\\$&') || '';
-  const name = params.name?.replace(/['"\\]/g, '\\$&') || '';
+  const id = params.id ? escapeAppleScriptString(params.id) : '';
+  const name = params.name ? escapeAppleScriptString(params.name) : '';
   const itemType = params.itemType;
   const listName = itemType === 'task' ? 'flattened tasks' : 'flattened projects';
   const singularTypeLabel = itemType === 'task' ? 'task' : 'project';
 
-  const newProjectId = params.newProjectId?.replace(/['"\\]/g, '\\$&') || '';
-  const newProjectName = params.newProjectName?.replace(/['"\\]/g, '\\$&') || '';
-  const newParentTaskId = params.newParentTaskId?.replace(/['"\\]/g, '\\$&') || '';
-  const newParentTaskName = params.newParentTaskName?.replace(/['"\\]/g, '\\$&') || '';
+  const newProjectId = params.newProjectId ? escapeAppleScriptString(params.newProjectId) : '';
+  const newProjectName = params.newProjectName ? escapeAppleScriptString(params.newProjectName) : '';
+  const newParentTaskId = params.newParentTaskId ? escapeAppleScriptString(params.newParentTaskId) : '';
+  const newParentTaskName = params.newParentTaskName ? escapeAppleScriptString(params.newParentTaskName) : '';
+  const jsonHelpers = buildAppleScriptJsonHelpers();
 
   const datePreambleParts: string[] = [];
 
@@ -135,6 +138,7 @@ export function generateAppleScript(params: EditItemParams): string {
 
   // Construct AppleScript with error handling
   let script = `
+${jsonHelpers}
   try
 ${datePreamble}
     tell application "OmniFocus"
@@ -162,7 +166,7 @@ ${datePreamble}
           if nameMatchCount = 1 then
             set foundItem to item 1 of nameMatches
           else if nameMatchCount > 1 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous ${singularTypeLabel} name: ${name}. Multiple matches found; please use id.\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Ambiguous ${singularTypeLabel} name: ${name}. Multiple matches found; please use id.") & "\\\"}"
           end if
         end if
 `;
@@ -194,7 +198,7 @@ ${datePreamble}
           end try
 
           if destinationProject is missing value then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with ID: ${newProjectId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Destination project not found with ID: ${newProjectId}") & "\\\"}"
           end if
 
           -- Move task to destination project first (before property edits)
@@ -208,9 +212,9 @@ ${datePreamble}
           set destinationProjectCount to count of destinationProjects
 
           if destinationProjectCount = 0 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination project not found with name: ${newProjectName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Destination project not found with name: ${newProjectName}") & "\\\"}"
           else if destinationProjectCount > 1 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination project name: ${newProjectName}. Multiple matches found; please use project id.\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Ambiguous destination project name: ${newProjectName}. Multiple matches found; please use project id.") & "\\\"}"
           end if
 
           set destinationProject to item 1 of destinationProjects
@@ -230,7 +234,7 @@ ${datePreamble}
           end try
 
           if destinationParentTask is missing value then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with ID: ${newParentTaskId}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Destination parent task not found with ID: ${newParentTaskId}") & "\\\"}"
           end if
 `;
       } else {
@@ -240,9 +244,9 @@ ${datePreamble}
           set destinationParentTaskCount to count of destinationParentTasks
 
           if destinationParentTaskCount = 0 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Destination parent task not found with name: ${newParentTaskName}\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Destination parent task not found with name: ${newParentTaskName}") & "\\\"}"
           else if destinationParentTaskCount > 1 then
-            return "{\\\"success\\\":false,\\\"error\\\":\\\"Ambiguous destination parent task name: ${newParentTaskName}. Multiple matches found; please use parent task id.\\\"}"
+            return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape("Ambiguous destination parent task name: ${newParentTaskName}. Multiple matches found; please use parent task id.") & "\\\"}"
           end if
 
           set destinationParentTask to item 1 of destinationParentTasks
@@ -278,7 +282,7 @@ ${datePreamble}
   if (params.newName !== undefined) {
     script += `
           -- Update name
-          set name of foundItem to "${params.newName.replace(/['"\\]/g, '\\$&')}"
+          set name of foundItem to "${escapeAppleScriptString(params.newName)}"
           set end of changedProperties to "name"
 `;
   }
@@ -286,7 +290,7 @@ ${datePreamble}
   if (params.newNote !== undefined) {
     script += `
           -- Update note
-          set note of foundItem to "${params.newNote.replace(/['"\\]/g, '\\$&')}"
+          set note of foundItem to "${escapeAppleScriptString(params.newNote)}"
           set end of changedProperties to "note"
 `;
   }
@@ -362,7 +366,7 @@ ${datePreamble}
       if (params.newStatus === 'completed') {
         script += `
           -- Mark task as completed
-          set completed of foundItem to true
+          mark complete foundItem
           set end of changedProperties to "status (completed)"
 `;
       } else if (params.newStatus === 'dropped') {
@@ -383,7 +387,7 @@ ${datePreamble}
 
     // Handle tag operations
     if (params.replaceTags && params.replaceTags.length > 0) {
-      const tagsList = params.replaceTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
+      const tagsList = params.replaceTags.map(tag => `"${escapeAppleScriptString(tag)}"`).join(', ');
       script += `
           -- Replace all tags
           set tagNames to {${tagsList}}
@@ -410,7 +414,7 @@ ${datePreamble}
     } else {
       // Add tags if specified
       if (params.addTags && params.addTags.length > 0) {
-        const tagsList = params.addTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
+        const tagsList = params.addTags.map(tag => `"${escapeAppleScriptString(tag)}"`).join(', ');
         script += `
           -- Add tags
           set tagNames to {${tagsList}}
@@ -430,7 +434,7 @@ ${datePreamble}
 
       // Remove tags if specified
       if (params.removeTags && params.removeTags.length > 0) {
-        const tagsList = params.removeTags.map(tag => `"${tag.replace(/['"\\]/g, '\\$&')}"`).join(', ');
+        const tagsList = params.removeTags.map(tag => `"${escapeAppleScriptString(tag)}"`).join(', ');
         script += `
           -- Remove tags
           set tagNames to {${tagsList}}
@@ -472,7 +476,7 @@ ${datePreamble}
 
     // Move to a new folder
     if (params.newFolderName !== undefined) {
-      const folderName = params.newFolderName.replace(/['"\\]/g, '\\$&');
+      const folderName = escapeAppleScriptString(params.newFolderName);
       script += `
           -- Move to new folder
           set destFolder to missing value
@@ -503,7 +507,7 @@ ${datePreamble}
           end repeat
 
           -- Return success with details
-          return "{\\\"success\\\":true,\\\"id\\\":\\"" & itemId & "\\",\\\"name\\\":\\"" & itemName & "\\",\\\"changedProperties\\\":\\"" & changedPropsText & "\\"}"
+          return "{\\\"success\\\":true,\\\"id\\\":\\"" & my jsonEscape(itemId) & "\\",\\\"name\\\":\\"" & my jsonEscape(itemName) & "\\",\\\"changedProperties\\\":\\"" & my jsonEscape(changedPropsText) & "\\\"}"
         else
           -- Item not found
           return "{\\\"success\\\":false,\\\"error\\\":\\\"Item not found\\\"}"
@@ -511,7 +515,7 @@ ${datePreamble}
       end tell
     end tell
   on error errorMessage
-    return "{\\\"success\\\":false,\\\"error\\\":\\"" & errorMessage & "\\"}"
+    return "{\\\"success\\\":false,\\\"error\\\":\\"" & my jsonEscape(errorMessage) & "\\\"}"
   end try
   `;
 
