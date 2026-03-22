@@ -234,10 +234,29 @@ mcporter call omnifocus.batch_add_items --args '{
 
 If you pass a subtask with `parentTaskId` or `parentTaskName`, do not also pass `projectName`. Subtasks inherit the project from their parent task.
 
-Correct parent + subtask example in a single batch:
+Working `mcporter` examples:
 
-```json
-{
+```bash
+# 1) Batch-create top-level tasks in a project
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "Parent: Category A",
+      "projectName": "OmniFocus MCP Batch Test"
+    },
+    {
+      "type": "task",
+      "name": "Parent: Category B",
+      "projectName": "OmniFocus MCP Batch Test"
+    }
+  ]
+}'
+```
+
+```bash
+# 2) Create parent + child in one batch
+mcporter call omnifocus.batch_add_items --args '{
   "items": [
     {
       "type": "task",
@@ -250,8 +269,48 @@ Correct parent + subtask example in a single batch:
       "parentTaskName": "Parent: Category A"
     }
   ]
-}
+}'
 ```
+
+```bash
+# 3) Safer two-step flow when adding many subtasks to existing parents
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "Child: A1",
+      "parentTaskName": "Parent: Category A"
+    },
+    {
+      "type": "task",
+      "name": "Child: A2",
+      "parentTaskName": "Parent: Category A"
+    },
+    {
+      "type": "task",
+      "name": "Child: B1",
+      "parentTaskName": "Parent: Category B"
+    }
+  ]
+}'
+```
+
+This will fail, by design:
+
+```bash
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "Child: A1",
+      "projectName": "OmniFocus MCP Batch Test",
+      "parentTaskName": "Parent: Category A"
+    }
+  ]
+}'
+```
+
+Because a subtask must inherit its project from the parent task.
 
 ### 6. 🖼️ Attachment Inspection
 

@@ -229,10 +229,29 @@ mcporter call omnifocus.batch_add_items --args '{
 
 如果某条子任务传了 `parentTaskId` 或 `parentTaskName`，就不要再传 `projectName`。子任务会自动继承父任务所在项目。
 
-单次批量里“先父任务、再子任务”的正确示例：
+可直接运行的 `mcporter` 示例：
 
-```json
-{
+```bash
+# 1）批量创建项目下的顶层任务
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "父任务：分类A",
+      "projectName": "OmniFocus MCP 批量测试"
+    },
+    {
+      "type": "task",
+      "name": "父任务：分类B",
+      "projectName": "OmniFocus MCP 批量测试"
+    }
+  ]
+}'
+```
+
+```bash
+# 2）单次批量里同时创建父任务和子任务
+mcporter call omnifocus.batch_add_items --args '{
   "items": [
     {
       "type": "task",
@@ -245,8 +264,48 @@ mcporter call omnifocus.batch_add_items --args '{
       "parentTaskName": "父任务：分类A"
     }
   ]
-}
+}'
 ```
+
+```bash
+# 3）更稳妥的两步法：父任务已存在时，再批量创建多个子任务
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "子任务：A1",
+      "parentTaskName": "父任务：分类A"
+    },
+    {
+      "type": "task",
+      "name": "子任务：A2",
+      "parentTaskName": "父任务：分类A"
+    },
+    {
+      "type": "task",
+      "name": "子任务：B1",
+      "parentTaskName": "父任务：分类B"
+    }
+  ]
+}'
+```
+
+下面这种写法会失败，这属于预期行为：
+
+```bash
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "子任务：A1",
+      "projectName": "OmniFocus MCP 批量测试",
+      "parentTaskName": "父任务：分类A"
+    }
+  ]
+}'
+```
+
+因为子任务必须继承父任务所在项目，不能再单独传 `projectName`。
 
 ### 6. 🖼️ 附件查看
 
