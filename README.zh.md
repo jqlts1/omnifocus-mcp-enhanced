@@ -212,6 +212,42 @@ get_custom_perspective_tasks {
 }
 ```
 
+`mcporter` 调用提示：
+
+```bash
+# 复杂数组 / 嵌套对象，建议明确使用 --args JSON
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "网站技术 SEO",
+      "projectName": "SEO 项目"
+    }
+  ]
+}'
+```
+
+如果某条子任务传了 `parentTaskId` 或 `parentTaskName`，就不要再传 `projectName`。子任务会自动继承父任务所在项目。
+
+单次批量里“先父任务、再子任务”的正确示例：
+
+```json
+{
+  "items": [
+    {
+      "type": "task",
+      "name": "父任务：分类A",
+      "projectName": "OmniFocus MCP 批量测试"
+    },
+    {
+      "type": "task",
+      "name": "子任务：A1",
+      "parentTaskName": "父任务：分类A"
+    }
+  ]
+}
+```
+
 ### 6. 🖼️ 附件查看
 
 先读取任务和附件元信息，再按需打开具体附件：

@@ -33,6 +33,22 @@ type BatchResult = {
   error?: string;
 };
 
+function validateBatchItem(item: BatchAddItemsParams, index: number): string | undefined {
+  if (item.type !== 'task') {
+    return undefined;
+  }
+
+  if (item.parentTaskId && item.parentTaskName) {
+    return `Item ${index + 1} ("${item.name}"): Use only one parent reference. Provide parentTaskId or parentTaskName, not both.`;
+  }
+
+  if ((item.parentTaskId || item.parentTaskName) && item.projectName) {
+    return `Item ${index + 1} ("${item.name}"): Do not provide projectName when parentTaskId or parentTaskName is set. Subtasks inherit project from their parent.`;
+  }
+
+  return undefined;
+}
+
 /**
  * Add multiple items (tasks or projects) to OmniFocus
  */
@@ -42,8 +58,17 @@ export async function batchAddItems(items: BatchAddItemsParams[]): Promise<Batch
     const results: ItemResult[] = [];
     
     // Process each item in sequence
-    for (const item of items) {
+    for (const [index, item] of items.entries()) {
       try {
+        const validationError = validateBatchItem(item, index);
+        if (validationError) {
+          results.push({
+            success: false,
+            error: validationError
+          });
+          continue;
+        }
+
         if (item.type === 'task') {
           // Extract task-specific params
           const taskParams: AddOmniFocusTaskParams = {

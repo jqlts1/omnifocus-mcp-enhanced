@@ -44,6 +44,15 @@ test('batch_add_items schema preserves plannedDate for task and project', () => 
   assert.equal(parsed.items[1].plannedDate, '2026-02-15');
 });
 
+test('batch_add_items schema documents subtask project inheritance', () => {
+  const itemSchema = (batchAddItemsSchema.shape.items as any)._def.type;
+  const projectNameDescription = itemSchema.shape.projectName.description;
+  const parentTaskNameDescription = itemSchema.shape.parentTaskName.description;
+
+  assert.match(projectNameDescription, /omit this when parentTaskId or parentTaskName is set/i);
+  assert.match(parentTaskNameDescription, /subtasks inherit project from their parent/i);
+});
+
 test('edit_item schema preserves newPlannedDate', () => {
   const parsed = editItemSchema.parse({
     itemType: 'task',

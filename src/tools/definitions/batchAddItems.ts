@@ -15,9 +15,9 @@ export const schema = z.object({
     tags: z.array(z.string()).optional().describe("Tags to assign to the item"),
 
     // Task-specific properties
-    projectName: z.string().optional().describe("For tasks: The name of the project to add the task to"),
-    parentTaskId: z.string().optional().describe("For tasks: The ID of the parent task to create this task as a subtask"),
-    parentTaskName: z.string().optional().describe("For tasks: The name of the parent task to create this task as a subtask"),
+    projectName: z.string().optional().describe("For tasks: The project name for top-level tasks. Omit this when parentTaskId or parentTaskName is set."),
+    parentTaskId: z.string().optional().describe("For tasks: The parent task ID for subtasks. When this is set, do not also provide projectName."),
+    parentTaskName: z.string().optional().describe("For tasks: The parent task name for subtasks. Subtasks inherit project from their parent, so do not also provide projectName."),
 
     // Project-specific properties
     folderName: z.string().optional().describe("For projects: The name of the folder to add the project to"),

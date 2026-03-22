@@ -217,6 +217,42 @@ Efficiently manage multiple tasks:
 }
 ```
 
+CLI tip for `mcporter`:
+
+```bash
+# Prefer explicit JSON args for complex arrays / nested objects
+mcporter call omnifocus.batch_add_items --args '{
+  "items": [
+    {
+      "type": "task",
+      "name": "Website Technical SEO",
+      "projectName": "SEO Project"
+    }
+  ]
+}'
+```
+
+If you pass a subtask with `parentTaskId` or `parentTaskName`, do not also pass `projectName`. Subtasks inherit the project from their parent task.
+
+Correct parent + subtask example in a single batch:
+
+```json
+{
+  "items": [
+    {
+      "type": "task",
+      "name": "Parent: Category A",
+      "projectName": "OmniFocus MCP Batch Test"
+    },
+    {
+      "type": "task",
+      "name": "Child: A1",
+      "parentTaskName": "Parent: Category A"
+    }
+  ]
+}
+```
+
 ### 6. 🖼️ Attachment Inspection
 
 Discover images and linked files on a task first, then read only the attachment you need:
