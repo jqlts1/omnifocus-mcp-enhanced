@@ -40,6 +40,8 @@ Reorganize these tasks safely.
 
 If that feels natural, this MCP server is doing its job.
 
+Want to see where the project is heading next? See the [roadmap](docs/roadmap/2026-02-25-batch-move-tasks-plan.md).
+
 ## 🆕 Latest Release
 
 - **v1.6.10** - Fixed Inbox task completion via `edit_item`, fixed AppleScript special-character handling for apostrophes/backslashes, fixed JSON result escaping for special characters, and clarified `batch_add_items` / `mcporter` usage with working examples.
