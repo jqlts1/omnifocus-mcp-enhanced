@@ -13,7 +13,9 @@
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@jqlts1/omnifocus-mcp-enhanced/badge" alt="OmniFocus Enhanced MCP server" />
 </a>
 
-Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native custom perspective access**, hierarchical task display, AI-optimized tool selection, and comprehensive task management. Perfect integration with Claude AI for intelligent workflows.
+Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native custom perspective access**, hierarchical task display, AI-optimized tool selection, and comprehensive task management.
+
+In plain English: this lets your AI assistant read your OmniFocus data, create tasks/projects, organize subtasks, review perspectives, and help you plan work without you manually jumping between apps.
 
 ## 🆕 Latest Release
 
@@ -74,7 +76,97 @@ claude mcp add omnifocus-enhanced -- node "/path/to/omnifocus-mcp-enhanced/dist/
 - **OmniFocus 3+** - The application must be installed and running
 - **OmniFocus Pro** - Required for custom perspectives (new features in v1.6.0)
 - **Node.js 18+** - For running the MCP server
-- **Claude Code** - For MCP integration
+- **Any MCP-capable client** - Claude Code, `mcporter`, or another MCP host
+
+## 🚦 Start Here
+
+If you only want the fastest way to understand this project, remember this:
+
+1. Connect the MCP server to your AI client.
+2. Talk to the AI naturally.
+3. Let it read, plan, create, move, or update your OmniFocus tasks for you.
+
+You do not need to memorize all tool names first.
+
+## 🙋 What This Is Good For
+
+- **Daily planning**: ask your AI what is due today, what is flagged, and what you can finish in 30 minutes.
+- **Project setup**: give the AI a rough goal, then let it create a project and break it into subtasks.
+- **Inbox cleanup**: ask it to review Inbox tasks and sort them into next actions, projects, or someday/later buckets.
+- **Perspective reviews**: ask it to open one of your custom perspectives and summarize what matters.
+- **Batch capture**: paste meeting notes or a brainstorm list and let the AI create multiple tasks at once.
+- **Attachment-aware review**: let the AI inspect task attachments only when needed.
+
+## 💬 Example AI Conversations
+
+These work well in Claude Code or any MCP client that can call the same tools.
+
+### 1. Daily Planning
+
+Try saying:
+
+```text
+Check my Forecast and flagged tasks, then tell me the 3 most important things to do today.
+Prefer tasks that take under 60 minutes first.
+```
+
+### 2. Inbox Cleanup
+
+Try saying:
+
+```text
+Review my Inbox and group the tasks into:
+1. do today
+2. schedule later
+3. turn into projects
+Then help me clean up the obvious ones.
+```
+
+### 3. Turn an Idea Into a Project
+
+Try saying:
+
+```text
+Create a project called "Launch spring newsletter".
+Add the main subtasks, estimated minutes, and mark the most important step as flagged.
+```
+
+### 4. Use a Custom Perspective
+
+Try saying:
+
+```text
+Open my custom perspective "今日工作安排" and summarize:
+- what is due soon
+- what looks blocked
+- what I can finish quickly
+```
+
+### 5. Batch Add From Notes
+
+Try saying:
+
+```text
+Turn these meeting notes into OmniFocus tasks under the project "Website Refresh".
+Use subtasks where it makes sense and keep the task names short.
+```
+
+### 6. Review Attachments Only When Needed
+
+Try saying:
+
+```text
+Find the task called "Review design draft".
+Show me what attachments it has first.
+Only open the image attachment if there is one.
+```
+
+## 🧭 Practical Usage Tips
+
+- Ask the AI to **look first, then change things** if you want safer workflows.
+- Use **task IDs** when you have duplicate task names.
+- For **subtasks**, let the parent task determine the project. Do not also pass `projectName`.
+- For `mcporter`, complex arrays are much more reliable with `--args '{...}'`.
 
 ## 🎯 Core Capabilities
 
