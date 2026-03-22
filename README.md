@@ -17,6 +17,29 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 
 In plain English: this lets your AI assistant read your OmniFocus data, create tasks/projects, organize subtasks, review perspectives, and help you plan work without you manually jumping between apps.
 
+## 🌠 Why This Project Exists
+
+OmniFocus is already powerful, but it is still mostly a tool you drive by hand.
+
+The bigger idea behind this project is simple:
+
+- less clicking, more conversation
+- less manual cleanup, more AI-assisted planning
+- less tool memorization, more natural task management
+
+The goal is not just to expose more OmniFocus commands.
+The goal is to let you work with OmniFocus like this:
+
+```text
+Plan my day.
+Clean up my Inbox.
+Turn these notes into a project.
+Show me what is blocked.
+Reorganize these tasks safely.
+```
+
+If that feels natural, this MCP server is doing its job.
+
 ## 🆕 Latest Release
 
 - **v1.6.10** - Fixed Inbox task completion via `edit_item`, fixed AppleScript special-character handling for apostrophes/backslashes, fixed JSON result escaping for special characters, and clarified `batch_add_items` / `mcporter` usage with working examples.
