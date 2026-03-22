@@ -17,6 +17,7 @@ Enhanced Model Context Protocol (MCP) server for OmniFocus featuring **native cu
 
 ## 🆕 Latest Release
 
+- **v1.6.10** - Fixed Inbox task completion via `edit_item`, fixed AppleScript special-character handling for apostrophes/backslashes, fixed JSON result escaping for special characters, and clarified `batch_add_items` / `mcporter` usage with working examples.
 - **v1.6.9** - Added task attachment support: `get_task_by_id` now lists attachment metadata, `dump_database` exports attachment/link metadata, and new `read_task_attachment` returns image attachments as MCP image content when possible.
 - **v1.6.8** - Added stable task move support via `move_task` and `edit_item` (`newProjectId/newProjectName/newParentTaskId/newParentTaskName/moveToInbox`) with duplicate-name protection and cycle-prevention checks.
 - **v1.6.6** - Added full Planned Date support (create/edit/read/filter/sort/export), including `plannedDate`/`newPlannedDate` and updated task displays.
