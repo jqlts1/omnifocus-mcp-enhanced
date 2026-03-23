@@ -45,7 +45,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         if (item.success) {
           const itemType = args.items[index].type;
           const itemName = args.items[index].name;
-          return `- ✅ ${itemType}: "${itemName}"`;
+          return `- ✅ ${itemType}: "${itemName}" (id: ${item.id})`;
         } else {
           const itemType = args.items[index].type;
           const itemName = args.items[index].name;
