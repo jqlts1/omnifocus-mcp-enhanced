@@ -45,7 +45,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       return {
         content: [{
           type: "text" as const,
-          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.`
+          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.\n\nid: ${result.projectId}`
         }]
       };
     } else {
