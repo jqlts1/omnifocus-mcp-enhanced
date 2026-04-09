@@ -73,12 +73,13 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ### Claude Code
 
+#### Quick Install (recommended)
 ```bash
-# One-line installation (recommended)
+# One-line installation
 claude mcp add omnifocus-enhanced -- npx -y omnifocus-mcp-enhanced
 ```
 
-Alternative methods for Claude Code:
+#### Alternative methods for Claude Code:
 
 ```bash
 # Upgrade to latest
