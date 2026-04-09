@@ -71,14 +71,15 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 📦 Installation
 
-### Quick Install (Recommended)
+### Claude Code
 
+#### Quick Install (recommended)
 ```bash
 # One-line installation
 claude mcp add omnifocus-enhanced -- npx -y omnifocus-mcp-enhanced
 ```
 
-### Alternative Installation Methods
+#### Alternative methods for Claude Code:
 
 ```bash
 # Upgrade to latest
@@ -94,6 +95,40 @@ cd omnifocus-mcp-enhanced
 npm install && npm run build
 claude mcp add omnifocus-enhanced -- node "/path/to/omnifocus-mcp-enhanced/dist/server.js"
 ```
+
+### Claude Desktop / Cowork
+
+Add the server to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "omnifocus-enhanced": {
+      "command": "npx",
+      "args": ["-y", "omnifocus-mcp-enhanced"]
+    }
+  }
+}
+```
+
+For a local clone, use:
+
+```json
+{
+  "mcpServers": {
+    "omnifocus-enhanced": {
+      "command": "node",
+      "args": ["/path/to/omnifocus-mcp-enhanced/dist/server.js"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop after editing the config file.
+
+### Using Both Claude Code and Claude Desktop / Cowork
+
+Claude Code and Claude Desktop read separate configurations. If you want to use this MCP server from both, you need to install it in both places — run `claude mcp add` for Claude Code **and** add the entry to `claude_desktop_config.json` for Claude Desktop / Cowork.
 
 ## 📋 Requirements
 
@@ -587,7 +622,10 @@ get_custom_perspective_tasks {
 
 ## 🔧 Configuration
 
-### Verify Installation
+### Claude Code
+
+Verify the server is registered:
+
 ```bash
 # Check MCP status
 claude mcp list
@@ -599,10 +637,15 @@ get_inbox_tasks
 list_custom_perspectives
 ```
 
+### Claude Desktop / Cowork
+
+Open `~/Library/Application Support/Claude/claude_desktop_config.json` and confirm the `omnifocus-enhanced` entry is present under `mcpServers`. Restart the app after any changes. Once running, you can test by asking the assistant to list your inbox tasks or custom perspectives.
+
 ### Troubleshooting
 - Ensure OmniFocus 3+ is installed and running
 - Verify Node.js 18+ is installed
-- Check Claude Code MCP configuration
+- For Claude Code: run `claude mcp list` to confirm the server is registered
+- For Claude Desktop / Cowork: verify `claude_desktop_config.json` is valid JSON and restart the app
 - Enable accessibility permissions for terminal apps if needed
 
 ## 🎯 Use Cases
