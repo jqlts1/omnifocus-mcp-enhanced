@@ -164,7 +164,10 @@ export async function dumpDatabase(): Promise<OmnifocusDatabase> {
           note: String(project.note || ""),
           tasks: project.tasks || [],
           flagged: false, // Default value
-          estimatedMinutes: null // Default value
+          estimatedMinutes: null, // Default value
+          nextReviewDate: null,
+          lastReviewDate: null,
+          reviewInterval: null
         };
       }
     }
