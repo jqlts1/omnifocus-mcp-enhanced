@@ -22,6 +22,9 @@ import * as getForecastTasksTool from './tools/definitions/getForecastTasks.js';
 import * as getTasksByTagTool from './tools/definitions/getTasksByTag.js';
 // Import ultimate filter tool
 import * as filterTasksTool from './tools/definitions/filterTasks.js';
+// Import project tools
+import * as getProjectsTool from './tools/definitions/getProjects.js';
+import * as getProjectsDueForReviewTool from './tools/definitions/getProjectsDueForReview.js';
 // Import custom perspective tools
 import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
 import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPerspectiveTasks.js';
@@ -146,6 +149,21 @@ server.tool(
   "Advanced task filtering with unlimited perspective combinations - status, dates, projects, tags, search, and more",
   filterTasksTool.schema.shape,
   filterTasksTool.handler
+);
+
+// Project tools
+server.tool(
+  "get_projects",
+  "List OmniFocus projects with optional status/folder filtering. Returns project metadata including review dates (nextReviewDate, lastReviewDate, reviewInterval). Lighter than dump_database — returns only projects, no tasks/folders/tags.",
+  getProjectsTool.schema.shape,
+  getProjectsTool.handler,
+);
+
+server.tool(
+  "get_projects_due_for_review",
+  "Get OmniFocus projects that are due for review (nextReviewDate <= now). Returns projects sorted by most overdue first. Use for weekly review project health checks.",
+  getProjectsDueForReviewTool.schema.shape,
+  getProjectsDueForReviewTool.handler,
 );
 
 // Custom perspective tools

@@ -83,6 +83,14 @@ export interface OmnifocusProject {
   tasks: string[]; // Task IDs
   flagged?: boolean;
   estimatedMinutes?: number | null;
+  // Review fields
+  nextReviewDate: string | null;
+  lastReviewDate: string | null;
+  reviewInterval: {
+    steps: number;
+    unit: "days" | "weeks" | "months" | "years";
+    fixed: boolean;
+  } | null;
 }
 
 export interface OmnifocusFolder {
