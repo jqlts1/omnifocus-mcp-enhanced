@@ -193,7 +193,7 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     
     // Execute the JXA script using osascript
     // Increase maxBuffer to support large OmniFocus databases (1000+ tasks)
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`, { maxBuffer: 50 * 1024 * 1024 });
+    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`, { maxBuffer: 10 * 1024 * 1024 });
 
     // Clean up the temporary file
     unlinkSync(tempFile);
