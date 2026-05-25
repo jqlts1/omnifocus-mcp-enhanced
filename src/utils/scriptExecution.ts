@@ -168,19 +168,18 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     // Create a temporary file for our JXA wrapper script
     const tempFile = join(tmpdir(), `jxa_wrapper_${Date.now()}.js`);
     
-    // Escape the script content properly for use in JXA
-    const escapedScript = scriptContent.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    
     // Create a JXA script that will execute our OmniJS script in OmniFocus
+    // Use JSON.stringify to safely embed the script content — avoids escaping issues
+    // with template literals (backticks, ${...}) in OmniJS scripts like omnifocusDump.js
     const jxaScript = `
     function run() {
       try {
         const app = Application('OmniFocus');
         app.includeStandardAdditions = true;
-        
+
         // Run the OmniJS script in OmniFocus and capture the output
-        const result = app.evaluateJavascript(\`${escapedScript}\`);
-        
+        const result = app.evaluateJavascript(${JSON.stringify(scriptContent)});
+
         // Return the result
         return result;
       } catch (e) {
@@ -193,8 +192,9 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     writeFileSync(tempFile, jxaScript);
     
     // Execute the JXA script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
-    
+    // Increase maxBuffer to support large OmniFocus databases (1000+ tasks)
+    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`, { maxBuffer: 50 * 1024 * 1024 });
+
     // Clean up the temporary file
     unlinkSync(tempFile);
     
