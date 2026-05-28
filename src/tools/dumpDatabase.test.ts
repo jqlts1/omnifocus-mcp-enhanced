@@ -68,3 +68,61 @@ test('normalizeOmnifocusDumpData preserves task and project added dates', () => 
   assert.equal(database.tasks[0].addedDate, taskAddedDate);
   assert.equal(database.projects['project-1'].addedDate, projectAddedDate);
 });
+
+test('normalizeOmnifocusDumpData does not validate added date format', () => {
+  const taskAddedDate = 'not-an-iso-date';
+  const projectAddedDate = 'also-not-an-iso-date';
+
+  const database = normalizeOmnifocusDumpData({
+    exportDate: '2026-05-28T00:00:00.000Z',
+    tasks: [
+      {
+        id: 'task-1',
+        name: 'Review quarterly goals',
+        addedDate: taskAddedDate,
+        note: '',
+        taskStatus: 'Available',
+        flagged: false,
+        dueDate: null,
+        deferDate: null,
+        plannedDate: null,
+        effectiveDueDate: null,
+        effectiveDeferDate: null,
+        effectivePlannedDate: null,
+        estimatedMinutes: null,
+        completedByChildren: false,
+        sequential: false,
+        tags: [],
+        projectID: 'project-1',
+        parentTaskID: null,
+        children: [],
+        inInbox: false
+      }
+    ],
+    projects: {
+      'project-1': {
+        id: 'project-1',
+        name: 'Quarterly planning',
+        addedDate: projectAddedDate,
+        status: 'Active',
+        folderID: null,
+        sequential: false,
+        effectiveDueDate: null,
+        effectiveDeferDate: null,
+        effectivePlannedDate: null,
+        dueDate: null,
+        deferDate: null,
+        plannedDate: null,
+        completedByChildren: false,
+        containsSingletonActions: false,
+        note: '',
+        tasks: ['task-1']
+      }
+    },
+    folders: {},
+    tags: {}
+  });
+
+  assert.equal(database.tasks[0].addedDate, taskAddedDate);
+  assert.equal(database.projects['project-1'].addedDate, projectAddedDate);
+});
