@@ -48,6 +48,7 @@ export interface TaskMinimal extends DatabaseObject {
   note: string;
   flagged: boolean;
   taskStatus: Task.Status;
+  added: Date | null;
   dueDate: Date | null;
   deferDate: Date | null;
   plannedDate: Date | null;
@@ -67,6 +68,7 @@ export interface ProjectMinimal extends DatabaseObject {
   name: string;
   note: string;
   status: Project.Status;
+  added: Date | null;
   dueDate: Date | null;
   deferDate: Date | null;
   plannedDate: Date | null;

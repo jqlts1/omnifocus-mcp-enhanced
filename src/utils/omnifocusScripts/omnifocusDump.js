@@ -8,6 +8,26 @@
           if (!date) return null;
           return date.toISOString();
         }
+
+        function getAddedDate(object) {
+          try {
+            if (object.added) {
+              return formatDate(object.added);
+            }
+          } catch {
+            // Continue to root-task fallback for objects that expose added elsewhere.
+          }
+
+          try {
+            if (object.task && object.task.added) {
+              return formatDate(object.task.added);
+            }
+          } catch {
+            // Fall through to null.
+          }
+
+          return null;
+        }
     
         // Helper function to safely get enum values - Simplified with direct mapping
         const taskStatusMap = {
@@ -98,6 +118,7 @@
             const projectData = {
               id: projectId,
               name: project.name,
+              addedDate: getAddedDate(project),
               status: getEnumValue(project.status, projectStatusMap),
               folderID: project.parentFolder ? project.parentFolder.id.primaryKey : null,
               sequential: project.task.sequential || false,
@@ -189,6 +210,7 @@
               const taskData = {
                 id: task.id.primaryKey,
                 name: task.name,
+                addedDate: getAddedDate(task),
                 note: task.note || "",
                 taskStatus: getEnumValue(task.taskStatus, taskStatusMap),
                 flagged: task.flagged,
