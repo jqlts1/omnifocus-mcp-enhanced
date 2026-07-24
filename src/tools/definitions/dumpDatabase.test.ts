@@ -85,6 +85,9 @@ test('formatCompactReport respects hideCompleted for inbox tasks', () => {
 
 test('formatCompactReport includes planned date marker for tasks', () => {
   assert.equal(typeof formatCompactReport, 'function');
+  const plannedDate = '2026-02-20T12:00:00.000Z';
+  const plannedLocal = new Date(plannedDate);
+  const plannedMarker = `PLAN:${plannedLocal.getMonth() + 1}/${plannedLocal.getDate()}`;
 
   const output = formatCompactReport(
     {
@@ -101,7 +104,7 @@ test('formatCompactReport includes planned date marker for tasks', () => {
           flagged: false,
           dueDate: null,
           deferDate: null,
-          plannedDate: '2026-02-20T09:00:00.000Z',
+          plannedDate,
           estimatedMinutes: null,
           tagNames: []
         }
@@ -116,11 +119,17 @@ test('formatCompactReport includes planned date marker for tasks', () => {
     }
   );
 
-  assert.match(output, /PLAN:2\/20/);
+  assert.match(output, new RegExp(plannedMarker));
 });
 
 test('formatCompactReport includes added date markers for tasks and projects', () => {
   assert.equal(typeof formatCompactReport, 'function');
+  const taskAddedDate = '2026-02-10T12:00:00.000Z';
+  const projectAddedDate = '2026-02-01T12:00:00.000Z';
+  const taskAddedLocal = new Date(taskAddedDate);
+  const projectAddedLocal = new Date(projectAddedDate);
+  const taskMarker = `ADD:${taskAddedLocal.getMonth() + 1}/${taskAddedLocal.getDate()}`;
+  const projectMarker = `ADD:${projectAddedLocal.getMonth() + 1}/${projectAddedLocal.getDate()}`;
 
   const output = formatCompactReport(
     {
@@ -135,7 +144,7 @@ test('formatCompactReport includes added date markers for tasks and projects', (
           completed: false,
           taskStatus: 'Available',
           flagged: false,
-          addedDate: '2026-02-10T09:00:00.000Z',
+          addedDate: taskAddedDate,
           dueDate: null,
           deferDate: null,
           plannedDate: null,
@@ -150,7 +159,7 @@ test('formatCompactReport includes added date markers for tasks and projects', (
           status: 'Active',
           folderID: null,
           flagged: false,
-          addedDate: '2026-02-01T09:00:00.000Z'
+          addedDate: projectAddedDate
         }
       },
       folders: {},
@@ -162,6 +171,6 @@ test('formatCompactReport includes added date markers for tasks and projects', (
     }
   );
 
-  assert.match(output, /P: Quarterly planning \[ADD:2\/1\]/);
-  assert.match(output, /Review quarterly goals \[ADD:2\/10\]/);
+  assert.match(output, new RegExp(`P: Quarterly planning \\[${projectMarker}\\]`));
+  assert.match(output, new RegExp(`Review quarterly goals \\[${taskMarker}\\]`));
 });
