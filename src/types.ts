@@ -23,6 +23,7 @@ export interface OmnifocusTask {
     active: boolean;
     
     // Dates
+    addedDate: string | null;
     dueDate: string | null;
     deferDate: string | null;
     plannedDate: string | null;
@@ -74,6 +75,7 @@ export interface OmnifocusProject {
   effectiveDueDate: string | null;
   effectiveDeferDate: string | null;
   effectivePlannedDate: string | null;
+  addedDate: string | null;
   dueDate: string | null;
   deferDate: string | null;
   plannedDate: string | null;

@@ -118,3 +118,50 @@ test('formatCompactReport includes planned date marker for tasks', () => {
 
   assert.match(output, /PLAN:2\/20/);
 });
+
+test('formatCompactReport includes added date markers for tasks and projects', () => {
+  assert.equal(typeof formatCompactReport, 'function');
+
+  const output = formatCompactReport(
+    {
+      exportDate: '2026-02-12T00:00:00.000Z',
+      tasks: [
+        {
+          id: 'task-added-1',
+          name: 'Review quarterly goals',
+          projectId: 'project-added-1',
+          parentId: null,
+          childIds: [],
+          completed: false,
+          taskStatus: 'Available',
+          flagged: false,
+          addedDate: '2026-02-10T09:00:00.000Z',
+          dueDate: null,
+          deferDate: null,
+          plannedDate: null,
+          estimatedMinutes: null,
+          tagNames: []
+        }
+      ],
+      projects: {
+        'project-added-1': {
+          id: 'project-added-1',
+          name: 'Quarterly planning',
+          status: 'Active',
+          folderID: null,
+          flagged: false,
+          addedDate: '2026-02-01T09:00:00.000Z'
+        }
+      },
+      folders: {},
+      tags: {}
+    },
+    {
+      hideCompleted: true,
+      hideRecurringDuplicates: true
+    }
+  );
+
+  assert.match(output, /P: Quarterly planning \[ADD:2\/1\]/);
+  assert.match(output, /Review quarterly goals \[ADD:2\/10\]/);
+});
