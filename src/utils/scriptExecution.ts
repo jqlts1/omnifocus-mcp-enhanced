@@ -1,4 +1,5 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
+import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import { writeFileSync, unlinkSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -8,21 +9,33 @@ import { dirname } from 'path';
 import { existsSync } from 'fs';
 import { sanitizeForJson } from './sanitize.js';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+function createTempFileName(prefix: string, extension: string): string {
+  return join(tmpdir(), `${prefix}_${randomUUID()}.${extension}`);
+}
+
+function removeTempFile(filePath: string): void {
+  try {
+    unlinkSync(filePath);
+  } catch {
+    // Ignore cleanup errors.
+  }
+}
 
 /**
  * Safely execute AppleScript by writing to a temp file
  * This avoids shell escaping issues with quotes and special characters
  */
 export async function executeAppleScript(script: string): Promise<string> {
-  const tempFile = join(tmpdir(), `applescript_${Date.now()}.scpt`);
+  const tempFile = createTempFileName('applescript', 'scpt');
 
   try {
     // Write the script to a temporary file
     writeFileSync(tempFile, script);
 
     // Execute using osascript with the file path (no shell escaping needed)
-    const { stdout, stderr } = await execAsync(`osascript ${tempFile}`);
+    const { stdout, stderr } = await execFileAsync('osascript', [tempFile]);
 
     if (stderr) {
       console.error("AppleScript stderr:", stderr);
@@ -31,32 +44,24 @@ export async function executeAppleScript(script: string): Promise<string> {
     return stdout.trim();
   } finally {
     // Clean up the temporary file
-    try {
-      unlinkSync(tempFile);
-    } catch (e) {
-      // Ignore cleanup errors
-    }
+    removeTempFile(tempFile);
   }
 }
 
 // Helper function to execute OmniFocus scripts
 export async function executeJXA(script: string): Promise<any[]> {
+  const tempFile = createTempFileName('jxa_script', 'js');
+
   try {
-    // Write the script to a temporary file in the system temp directory
-    const tempFile = join(tmpdir(), `jxa_script_${Date.now()}.js`);
-    
     // Write the script to the temporary file
     writeFileSync(tempFile, script);
-    
+
     // Execute the script using osascript
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`);
+    const { stdout, stderr } = await execFileAsync('osascript', ['-l', 'JavaScript', tempFile]);
     
     if (stderr) {
       console.error("Script stderr output:", stderr);
     }
-    
-    // Clean up the temporary file
-    unlinkSync(tempFile);
     
     // Parse the output as JSON and sanitize isolated surrogates
     try {
@@ -75,32 +80,34 @@ export async function executeJXA(script: string): Promise<any[]> {
   } catch (error) {
     console.error("Failed to execute JXA script:", error);
     throw error;
+  } finally {
+    removeTempFile(tempFile);
   }
 }
 
 // Function to execute scripts in OmniFocus using the URL scheme
 // Update src/utils/scriptExecution.ts
 export async function executeOmniFocusScript(scriptPath: string, args?: any): Promise<any> {
+  const tempFile = createTempFileName('jxa_wrapper', 'js');
+
   try {
-    // Get the actual script path (existing code remains the same)
-    let actualPath;
-    if (scriptPath.startsWith('@')) {
-      const scriptName = scriptPath.substring(1);
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      
-      const distPath = join(__dirname, '..', 'utils', 'omnifocusScripts', scriptName);
-      const srcPath = join(__dirname, '..', '..', 'src', 'utils', 'omnifocusScripts', scriptName);
-      
-      if (existsSync(distPath)) {
-        actualPath = distPath;
-      } else if (existsSync(srcPath)) {
-        actualPath = srcPath;
-      } else {
-        actualPath = join(__dirname, '..', 'omnifocusScripts', scriptName);
-      }
-    } else {
-      actualPath = scriptPath;
+    if (!scriptPath.startsWith('@')) {
+      throw new Error('OmniFocus scripts must use an @-prefixed built-in script name');
+    }
+
+    const scriptName = scriptPath.substring(1);
+    if (!/^[A-Za-z0-9_-]+\.js$/.test(scriptName)) {
+      throw new Error(`Invalid OmniFocus script name: ${scriptName}`);
+    }
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const distPath = join(__dirname, '..', 'utils', 'omnifocusScripts', scriptName);
+    const srcPath = join(__dirname, '..', '..', 'src', 'utils', 'omnifocusScripts', scriptName);
+    const actualPath = existsSync(distPath) ? distPath : srcPath;
+
+    if (!existsSync(actualPath)) {
+      throw new Error(`OmniFocus script not found: ${scriptName}`);
     }
     
     // Read the script file
@@ -122,6 +129,8 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     const format = injectedArgs.format || "detailed";
     const tagName = injectedArgs.tagName || null;
     const exactMatch = injectedArgs.exactMatch !== undefined ? injectedArgs.exactMatch : false;
+    const days = injectedArgs.days !== undefined ? injectedArgs.days : 7;
+    const includeDeferredOnly = injectedArgs.includeDeferredOnly !== undefined ? injectedArgs.includeDeferredOnly : false;
     `;
       
       // Replace any hardcoded parameters in the script with injected ones
@@ -166,9 +175,6 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
       );
     }
     
-    // Create a temporary file for our JXA wrapper script
-    const tempFile = join(tmpdir(), `jxa_wrapper_${Date.now()}.js`);
-    
     // Create a JXA script that will execute our OmniJS script in OmniFocus
     // Use JSON.stringify to safely embed the script content — avoids escaping issues
     // with template literals (backticks, ${...}) in OmniJS scripts like omnifocusDump.js
@@ -194,10 +200,11 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     
     // Execute the JXA script using osascript
     // Increase maxBuffer to support large OmniFocus databases (1000+ tasks)
-    const { stdout, stderr } = await execAsync(`osascript -l JavaScript ${tempFile}`, { maxBuffer: 10 * 1024 * 1024 });
-
-    // Clean up the temporary file
-    unlinkSync(tempFile);
+    const { stdout, stderr } = await execFileAsync(
+      'osascript',
+      ['-l', 'JavaScript', tempFile],
+      { maxBuffer: 10 * 1024 * 1024 }
+    );
     
     if (stderr) {
       console.error("Script stderr output:", stderr);
@@ -213,6 +220,7 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
   } catch (error) {
     console.error("Failed to execute OmniFocus script:", error);
     throw error;
+  } finally {
+    removeTempFile(tempFile);
   }
 }
-    

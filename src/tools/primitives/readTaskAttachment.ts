@@ -1,4 +1,7 @@
 import { readFile } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { isAbsolute, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
@@ -38,6 +41,27 @@ function decodeTextContent(buffer: Buffer): string {
   return buffer.toString('utf8');
 }
 
+export function resolveLinkedAttachmentPath(
+  url: string,
+  homeDirectory = homedir(),
+  canonicalize: (path: string) => string = realpathSync
+): string {
+  const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== 'file:') {
+    throw new Error('Linked attachment URL must use the file protocol');
+  }
+
+  const attachmentPath = canonicalize(resolve(fileURLToPath(parsedUrl)));
+  const homePath = canonicalize(resolve(homeDirectory));
+  const relativePath = relative(homePath, attachmentPath);
+
+  if (relativePath === '' || relativePath.startsWith('..') || isAbsolute(relativePath)) {
+    throw new Error('Linked attachments must be located inside the user home directory');
+  }
+
+  return attachmentPath;
+}
+
 export function validateReadTaskAttachmentParams(params: ReadTaskAttachmentParams): { valid: boolean; error?: string } {
   if (!params.taskId && !params.taskName) {
     return {
@@ -64,7 +88,7 @@ async function readLinkedAttachment(attachment: TaskAttachmentInfo): Promise<Rea
     };
   }
 
-  const buffer = await readFile(fileURLToPath(attachment.url));
+  const buffer = await readFile(resolveLinkedAttachmentPath(attachment.url));
 
   return {
     success: true,

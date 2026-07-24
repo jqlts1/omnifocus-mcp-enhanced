@@ -7,3 +7,9 @@ test('escapeAppleScriptString escapes quotes and backslashes but preserves apost
 
   assert.equal(escaped, `Client's \\"draft\\" in C:\\\\Temp`);
 });
+
+test('escapeAppleScriptString escapes control characters', () => {
+  const escaped = escapeAppleScriptString('first\nsecond\rthird\tcolumn');
+
+  assert.equal(escaped, 'first\\nsecond\\rthird\\tcolumn');
+});
