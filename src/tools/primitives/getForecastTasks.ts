@@ -6,6 +6,35 @@ export interface GetForecastTasksOptions {
   includeDeferredOnly?: boolean;
 }
 
+export function parseLocalDateKey(dateKey: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) {
+    throw new Error(`Invalid forecast date: ${dateKey}`);
+  }
+
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (
+    date.getFullYear() !== Number(match[1]) ||
+    date.getMonth() !== Number(match[2]) - 1 ||
+    date.getDate() !== Number(match[3])
+  ) {
+    throw new Error(`Invalid forecast date: ${dateKey}`);
+  }
+
+  return date;
+}
+
+export function getForecastDateCategory(taskDate: Date, now = new Date()): 'overdue' | 'today' | 'tomorrow' | 'future' {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (taskDate < today) return 'overdue';
+  if (taskDate.getTime() === today.getTime()) return 'today';
+  if (taskDate.getTime() === tomorrow.getTime()) return 'tomorrow';
+  return 'future';
+}
+
 export async function getForecastTasks(options: GetForecastTasksOptions = {}): Promise<string> {
   const { days = 7, hideCompleted = true, includeDeferredOnly = false } = options;
   
@@ -38,24 +67,19 @@ export async function getForecastTasks(options: GetForecastTasksOptions = {}): P
         if (dates.length === 0) {
           output += "🎉 No tasks due in the forecast period - enjoy the calm!\n";
         } else {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          
           dates.forEach(dateStr => {
             const tasks = data.tasksByDate[dateStr];
             if (!tasks || tasks.length === 0) return;
             
-            const taskDate = new Date(dateStr);
-            const isToday = taskDate.getTime() === today.getTime();
-            const isTomorrow = taskDate.getTime() === today.getTime() + 24 * 60 * 60 * 1000;
-            const isOverdue = taskDate < today;
+            const taskDate = parseLocalDateKey(dateStr);
+            const category = getForecastDateCategory(taskDate);
             
             let dateHeader = '';
-            if (isOverdue) {
+            if (category === 'overdue') {
               dateHeader = `## ⚠️ OVERDUE - ${taskDate.toLocaleDateString()}`;
-            } else if (isToday) {
+            } else if (category === 'today') {
               dateHeader = `## 🔥 TODAY - ${taskDate.toLocaleDateString()}`;
-            } else if (isTomorrow) {
+            } else if (category === 'tomorrow') {
               dateHeader = `## ⏰ TOMORROW - ${taskDate.toLocaleDateString()}`;
             } else {
               const dayOfWeek = taskDate.toLocaleDateString('en-US', { weekday: 'long' });

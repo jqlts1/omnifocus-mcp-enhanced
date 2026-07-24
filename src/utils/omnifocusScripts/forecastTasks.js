@@ -1,11 +1,6 @@
 // OmniJS script to get forecast tasks from OmniFocus
 (() => {
   try {
-    // Use default values since parameters are not easily available in JXA mode
-    const days = 7;
-    const hideCompleted = true; // Default to true
-    const includeDeferredOnly = false;
-    
     // Helper function to format dates consistently
     function formatDate(date) {
       if (!date) return null;
@@ -16,8 +11,10 @@
     function getDateKey(date) {
       if (!date) return null;
       const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      return d.toISOString().split('T')[0];
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
     
     // Get task status enum mapping
@@ -68,8 +65,8 @@
         let taskDate = null;
         let isDue = false;
         
-        // Check if task has due date in range
-        if (task.dueDate) {
+        // Due tasks take precedence unless deferred-only mode was requested.
+        if (!includeDeferredOnly && task.dueDate) {
           const dueDate = new Date(task.dueDate);
           dueDate.setHours(0, 0, 0, 0);
           
@@ -87,16 +84,14 @@
         }
         
         // Check if task has defer date in range (becomes available)
-        if (!includeDeferredOnly || !shouldInclude) {
-          if (task.deferDate && !isDue) {
-            const deferDate = new Date(task.deferDate);
-            deferDate.setHours(0, 0, 0, 0);
-            
-            if (deferDate >= today && deferDate <= endDate) {
-              shouldInclude = true;
-              taskDate = deferDate;
-              isDue = false;
-            }
+        if (!shouldInclude && task.deferDate) {
+          const deferDate = new Date(task.deferDate);
+          deferDate.setHours(0, 0, 0, 0);
+
+          if (deferDate >= today && deferDate <= endDate) {
+            shouldInclude = true;
+            taskDate = deferDate;
+            isDue = false;
           }
         }
         
@@ -115,7 +110,7 @@
             flagged: task.flagged,
             dueDate: formatDate(task.dueDate),
             deferDate: formatDate(task.deferDate),
-          plannedDate: formatDate(task.plannedDate),
+            plannedDate: formatDate(task.plannedDate),
             estimatedMinutes: task.estimatedMinutes,
             projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
             projectName: task.containingProject ? task.containingProject.name : null,
