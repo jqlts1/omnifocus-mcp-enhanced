@@ -135,3 +135,29 @@ test('generateAppleScript escapes edit responses through AppleScript helper', ()
   assert.match(script, /my jsonEscape\(changedPropsText\)/);
   assert.match(script, /my jsonEscape\(errorMessage\)/);
 });
+
+test('generateAppleScript sets planned date from preamble variable', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newPlannedDate: '2026-03-15'
+  });
+
+  const tellIndex = script.indexOf('tell application "OmniFocus"');
+  const preambleIndex = script.indexOf('set newPlannedDateValue to current date');
+  assert.ok(preambleIndex > -1 && preambleIndex < tellIndex);
+  assert.match(script, /set planned date of foundItem to newPlannedDateValue/);
+  assert.match(script, /set end of changedProperties to "planned date"/);
+});
+
+test('generateAppleScript clears planned date with missing value', () => {
+  const script = generateAppleScript({
+    id: 'task-123',
+    itemType: 'task',
+    newPlannedDate: ''
+  });
+
+  assert.match(script, /set planned date of foundItem to missing value/);
+  assert.match(script, /set end of changedProperties to "planned date"/);
+  assert.doesNotMatch(script, /set newPlannedDateValue to current date/);
+});

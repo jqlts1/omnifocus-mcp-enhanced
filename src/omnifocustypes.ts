@@ -16,6 +16,17 @@ export namespace Task {
     Fixed,
     None
   }
+
+  export enum RepetitionScheduleType {
+    Regularly,
+    FromCompletion
+  }
+
+  export enum AnchorDateKey {
+    DeferDate,
+    DueDate,
+    PlannedDate
+  }
 }
 export namespace Project {
   export enum Status {
@@ -92,4 +103,5 @@ export interface TagMinimal extends DatabaseObject {
   status: Tag.Status;
   parent: TagMinimal | null;
   active: boolean;
+  childrenAreMutuallyExclusive?: boolean;
 }

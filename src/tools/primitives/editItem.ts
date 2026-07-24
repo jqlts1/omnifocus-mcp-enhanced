@@ -2,6 +2,7 @@ import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
+import { applyTagsExclusive } from './applyTagsExclusive.js';
 
 // Status options for tasks and projects
 type TaskStatus = 'incomplete' | 'completed' | 'dropped';
@@ -27,6 +28,7 @@ export interface EditItemParams {
   addTags?: string[];           // Tags to add to the task
   removeTags?: string[];        // Tags to remove from the task
   replaceTags?: string[];       // Tags to replace all existing tags with
+  exclusiveTags?: boolean;      // Respect mutually exclusive tag groups when applying tags (default: true)
   newProjectId?: string;        // Move task to a new project by ID
   newProjectName?: string;      // Move task to a new project by name
   newParentTaskId?: string;     // Move task under a new parent task by ID
@@ -530,6 +532,8 @@ export async function editItem(params: EditItemParams): Promise<{
   id?: string,
   name?: string,
   changedProperties?: string,
+  removedSiblings?: string[],
+  missingTags?: string[],
   error?: string
 }> {
   try {
@@ -560,13 +564,48 @@ export async function editItem(params: EditItemParams): Promise<{
     try {
       const result = JSON.parse(stdout);
 
-      // Return the result
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+
+      const itemId = result.id as string;
+      const exclusiveTags = params.exclusiveTags !== false;
+
+      // Enforce mutually exclusive tag groups when tags were added or replaced.
+      if (itemId && exclusiveTags && params.itemType === 'task') {
+        if (params.replaceTags && params.replaceTags.length > 0) {
+          const exclusivityResult = await applyTagsExclusive(itemId, params.replaceTags, 'replace');
+          return {
+            success: true,
+            id: result.id,
+            name: result.name,
+            changedProperties: result.changedProperties,
+            removedSiblings: exclusivityResult.removedSiblings,
+            missingTags: exclusivityResult.missing,
+          };
+        }
+
+        if (params.addTags && params.addTags.length > 0) {
+          const exclusivityResult = await applyTagsExclusive(itemId, params.addTags, 'add');
+          return {
+            success: true,
+            id: result.id,
+            name: result.name,
+            changedProperties: result.changedProperties,
+            removedSiblings: exclusivityResult.removedSiblings,
+            missingTags: exclusivityResult.missing,
+          };
+        }
+      }
+
       return {
-        success: result.success,
+        success: true,
         id: result.id,
         name: result.name,
         changedProperties: result.changedProperties,
-        error: result.error
       };
     } catch (parseError) {
       console.error('Error parsing AppleScript result:', parseError);

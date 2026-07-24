@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.7.0** - Added OmniFocus 4.7+ repeat rule support via `set_repetition_rule` (ICS rule strings, schedule type, anchor date, catch-up, end date, repetition count), mutually exclusive tag support via `exclusiveTags` on add/edit tools, and improved planned-date editing tests.
 - **v1.6.10** - Fixed Inbox task completion via `edit_item`, fixed AppleScript special-character handling for apostrophes/backslashes, fixed JSON result escaping for special characters, and clarified `batch_add_items` / `mcporter` usage with working examples.
 - **v1.6.9** - Added task attachment support: `get_task_by_id` now lists attachment metadata, `dump_database` exports attachment/link metadata, and new `read_task_attachment` returns image attachments as MCP image content when possible.
 - **v1.6.8** - Added stable task move support via `move_task` and `edit_item` (`newProjectId/newProjectName/newParentTaskId/newParentTaskName/moveToInbox`) with duplicate-name protection and cycle-prevention checks.
@@ -66,6 +67,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **🔄 Full CRUD Operations** - Create, read, update, delete tasks and projects
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
+- **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
+- **🔁 Repeat Rules** - Full OmniFocus 4.7+ repetition support (ICS rules, schedule type, anchor date, catch-up, end date, count)
 - **🤖 AI Integration** - Seamless Claude AI integration for intelligent workflows
 - **🖼️ Attachment-Aware Reads** - Surface note attachments and linked files before deciding whether AI should inspect them
 

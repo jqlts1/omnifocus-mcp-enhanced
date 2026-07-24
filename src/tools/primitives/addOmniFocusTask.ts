@@ -2,6 +2,7 @@ import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
 import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
+import { applyTagsExclusive } from './applyTagsExclusive.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -13,6 +14,7 @@ export interface AddOmniFocusTaskParams {
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
+  exclusiveTags?: boolean; // Respect mutually exclusive tag groups when applying tags (default: true)
   projectName?: string; // Project name to add task to
   parentTaskId?: string; // Parent task ID for subtask creation
   parentTaskName?: string; // Parent task name for subtask creation (alternative to ID)
@@ -152,7 +154,7 @@ async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise
 /**
  * Add a task to OmniFocus
  */
-export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{ success: boolean, taskId?: string, error?: string }> {
+export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{ success: boolean, taskId?: string, error?: string, removedSiblings?: string[], missingTags?: string[] }> {
   try {
     // Validate parent task parameters
     const validation = await validateParentTaskParams(params);
@@ -179,11 +181,31 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
     try {
       const result = JSON.parse(stdout);
 
-      // Return the result
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+
+      const taskId = result.taskId as string;
+      const tags = params.tags || [];
+      const exclusiveTags = params.exclusiveTags !== false;
+
+      // If tags were applied and exclusivity is enabled, enforce mutually exclusive groups.
+      if (taskId && tags.length > 0 && exclusiveTags) {
+        const exclusivityResult = await applyTagsExclusive(taskId, tags, 'add');
+        return {
+          success: true,
+          taskId,
+          removedSiblings: exclusivityResult.removedSiblings,
+          missingTags: exclusivityResult.missing,
+        };
+      }
+
       return {
-        success: result.success,
-        taskId: result.taskId,
-        error: result.error
+        success: true,
+        taskId,
       };
     } catch (parseError) {
       console.error("Error parsing AppleScript result:", parseError);
@@ -199,4 +221,4 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
       error: error?.message || "Unknown error in addOmniFocusTask"
     };
   }
-} 
+}

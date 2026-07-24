@@ -96,6 +96,16 @@ export interface OmnifocusFolder {
   subfolders: string[]; // Subfolder IDs
 }
 
+export type RepetitionScheduleType = 'Regularly' | 'FromCompletion';
+export type RepetitionAnchorDateKey = 'DueDate' | 'DeferDate' | 'PlannedDate';
+
+export interface RepetitionRuleInfo {
+  ruleString: string;
+  scheduleType: RepetitionScheduleType;
+  anchorDateKey: RepetitionAnchorDateKey;
+  catchUpAutomatically: boolean;
+}
+
 export interface OmnifocusTag {
   id: string;
   name: string;
@@ -103,4 +113,5 @@ export interface OmnifocusTag {
   active: boolean;
   allowsNextAction: boolean;
   tasks: string[]; // Task IDs
+  childrenAreMutuallyExclusive?: boolean;
 }

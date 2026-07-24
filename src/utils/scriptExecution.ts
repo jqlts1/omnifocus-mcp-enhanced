@@ -117,6 +117,8 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     if (args && Object.keys(args).length > 0) {
       const argsJson = JSON.stringify(args);
       // Inject parameters at the beginning of the script
+      // New scripts should read from `injectedArgs` directly and avoid declaring
+      // top-level names that collide with these legacy variables.
       const parameterInjection = `
     // Injected parameters
     const injectedArgs = ${argsJson};
@@ -133,7 +135,7 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     const includeDeferredOnly = injectedArgs.includeDeferredOnly !== undefined ? injectedArgs.includeDeferredOnly : false;
     const includeInactive = injectedArgs.includeInactive !== undefined ? injectedArgs.includeInactive : true;
     `;
-      
+
       // Replace any hardcoded parameters in the script with injected ones
       scriptContent = scriptContent.replace(
         /let perspectiveName = "今日工作安排"; \/\/ Hardcode for testing/,
@@ -167,13 +169,12 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
         /let format = "detailed";/,
         'let format = injectedArgs.format || "detailed";'
       );
-      
-      // Inject the parameters at the beginning of the function
-      scriptContent = scriptContent.replace(
-        '(() => {',
-        `(() => {
-    ${parameterInjection}`
-      );
+
+      // Inject the parameters at the very beginning of the script so that
+      // `injectedArgs` is available before any IIFE runs. This is safer than
+      // replacing the first `(() => {` because new scripts may contain multiple
+      // IIFEs or no IIFE at all.
+      scriptContent = parameterInjection + '\n' + scriptContent;
     }
     
     // Create a JXA script that will execute our OmniJS script in OmniFocus

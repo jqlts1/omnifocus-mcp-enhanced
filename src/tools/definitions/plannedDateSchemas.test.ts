@@ -88,3 +88,34 @@ test('filter_tasks schema supports planned date filters and sorting', () => {
   assert.equal(parsed.plannedBefore, '2026-02-20');
   assert.equal(parsed.sortBy, 'plannedDate');
 });
+
+test('add_omnifocus_task schema preserves exclusiveTags', () => {
+  const parsed = addTaskSchema.parse({
+    name: 'Task with exclusive tags',
+    tags: ['High', 'Work'],
+    exclusiveTags: false
+  }) as any;
+
+  assert.equal(parsed.exclusiveTags, false);
+});
+
+test('add_project schema preserves exclusiveTags', () => {
+  const parsed = addProjectSchema.parse({
+    name: 'Project with exclusive tags',
+    tags: ['High'],
+    exclusiveTags: true
+  }) as any;
+
+  assert.equal(parsed.exclusiveTags, true);
+});
+
+test('edit_item schema preserves exclusiveTags', () => {
+  const parsed = editItemSchema.parse({
+    itemType: 'task',
+    id: 'abc',
+    addTags: ['High'],
+    exclusiveTags: true
+  }) as any;
+
+  assert.equal(parsed.exclusiveTags, true);
+});

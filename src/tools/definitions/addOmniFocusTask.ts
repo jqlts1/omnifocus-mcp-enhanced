@@ -11,6 +11,7 @@ export const schema = z.object({
   flagged: z.boolean().optional().describe("Whether the task is flagged or not"),
   estimatedMinutes: z.number().optional().describe("Estimated time to complete the task, in minutes"),
   tags: z.array(z.string()).optional().describe("Tags to assign to the task"),
+  exclusiveTags: z.boolean().optional().describe("Respect mutually exclusive tag groups when applying tags (default: true). When a tag belongs to an exclusive group, sibling tags from that group are removed."),
   projectName: z.string().optional().describe("The name of the project to add the task to (will add to inbox if not specified)"),
   parentTaskId: z.string().optional().describe("The ID of the parent task to create this task as a subtask"),
   parentTaskName: z.string().optional().describe("The name of the parent task to create this task as a subtask (alternative to parentTaskId)")
@@ -45,10 +46,14 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         ? ` planned for ${new Date(args.plannedDate).toLocaleDateString()}`
         : "";
 
+      let exclusivityText = result.removedSiblings && result.removedSiblings.length > 0
+        ? `\nRemoved mutually exclusive tags: ${result.removedSiblings.join(', ')}`
+        : "";
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ Task "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}.\n\nid: ${result.taskId}`
+          text: `✅ Task "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}.\n\nid: ${result.taskId}${exclusivityText}`
         }]
       };
     } else {

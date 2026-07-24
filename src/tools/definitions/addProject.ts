@@ -11,6 +11,7 @@ export const schema = z.object({
   flagged: z.boolean().optional().describe("Whether the project is flagged or not"),
   estimatedMinutes: z.number().optional().describe("Estimated time to complete the project, in minutes"),
   tags: z.array(z.string()).optional().describe("Tags to assign to the project"),
+  exclusiveTags: z.boolean().optional().describe("Respect mutually exclusive tag groups when applying tags (default: true). When a tag belongs to an exclusive group, sibling tags from that group are removed."),
   folderName: z.string().optional().describe("The name of the folder to add the project to (will add to root if not specified)"),
   sequential: z.boolean().optional().describe("Whether tasks in the project should be sequential (default: false)")
 });
@@ -42,10 +43,14 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         ? " (sequential)"
         : " (parallel)";
 
+      let exclusivityText = result.removedSiblings && result.removedSiblings.length > 0
+        ? `\nRemoved mutually exclusive tags: ${result.removedSiblings.join(', ')}`
+        : "";
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.\n\nid: ${result.projectId}`
+          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.\n\nid: ${result.projectId}${exclusivityText}`
         }]
       };
     } else {

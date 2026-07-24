@@ -2,6 +2,7 @@ import { executeAppleScript } from '../../utils/scriptExecution.js';
 import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
 import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
+import { applyTagsExclusive } from './applyTagsExclusive.js';
 
 // Interface for project creation parameters
 export interface AddProjectParams {
@@ -13,6 +14,7 @@ export interface AddProjectParams {
   flagged?: boolean;
   estimatedMinutes?: number;
   tags?: string[]; // Tag names
+  exclusiveTags?: boolean; // Respect mutually exclusive tag groups when applying tags (default: true)
   folderName?: string; // Folder name to add project to
   sequential?: boolean; // Whether tasks should be sequential or parallel
 }
@@ -106,7 +108,7 @@ ${datePreamble}
 /**
  * Add a project to OmniFocus
  */
-export async function addProject(params: AddProjectParams): Promise<{ success: boolean, projectId?: string, error?: string }> {
+export async function addProject(params: AddProjectParams): Promise<{ success: boolean, projectId?: string, error?: string, removedSiblings?: string[], missingTags?: string[] }> {
   try {
     // Generate AppleScript
     const script = generateAppleScript(params);
@@ -122,11 +124,31 @@ export async function addProject(params: AddProjectParams): Promise<{ success: b
     try {
       const result = JSON.parse(stdout);
 
-      // Return the result
+      if (!result.success) {
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+
+      const projectId = result.projectId as string;
+      const tags = params.tags || [];
+      const exclusiveTags = params.exclusiveTags !== false;
+
+      // If tags were applied and exclusivity is enabled, enforce mutually exclusive groups.
+      if (projectId && tags.length > 0 && exclusiveTags) {
+        const exclusivityResult = await applyTagsExclusive(projectId, tags, 'add');
+        return {
+          success: true,
+          projectId,
+          removedSiblings: exclusivityResult.removedSiblings,
+          missingTags: exclusivityResult.missing,
+        };
+      }
+
       return {
-        success: result.success,
-        projectId: result.projectId,
-        error: result.error
+        success: true,
+        projectId,
       };
     } catch (parseError) {
       console.error("Error parsing AppleScript result:", parseError);
@@ -142,4 +164,4 @@ export async function addProject(params: AddProjectParams): Promise<{ success: b
       error: error?.message || "Unknown error in addProject"
     };
   }
-} 
+}

@@ -21,6 +21,7 @@ export const schema = z.object({
   addTags: z.array(z.string()).optional().describe("Tags to add to the task"),
   removeTags: z.array(z.string()).optional().describe("Tags to remove from the task"),
   replaceTags: z.array(z.string()).optional().describe("Tags to replace all existing tags with"),
+  exclusiveTags: z.boolean().optional().describe("Respect mutually exclusive tag groups when adding/replacing tags (default: true). When a tag belongs to an exclusive group, sibling tags from that group are removed."),
   newProjectId: z.string().optional().describe("For tasks: move task to this project ID"),
   newProjectName: z.string().optional().describe("For tasks: move task to this project name (errors on duplicate names)"),
   newParentTaskId: z.string().optional().describe("For tasks: move task under this parent task ID"),
@@ -58,10 +59,14 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
         changedText = ` (${result.changedProperties})`;
       }
 
+      let exclusivityText = result.removedSiblings && result.removedSiblings.length > 0
+        ? `\nRemoved mutually exclusive tags: ${result.removedSiblings.join(', ')}`
+        : "";
+
       return {
         content: [{
           type: "text" as const,
-          text: `✅ ${itemTypeLabel} "${result.name}" updated successfully${changedText}.`
+          text: `✅ ${itemTypeLabel} "${result.name}" updated successfully${changedText}.${exclusivityText}`
         }]
       };
     } else {

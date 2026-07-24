@@ -15,6 +15,7 @@ import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as getTaskByIdTool from './tools/definitions/getTaskById.js';
 import * as readTaskAttachmentTool from './tools/definitions/readTaskAttachment.js';
 import * as getTodayCompletedTasksTool from './tools/definitions/getTodayCompletedTasks.js';
+import * as setRepetitionRuleTool from './tools/definitions/setRepetitionRule.js';
 // Import perspective tools
 import * as getInboxTasksTool from './tools/definitions/getInboxTasks.js';
 import * as getFlaggedTasksTool from './tools/definitions/getFlaggedTasks.js';
@@ -110,6 +111,13 @@ server.tool(
   "Get tasks completed today - view today's accomplishments",
   getTodayCompletedTasksTool.schema.shape,
   getTodayCompletedTasksTool.handler
+);
+
+server.tool(
+  "set_repetition_rule",
+  "Set, update, or clear the repeat rule on a task. Supports ICS rule strings, schedule type, anchor date, catch-up, end date, and repetition count.",
+  setRepetitionRuleTool.schema.shape,
+  setRepetitionRuleTool.handler
 );
 
 // Register perspective tools
