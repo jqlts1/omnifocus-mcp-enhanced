@@ -56,7 +56,7 @@ export function formatCompactReport(database: any, options: { hideCompleted: boo
   // Add legend
   output += `FORMAT LEGEND:
 F: Folder | P: Project | •: Task | 🚩: Flagged
-Dates: [M/D] | [DUE:M/D] [PLAN:M/D] [defer:M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
+Dates: [M/D] | [ADD:M/D] [DUE:M/D] [PLAN:M/D] [defer:M/D] | Duration: (30m) or (2h) | Tags: <tag1,tag2>
 Status: #next #avail #block #due #over #compl #drop\n\n`;
   
   // Map of folder IDs to folder objects for quick lookup
@@ -134,6 +134,11 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
     }
     
     // Add due date if present
+    if (project.addedDate) {
+      const addedDateStr = formatCompactDate(project.addedDate);
+      statusInfo += ` [ADD:${addedDateStr}]`;
+    }
+
     if (project.dueDate) {
       const dueDateStr = formatCompactDate(project.dueDate);
       statusInfo += statusInfo ? ` [DUE:${dueDateStr}]` : ` [DUE:${dueDateStr}]`;
@@ -178,6 +183,10 @@ Status: #next #avail #block #due #over #compl #drop\n\n`;
     
     // Format dates
     let dateInfo = '';
+    if (task.addedDate) {
+      const addedDateStr = formatCompactDate(task.addedDate);
+      dateInfo += ` [ADD:${addedDateStr}]`;
+    }
     if (task.dueDate) {
       const dueDateStr = formatCompactDate(task.dueDate);
       dateInfo += ` [DUE:${dueDateStr}]`;
