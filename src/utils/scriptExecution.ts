@@ -131,6 +131,7 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     const exactMatch = injectedArgs.exactMatch !== undefined ? injectedArgs.exactMatch : false;
     const days = injectedArgs.days !== undefined ? injectedArgs.days : 7;
     const includeDeferredOnly = injectedArgs.includeDeferredOnly !== undefined ? injectedArgs.includeDeferredOnly : false;
+    const includeInactive = injectedArgs.includeInactive !== undefined ? injectedArgs.includeInactive : true;
     `;
       
       // Replace any hardcoded parameters in the script with injected ones

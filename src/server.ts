@@ -20,6 +20,7 @@ import * as getInboxTasksTool from './tools/definitions/getInboxTasks.js';
 import * as getFlaggedTasksTool from './tools/definitions/getFlaggedTasks.js';
 import * as getForecastTasksTool from './tools/definitions/getForecastTasks.js';
 import * as getTasksByTagTool from './tools/definitions/getTasksByTag.js';
+import * as listTagsTool from './tools/definitions/listTags.js';
 // Import ultimate filter tool
 import * as filterTasksTool from './tools/definitions/filterTasks.js';
 // Import custom perspective tools
@@ -138,6 +139,13 @@ server.tool(
   "Get tasks filtered by OmniFocus tags (labels like @home, @work, @urgent). Use this for tag-based filtering, NOT for custom perspective names. Tags are labels assigned to individual tasks.",
   getTasksByTagTool.schema.shape, 
   getTasksByTagTool.handler
+);
+
+server.tool(
+  "list_tags",
+  "List OmniFocus tags with IDs, parent relationships, and active status without loading tasks",
+  listTagsTool.schema.shape,
+  listTagsTool.handler
 );
 
 // Ultimate filter tool - The most powerful task perspective engine
