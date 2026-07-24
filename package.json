@@ -13,7 +13,7 @@
     "start": "node dist/server.js",
     "dev": "tsc -w",
     "prepublishOnly": "npm run build",
-    "test": "npm run build && node --test \"dist/**/*.test.js\""
+    "test": "npm run build && node --test dist/tools/definitions/*.test.js dist/tools/*.test.js dist/tools/primitives/*.test.js dist/utils/*.test.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
