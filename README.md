@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.8.0** - Added full **Folder Management** support: `add_folder`, `edit_folder`, `remove_folder`, `list_folders`, and `get_folder`. Create nested folder hierarchies, rename/move folders (with cycle protection), and inspect folder contents (child projects + subfolders). Note: removing a folder permanently deletes all projects and tasks it contains.
 - **v1.7.0** - Added OmniFocus 4.7+ repeat rule support via `set_repetition_rule` (ICS rule strings, schedule type, anchor date, catch-up, end date, repetition count), mutually exclusive tag support via `exclusiveTags` on add/edit tools, and improved planned-date editing tests.
 - **v1.6.10** - Fixed Inbox task completion via `edit_item`, fixed AppleScript special-character handling for apostrophes/backslashes, fixed JSON result escaping for special characters, and clarified `batch_add_items` / `mcporter` usage with working examples.
 - **v1.6.9** - Added task attachment support: `get_task_by_id` now lists attachment metadata, `dump_database` exports attachment/link metadata, and new `read_task_attachment` returns image attachments as MCP image content when possible.
@@ -65,6 +66,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **🎯 Batch Operations** - Add/remove multiple tasks efficiently
 - **📊 Smart Querying** - Find tasks by ID, name, or complex criteria
 - **🔄 Full CRUD Operations** - Create, read, update, delete tasks and projects
+- **📁 Folder Management** - Full CRUD for folders with nested hierarchy, move/rename, and content inspection
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -512,8 +514,15 @@ read_task_attachment {
 16. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
 17. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
 
+### 📁 Folder Management Tools (NEW)
+18. **add_folder** - 🆕 **NEW**: Create a folder, optionally nested under a parent folder
+19. **edit_folder** - 🆕 **NEW**: Rename a folder or move it under a different parent (empty string moves to root)
+20. **remove_folder** - 🆕 **NEW**: Delete a folder (⚠️ also deletes all contained projects and tasks)
+21. **list_folders** - 🆕 **NEW**: List all folders with IDs, parents, status, and project counts
+22. **get_folder** - 🆕 **NEW**: Get a single folder with its child projects and subfolders
+
 ### 📊 Analytics & Tracking
-18. **get_today_completed_tasks** - View today's completed tasks
+23. **get_today_completed_tasks** - View today's completed tasks
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
 
@@ -621,6 +630,29 @@ get_custom_perspective_tasks {
   "perspectiveName": "Weekly Planning",
   "displayMode": "flat"
 }
+```
+
+### 📁 Folder Management
+
+```bash
+# List all folders with project counts
+list_folders {"includeDropped": false}
+
+# Create a top-level folder
+add_folder {"name": "Work"}
+
+# Create a nested folder
+add_folder {"name": "Clients", "parentFolderName": "Work"}
+
+# Inspect a folder's projects and subfolders
+get_folder {"name": "Work"}
+
+# Rename or move a folder (empty string moves to root)
+edit_folder {"name": "Clients", "newName": "Key Clients"}
+edit_folder {"name": "Key Clients", "newParentFolderName": ""}
+
+# Delete a folder (⚠️ also deletes all contained projects and tasks)
+remove_folder {"name": "Old Archive"}
 ```
 
 ## 🔧 Configuration

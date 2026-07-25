@@ -27,11 +27,17 @@ import * as filterTasksTool from './tools/definitions/filterTasks.js';
 // Import custom perspective tools
 import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
 import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPerspectiveTasks.js';
+// Import folder management tools
+import * as addFolderTool from './tools/definitions/addFolder.js';
+import * as editFolderTool from './tools/definitions/editFolder.js';
+import * as removeFolderTool from './tools/definitions/removeFolder.js';
+import * as listFoldersTool from './tools/definitions/listFolders.js';
+import * as getFolderTool from './tools/definitions/getFolder.js';
 
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.6.9"
+  version: "1.8.0"
 });
 
 // Register tools
@@ -177,6 +183,42 @@ server.tool(
   "Get tasks from a specific OmniFocus custom perspective by name. Use this when user refers to perspective names like '今日工作安排', '今日复盘', '本周项目' etc. - these are custom views created in OmniFocus, NOT tags. Supports hierarchical tree display of task relationships.",
   getCustomPerspectiveTasksTool.schema.shape,
   getCustomPerspectiveTasksTool.handler
+);
+
+// Folder management tools
+server.tool(
+  "add_folder",
+  "Create a new folder in OmniFocus, optionally nested under a parent folder. Folders organize projects into a hierarchy.",
+  addFolderTool.schema.shape,
+  addFolderTool.handler
+);
+
+server.tool(
+  "edit_folder",
+  "Rename a folder or move it under a different parent folder (use an empty string for newParentFolderName to move it to the root level).",
+  editFolderTool.schema.shape,
+  editFolderTool.handler
+);
+
+server.tool(
+  "remove_folder",
+  "Remove a folder from OmniFocus. WARNING: this also permanently deletes all projects and tasks contained in the folder.",
+  removeFolderTool.schema.shape,
+  removeFolderTool.handler
+);
+
+server.tool(
+  "list_folders",
+  "List all OmniFocus folders with IDs, parent relationships, status, and project counts without loading tasks.",
+  listFoldersTool.schema.shape,
+  listFoldersTool.handler
+);
+
+server.tool(
+  "get_folder",
+  "Get a single OmniFocus folder by ID or name, including its child projects and subfolders.",
+  getFolderTool.schema.shape,
+  getFolderTool.handler
 );
 
 // Start the MCP server
