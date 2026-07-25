@@ -33,11 +33,15 @@ import * as editFolderTool from './tools/definitions/editFolder.js';
 import * as removeFolderTool from './tools/definitions/removeFolder.js';
 import * as listFoldersTool from './tools/definitions/listFolders.js';
 import * as getFolderTool from './tools/definitions/getFolder.js';
+// Import productivity tools
+import * as appendToNoteTool from './tools/definitions/appendToNote.js';
+import * as countTasksTool from './tools/definitions/countTasks.js';
+import * as duplicateTaskTool from './tools/definitions/duplicateTask.js';
 
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.8.0"
+  version: "1.9.0"
 });
 
 // Register tools
@@ -219,6 +223,28 @@ server.tool(
   "Get a single OmniFocus folder by ID or name, including its child projects and subfolders.",
   getFolderTool.schema.shape,
   getFolderTool.handler
+);
+
+// Productivity tools
+server.tool(
+  "append_to_note",
+  "Append text to a task or project note without overwriting the existing note. Useful for logging progress or adding context.",
+  appendToNoteTool.schema.shape,
+  appendToNoteTool.handler
+);
+
+server.tool(
+  "count_tasks",
+  "Count tasks matching filters without returning the full list. Fast 'how many' queries that return a total plus a breakdown by status. Uses the same filters as filter_tasks.",
+  countTasksTool.schema.shape,
+  countTasksTool.handler
+);
+
+server.tool(
+  "duplicate_task",
+  "Duplicate an existing task, optionally with its subtasks, and optionally with a new name. Useful for template-based workflows.",
+  duplicateTaskTool.schema.shape,
+  duplicateTaskTool.handler
 );
 
 // Start the MCP server

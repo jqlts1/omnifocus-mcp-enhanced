@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.9.0** - Added 3 productivity tools: `append_to_note` (append text to a task/project note without overwriting), `count_tasks` (fast "how many" aggregate queries with a status breakdown, using the same filters as `filter_tasks`), and `duplicate_task` (clone a task with or without its subtasks, optionally renamed).
 - **v1.8.0** - Added full **Folder Management** support: `add_folder`, `edit_folder`, `remove_folder`, `list_folders`, and `get_folder`. Create nested folder hierarchies, rename/move folders (with cycle protection), and inspect folder contents (child projects + subfolders). Note: removing a folder permanently deletes all projects and tasks it contains.
 - **v1.7.0** - Added OmniFocus 4.7+ repeat rule support via `set_repetition_rule` (ICS rule strings, schedule type, anchor date, catch-up, end date, repetition count), mutually exclusive tag support via `exclusiveTags` on add/edit tools, and improved planned-date editing tests.
 - **v1.6.10** - Fixed Inbox task completion via `edit_item`, fixed AppleScript special-character handling for apostrophes/backslashes, fixed JSON result escaping for special characters, and clarified `batch_add_items` / `mcporter` usage with working examples.
@@ -521,8 +522,13 @@ read_task_attachment {
 21. **list_folders** - 🆕 **NEW**: List all folders with IDs, parents, status, and project counts
 22. **get_folder** - 🆕 **NEW**: Get a single folder with its child projects and subfolders
 
+### ⚡ Productivity Tools (NEW)
+23. **append_to_note** - 🆕 **NEW**: Append text to a task/project note without overwriting
+24. **count_tasks** - 🆕 **NEW**: Fast "how many" queries with a status breakdown (same filters as filter_tasks)
+25. **duplicate_task** - 🆕 **NEW**: Clone a task with/without subtasks, optionally renamed
+
 ### 📊 Analytics & Tracking
-23. **get_today_completed_tasks** - View today's completed tasks
+26. **get_today_completed_tasks** - View today's completed tasks
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
 
@@ -653,6 +659,35 @@ edit_folder {"name": "Key Clients", "newParentFolderName": ""}
 
 # Delete a folder (⚠️ also deletes all contained projects and tasks)
 remove_folder {"name": "Old Archive"}
+```
+
+### ⚡ Productivity Tools
+
+```bash
+# Append a progress note without overwriting the existing note
+append_to_note {
+  "itemType": "task",
+  "name": "Write report",
+  "text": "Drafted section 1 today"
+}
+
+# Fast count: how many flagged tasks are still actionable?
+count_tasks {
+  "flagged": true,
+  "taskStatus": ["Available", "Next", "DueSoon", "Overdue"]
+}
+
+# How many tasks remain in a project (by status breakdown)
+count_tasks {"projectFilter": "Website Redesign"}
+
+# Duplicate a task template with its subtasks
+duplicate_task {
+  "name": "Weekly Review Checklist",
+  "newName": "Weekly Review - 2026-03-02"
+}
+
+# Duplicate without subtasks
+duplicate_task {"taskId": "abc123", "includeSubtasks": false}
 ```
 
 ## 🔧 Configuration
