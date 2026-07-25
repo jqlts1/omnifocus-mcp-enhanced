@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.10.0** - Major capability expansion: **Tag Management** (`add_tag`, `edit_tag`, `remove_tag`, `search_tags`), **Task Notifications** (`list_task_notifications`, `add_task_notification`, `remove_task_notification` — absolute or due-relative reminders), plus first-class MCP **Prompts** (4 guided review workflows) and **Resources** (3 live JSON snapshots). Now 35 tools, 4 prompts, and 3 resources.
 - **v1.9.0** - Added 3 productivity tools: `append_to_note` (append text to a task/project note without overwriting), `count_tasks` (fast "how many" aggregate queries with a status breakdown, using the same filters as `filter_tasks`), and `duplicate_task` (clone a task with or without its subtasks, optionally renamed).
 - **v1.8.0** - Added full **Folder Management** support: `add_folder`, `edit_folder`, `remove_folder`, `list_folders`, and `get_folder`. Create nested folder hierarchies, rename/move folders (with cycle protection), and inspect folder contents (child projects + subfolders). Note: removing a folder permanently deletes all projects and tasks it contains.
 - **v1.7.0** - Added OmniFocus 4.7+ repeat rule support via `set_repetition_rule` (ICS rule strings, schedule type, anchor date, catch-up, end date, repetition count), mutually exclusive tag support via `exclusiveTags` on add/edit tools, and improved planned-date editing tests.
@@ -68,6 +69,10 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **📊 Smart Querying** - Find tasks by ID, name, or complex criteria
 - **🔄 Full CRUD Operations** - Create, read, update, delete tasks and projects
 - **📁 Folder Management** - Full CRUD for folders with nested hierarchy, move/rename, and content inspection
+- **🏷️ Tag Management** - Full CRUD for tags with nesting, status control, and fuzzy search
+- **🔔 Task Notifications** - List, add, and remove reminders (absolute time or relative to due date)
+- **💬 MCP Prompts** - 4 guided review workflows (daily, weekly, inbox processing, project planning)
+- **📡 MCP Resources** - 3 live JSON snapshots (inbox, today, active projects)
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -527,8 +532,43 @@ read_task_attachment {
 24. **count_tasks** - 🆕 **NEW**: Fast "how many" queries with a status breakdown (same filters as filter_tasks)
 25. **duplicate_task** - 🆕 **NEW**: Clone a task with/without subtasks, optionally renamed
 
+### 🏷️ Tag Management Tools (NEW)
+26. **list_tags** - List all tags with IDs, parents, and active status
+27. **add_tag** - 🆕 **NEW**: Create a tag, optionally nested under a parent tag
+28. **edit_tag** - 🆕 **NEW**: Rename, change status (active/onHold/dropped), or move a tag
+29. **remove_tag** - 🆕 **NEW**: Delete a tag (tasks are kept, they just lose the tag)
+30. **search_tags** - 🆕 **NEW**: Search tags by name (fuzzy or exact)
+
+### 🔔 Notification Tools (NEW)
+31. **list_task_notifications** - 🆕 **NEW**: List reminders set on a task
+32. **add_task_notification** - 🆕 **NEW**: Add a reminder (absolute time or minutes relative to due date)
+33. **remove_task_notification** - 🆕 **NEW**: Remove a reminder by index, or remove all
+
 ### 📊 Analytics & Tracking
-26. **get_today_completed_tasks** - View today's completed tasks
+34. **get_today_completed_tasks** - View today's completed tasks
+
+> Note: `get_tasks_by_tag` (#14) and `list_tags` (#26) were available in earlier versions; the tag CRUD tools are new in v1.10.0.
+
+## 💬 MCP Prompts (NEW in v1.10.0)
+
+Guided review workflows that pull live OmniFocus data and hand the AI a structured plan of attack. In clients like Claude Desktop these appear as selectable prompts.
+
+| Prompt | Arguments | What it does |
+|---|---|---|
+| **daily_review** | – | Pulls overdue, due-soon, and flagged tasks; produces today's top 3 priorities |
+| **weekly_review** | – | GTD weekly review: classifies active projects as on track / at risk / stalled, proposes next actions |
+| **inbox_processing** | – | Walks inbox items one by one through GTD clarification (delete/defer/delegate/keep) |
+| **project_planning** | `project` | Breaks a project into sequenced, estimated next actions (fuzzy-matches the project name) |
+
+## 📡 MCP Resources (NEW in v1.10.0)
+
+Live JSON snapshots your AI client can read without calling a tool.
+
+| Resource URI | Contents |
+|---|---|
+| `omnifocus://inbox` | Current inbox tasks |
+| `omnifocus://today` | Overdue + due today + flagged, grouped |
+| `omnifocus://projects` | Active projects with task counts and stalled detection |
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
 
@@ -688,6 +728,49 @@ duplicate_task {
 
 # Duplicate without subtasks
 duplicate_task {"taskId": "abc123", "includeSubtasks": false}
+```
+
+### 🏷️ Tag Management
+
+```bash
+# Search and list tags
+search_tags {"query": "work"}
+list_tags {"includeInactive": false}
+
+# Create a tag, optionally nested
+add_tag {"name": "Deep Work"}
+add_tag {"name": "Client A", "parentTagName": "Clients"}
+
+# Rename, pause, or move a tag ("" moves to root)
+edit_tag {"name": "Deep Work", "newName": "Focus"}
+edit_tag {"name": "Focus", "newStatus": "onHold"}
+edit_tag {"name": "Client A", "newParentTagName": ""}
+
+# Delete a tag (tasks are kept, they just lose the tag)
+remove_tag {"name": "Obsolete"}
+```
+
+### 🔔 Task Notifications
+
+```bash
+# See what reminders a task has
+list_task_notifications {"taskName": "Submit report"}
+
+# Remind at a fixed time
+add_task_notification {
+  "taskName": "Submit report",
+  "absoluteDate": "2026-03-05T09:00:00"
+}
+
+# Remind 30 minutes before the due date (requires a due date)
+add_task_notification {
+  "taskName": "Submit report",
+  "relativeMinutes": -30
+}
+
+# Remove one by index, or clear them all
+remove_task_notification {"taskName": "Submit report", "index": 0}
+remove_task_notification {"taskName": "Submit report", "removeAll": true}
 ```
 
 ## 🔧 Configuration

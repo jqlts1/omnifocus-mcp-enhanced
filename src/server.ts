@@ -37,11 +37,23 @@ import * as getFolderTool from './tools/definitions/getFolder.js';
 import * as appendToNoteTool from './tools/definitions/appendToNote.js';
 import * as countTasksTool from './tools/definitions/countTasks.js';
 import * as duplicateTaskTool from './tools/definitions/duplicateTask.js';
+// Import tag management tools
+import * as addTagTool from './tools/definitions/addTag.js';
+import * as editTagTool from './tools/definitions/editTag.js';
+import * as removeTagTool from './tools/definitions/removeTag.js';
+import * as searchTagsTool from './tools/definitions/searchTags.js';
+// Import notification tools
+import * as listTaskNotificationsTool from './tools/definitions/listTaskNotifications.js';
+import * as addTaskNotificationTool from './tools/definitions/addTaskNotification.js';
+import * as removeTaskNotificationTool from './tools/definitions/removeTaskNotification.js';
+// Import prompts and resources
+import { registerPrompts } from './context/prompts.js';
+import { registerResources } from './context/resources.js';
 
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.9.0"
+  version: "1.10.0"
 });
 
 // Register tools
@@ -246,6 +258,61 @@ server.tool(
   duplicateTaskTool.schema.shape,
   duplicateTaskTool.handler
 );
+
+// Tag management tools
+server.tool(
+  "add_tag",
+  "Create a new tag in OmniFocus, optionally nested under a parent tag.",
+  addTagTool.schema.shape,
+  addTagTool.handler
+);
+
+server.tool(
+  "edit_tag",
+  "Rename a tag, change its status (active/onHold/dropped), or move it under a different parent tag (empty string moves to root).",
+  editTagTool.schema.shape,
+  editTagTool.handler
+);
+
+server.tool(
+  "remove_tag",
+  "Delete a tag from OmniFocus. Tasks are not deleted; they simply lose the tag. Child tags are deleted with the parent.",
+  removeTagTool.schema.shape,
+  removeTagTool.handler
+);
+
+server.tool(
+  "search_tags",
+  "Search OmniFocus tags by name with fuzzy or exact matching.",
+  searchTagsTool.schema.shape,
+  searchTagsTool.handler
+);
+
+// Notification tools
+server.tool(
+  "list_task_notifications",
+  "List all notifications (reminders) set on a task, with their kind and fire time.",
+  listTaskNotificationsTool.schema.shape,
+  listTaskNotificationsTool.handler
+);
+
+server.tool(
+  "add_task_notification",
+  "Add a notification (reminder) to a task. Use absoluteDate for a fixed time, or relativeMinutes for an offset from the task's due date (negative = before due).",
+  addTaskNotificationTool.schema.shape,
+  addTaskNotificationTool.handler
+);
+
+server.tool(
+  "remove_task_notification",
+  "Remove a notification from a task by 0-based index, or remove all notifications with removeAll.",
+  removeTaskNotificationTool.schema.shape,
+  removeTaskNotificationTool.handler
+);
+
+// Register prompts (guided review workflows) and resources (live snapshots)
+registerPrompts(server);
+registerResources(server);
 
 // Start the MCP server
 const transport = new StdioServerTransport();
