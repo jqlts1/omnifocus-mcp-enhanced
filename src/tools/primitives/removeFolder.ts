@@ -62,8 +62,14 @@ ${jsonHelpers}
           set folderId to id of foundFolder as string
 
           -- Count contained projects and tasks before deleting (for reporting)
-          set projectCountValue to count of (flattened projects of foundFolder)
-          set taskCountValue to count of (flattened tasks of foundFolder)
+          set containedProjects to flattened projects of foundFolder
+          set projectCountValue to count of containedProjects
+          set taskCountValue to 0
+          repeat with aProject in containedProjects
+            try
+              set taskCountValue to taskCountValue + (count of (flattened tasks of aProject))
+            end try
+          end repeat
 
           -- Delete the folder (cascades to contained projects and tasks)
           delete foundFolder
