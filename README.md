@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.11.0** - Added a bundled **agent skill** (`omnifocus-cli`). One command (`npx omnifocus-mcp-enhanced install-skill`) generates a local CLI covering all 35 tools, so AI agents can drive OmniFocus through shell commands instead of loading 35 tool schemas into context. The CLI is generated on your machine from your installed server version, so it never drifts out of sync.
 - **v1.10.0** - Major capability expansion: **Tag Management** (`add_tag`, `edit_tag`, `remove_tag`, `search_tags`), **Task Notifications** (`list_task_notifications`, `add_task_notification`, `remove_task_notification` — absolute or due-relative reminders), plus first-class MCP **Prompts** (4 guided review workflows) and **Resources** (3 live JSON snapshots). Now 35 tools, 4 prompts, and 3 resources.
 - **v1.9.0** - Added 3 productivity tools: `append_to_note` (append text to a task/project note without overwriting), `count_tasks` (fast "how many" aggregate queries with a status breakdown, using the same filters as `filter_tasks`), and `duplicate_task` (clone a task with or without its subtasks, optionally renamed).
 - **v1.8.0** - Added full **Folder Management** support: `add_folder`, `edit_folder`, `remove_folder`, `list_folders`, and `get_folder`. Create nested folder hierarchies, rename/move folders (with cycle protection), and inspect folder contents (child projects + subfolders). Note: removing a folder permanently deletes all projects and tasks it contains.
@@ -73,6 +74,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **🔔 Task Notifications** - List, add, and remove reminders (absolute time or relative to due date)
 - **💬 MCP Prompts** - 4 guided review workflows (daily, weekly, inbox processing, project planning)
 - **📡 MCP Resources** - 3 live JSON snapshots (inbox, today, active projects)
+- **🛠️ Agent Skill** - One-command install of a local CLI covering all 35 tools, to keep AI context usage low
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -569,6 +571,50 @@ Live JSON snapshots your AI client can read without calling a tool.
 | `omnifocus://inbox` | Current inbox tasks |
 | `omnifocus://today` | Overdue + due today + flagged, grouped |
 | `omnifocus://projects` | Active projects with task counts and stalled detection |
+
+## 🛠️ Agent Skill (NEW in v1.11.0)
+
+With 35 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
+
+### Install
+
+```bash
+npx omnifocus-mcp-enhanced install-skill
+```
+
+That single command:
+1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter) (pinned to `@latest`)
+2. Generates a standalone CLI from the server's live tool schemas (~20s)
+3. Installs `SKILL.md` + the CLI into `~/.agents/skills/omnifocus-cli/`
+4. Verifies all 35 tools are present and that OmniFocus is reachable
+
+Install elsewhere with `AGENT_SKILLS_DIR=/custom/path npx omnifocus-mcp-enhanced install-skill`.
+
+### Why generate the CLI locally?
+
+The CLI is **not** shipped pre-built. It is generated on your machine from the server version you actually have installed, which means it can never silently lack the newest commands — the most common failure mode for this kind of tooling.
+
+### Usage
+
+```bash
+CLI=~/.agents/skills/omnifocus-cli/bin/omnifocus-enhanced.js
+
+$CLI get-inbox-tasks
+$CLI count-tasks --flagged true
+$CLI filter-tasks --task-status Available,Next --due-this-week true
+$CLI add-folder --name "Clients" --parent-folder-name "Work"
+```
+
+Flag conventions: booleans need explicit values (`--flagged true`), arrays are comma-separated (`--task-status Available,Next`), and `--raw '<json>'` bypasses flag parsing for complex nested arguments.
+
+### Keeping it current
+
+Re-run the installer after upgrading the server — a stale CLI will silently miss new tools:
+
+```bash
+npm install -g omnifocus-mcp-enhanced@latest
+npx omnifocus-mcp-enhanced install-skill
+```
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
 
