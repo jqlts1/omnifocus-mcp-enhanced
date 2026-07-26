@@ -179,13 +179,13 @@ new commands — this is the most common failure mode). Run this from the projec
 where the skill is installed:
 
 ```bash
-npx omnifocus-mcp-enhanced install-skill
+npx -y omnifocus-mcp-enhanced@latest install-skill
 ```
 
 For a globally installed skill, preserve that scope when refreshing:
 
 ```bash
-npx omnifocus-mcp-enhanced install-skill --global
+npx -y omnifocus-mcp-enhanced@latest install-skill --global
 ```
 
 The installer pins the MCP package and mcporter to `@latest`, regenerates the

@@ -26,6 +26,7 @@ Usage:
   omnifocus-mcp-enhanced --version       Print the package version
 
 The server is normally launched by an MCP client rather than run by hand.
+When using npx, prefer: npx -y omnifocus-mcp-enhanced@latest install-skill
 `);
   process.exit(0);
 }

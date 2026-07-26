@@ -580,7 +580,7 @@ With 35 tools, loading every MCP tool schema into an AI conversation costs a lot
 ### Install
 
 ```bash
-npx omnifocus-mcp-enhanced install-skill
+npx -y omnifocus-mcp-enhanced@latest install-skill
 ```
 
 By default, this installs **only in the current project**:
@@ -597,7 +597,7 @@ Use `--global` only when you intentionally want the skill available in every
 project:
 
 ```bash
-npx omnifocus-mcp-enhanced install-skill --global
+npx -y omnifocus-mcp-enhanced@latest install-skill --global
 ```
 
 The global skill is installed in `~/.claude/skills/omnifocus-cli/`, and its MCP
@@ -609,7 +609,7 @@ That single command:
 3. Installs `SKILL.md` + the CLI into the current project's `.claude/skills/omnifocus-cli/` (or `~/.claude/skills/omnifocus-cli/` with `--global`)
 4. Verifies all 35 tools are present and that OmniFocus is reachable
 
-Install elsewhere with `CLAUDE_SKILLS_DIR=/custom/path npx omnifocus-mcp-enhanced install-skill` (`AGENT_SKILLS_DIR` remains available as a legacy alias).
+Install elsewhere with `CLAUDE_SKILLS_DIR=/custom/path npx -y omnifocus-mcp-enhanced@latest install-skill` (`AGENT_SKILLS_DIR` remains available as a legacy alias).
 
 ### Why generate the CLI locally?
 
@@ -634,7 +634,7 @@ Re-run the installer after upgrading the server — a stale CLI will silently mi
 
 ```bash
 npm install -g omnifocus-mcp-enhanced@latest
-npx omnifocus-mcp-enhanced install-skill
+npx -y omnifocus-mcp-enhanced@latest install-skill
 ```
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)

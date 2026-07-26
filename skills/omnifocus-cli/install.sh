@@ -35,8 +35,8 @@ usage() {
 Install the omnifocus-cli agent skill.
 
 Usage:
-  npx $PACKAGE install-skill             Install in the current project
-  npx $PACKAGE install-skill --global    Install for all projects
+  npx -y ${PACKAGE}@latest install-skill             Install in the current project
+  npx -y ${PACKAGE}@latest install-skill --global    Install for all projects
 
 Default project locations:
   Skill:     ./.claude/skills/$SKILL_NAME
@@ -195,6 +195,6 @@ Try it:
   $TARGET_DIR/bin/omnifocus-enhanced.js count-tasks --flagged true
 
 After upgrading $PACKAGE, re-run this installer to refresh the CLI:
-  npx $PACKAGE install-skill$([[ "$INSTALL_GLOBAL" == true ]] && printf ' --global')
+  npx -y ${PACKAGE}@latest install-skill$([[ "$INSTALL_GLOBAL" == true ]] && printf ' --global')
 
 EOF
