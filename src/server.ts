@@ -148,28 +148,28 @@ server.tool(
 // Register perspective tools
 server.tool(
   "get_inbox_tasks",
-  "Get tasks from OmniFocus inbox perspective",
+  "Get inbox tasks with direct subtask counts and optional subtask-tree expansion",
   getInboxTasksTool.schema.shape,
   getInboxTasksTool.handler
 );
 
 server.tool(
   "get_flagged_tasks", 
-  "Get flagged tasks from OmniFocus with optional project filtering",
+  "Get flagged tasks with direct subtask counts, optional project filtering, and optional tree expansion",
   getFlaggedTasksTool.schema.shape,
   getFlaggedTasksTool.handler
 );
 
 server.tool(
   "get_forecast_tasks",
-  "Get tasks from OmniFocus forecast perspective (due/deferred tasks in date range)", 
+  "Get forecast tasks with direct subtask counts and optional subtask-tree expansion",
   getForecastTasksTool.schema.shape,
   getForecastTasksTool.handler
 );
 
 server.tool(
   "get_tasks_by_tag",
-  "Get tasks filtered by OmniFocus tags (labels like @home, @work, @urgent). Use this for tag-based filtering, NOT for custom perspective names. Tags are labels assigned to individual tasks.",
+  "Get tasks filtered by OmniFocus tags, with direct subtask counts and optional tree expansion. Use this for tags, not custom perspective names.",
   getTasksByTagTool.schema.shape, 
   getTasksByTagTool.handler
 );
@@ -184,7 +184,7 @@ server.tool(
 // Ultimate filter tool - The most powerful task perspective engine
 server.tool(
   "filter_tasks",
-  "Advanced task filtering with unlimited perspective combinations - status, dates, projects, tags, search, and more",
+  "Advanced task filtering by status, dates, projects, tags, search, and more, with optional subtask-tree expansion",
   filterTasksTool.schema.shape,
   filterTasksTool.handler
 );

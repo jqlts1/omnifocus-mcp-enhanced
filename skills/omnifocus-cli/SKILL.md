@@ -25,6 +25,18 @@ These matter — getting them wrong causes confusing errors:
 
 ## Reading Tasks
 
+Inbox, flagged, forecast, tag, filtered, and single-task reads are task-tree
+aware. Their default output includes `[N subtasks]`, where `N` is the number
+of visible direct children. Do not expand trees unless the user needs task
+structure or could mistake a parent task for an actionable leaf task.
+
+- `--show-subtasks true` recursively expands descendants.
+- `--max-subtask-depth N` limits expansion to `N` levels; omitted is unlimited.
+- `--max-subtask-depth 0` keeps counts but expands no descendants.
+- Existing completion filtering also applies to descendants in list commands.
+- Expanded descendants do not need to match the top-level query filter.
+- The server prevents duplicate top-level display when a match is already shown inside an expanded tree.
+
 ```bash
 # Perspectives
 bin/omnifocus-enhanced.cjs get-inbox-tasks
@@ -32,12 +44,19 @@ bin/omnifocus-enhanced.cjs get-flagged-tasks
 bin/omnifocus-enhanced.cjs get-forecast-tasks --days 7
 bin/omnifocus-enhanced.cjs get-tasks-by-tag --tag-name "work"
 
+# Task lists always show direct subtask counts. Expand trees only when needed.
+bin/omnifocus-enhanced.cjs get-inbox-tasks --show-subtasks true
+bin/omnifocus-enhanced.cjs get-flagged-tasks --show-subtasks true --max-subtask-depth 1
+bin/omnifocus-enhanced.cjs get-forecast-tasks --days 7 --show-subtasks true --max-subtask-depth 2
+bin/omnifocus-enhanced.cjs get-tasks-by-tag --tag-name "work" --show-subtasks true
+
 # Custom perspectives (OmniFocus Pro) — these are user-defined views, NOT tags
 bin/omnifocus-enhanced.cjs list-custom-perspectives
 bin/omnifocus-enhanced.cjs get-custom-perspective-tasks --perspective-name "今日计划"
 
 # Single task with attachment metadata
 bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>"
+bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>" --show-subtasks true
 
 # Completed today
 bin/omnifocus-enhanced.cjs get-today-completed-tasks
@@ -55,6 +74,7 @@ bin/omnifocus-enhanced.cjs filter-tasks --task-status Available,Next --due-this-
 bin/omnifocus-enhanced.cjs filter-tasks --estimate-max 30 --flagged true
 bin/omnifocus-enhanced.cjs filter-tasks --planned-today true --sort-by plannedDate
 bin/omnifocus-enhanced.cjs filter-tasks --project-filter "Website" --task-status Overdue
+bin/omnifocus-enhanced.cjs filter-tasks --flagged true --show-subtasks true --max-subtask-depth 2
 
 # Fast counts (low token cost)
 bin/omnifocus-enhanced.cjs count-tasks --flagged true

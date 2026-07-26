@@ -1,13 +1,16 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { dedupeExpandedTopLevelTasks, formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
 
 export interface GetTasksByTagOptions {
   tagName: string;
   hideCompleted?: boolean;
   exactMatch?: boolean;
+  showSubtasks?: boolean;
+  maxSubtaskDepth?: number;
 }
 
 export async function getTasksByTag(options: GetTasksByTagOptions): Promise<string> {
-  const { tagName, hideCompleted = true, exactMatch = false } = options;
+  const { tagName, hideCompleted = true, exactMatch = false, showSubtasks = false, maxSubtaskDepth } = options;
   
   if (!tagName || tagName.trim() === '') {
     throw new Error('Tag name is required');
@@ -18,7 +21,9 @@ export async function getTasksByTag(options: GetTasksByTagOptions): Promise<stri
     const result = await executeOmniFocusScript('@tasksByTag.js', { 
       tagName: tagName.trim(),
       hideCompleted: hideCompleted,
-      exactMatch: exactMatch
+      exactMatch,
+      showSubtasks,
+      maxSubtaskDepth
     });
     
     if (typeof result === 'string') {
@@ -58,7 +63,11 @@ export async function getTasksByTag(options: GetTasksByTagOptions): Promise<stri
           // Group tasks by project for better organization
           const tasksByProject = new Map<string, any[]>();
           
-          data.tasks.forEach((task: any) => {
+          const displayedTasks = dedupeExpandedTopLevelTasks(data.tasks as TaskTreeNode[], showSubtasks);
+          if (displayedTasks.length !== data.tasks.length) {
+            output += `Displayed as ${displayedTasks.length} task tree${displayedTasks.length === 1 ? '' : 's'} to avoid duplicate subtasks.\n\n`;
+          }
+          displayedTasks.forEach((task: TaskTreeNode) => {
             const projectName = task.projectName || '📥 Inbox';
             if (!tasksByProject.has(projectName)) {
               tasksByProject.set(projectName, []);
@@ -72,31 +81,8 @@ export async function getTasksByTag(options: GetTasksByTagOptions): Promise<stri
               output += `## 📁 ${projectName}\n`;
             }
             
-            tasks.forEach((task: any) => {
-              const flagSymbol = task.flagged ? '🚩 ' : '';
-              const dueDateStr = task.dueDate ? ` [DUE: ${new Date(task.dueDate).toLocaleDateString()}]` : '';
-              const deferDateStr = task.deferDate ? ` [DEFER: ${new Date(task.deferDate).toLocaleDateString()}]` : '';
-              const plannedDateStr = task.plannedDate ? ` [PLAN: ${new Date(task.plannedDate).toLocaleDateString()}]` : '';
-              const statusStr = task.taskStatus !== 'Available' ? ` (${task.taskStatus})` : '';
-              const estimateStr = task.estimatedMinutes ? ` ⏱${task.estimatedMinutes}m` : '';
-              
-              output += `• ${flagSymbol}${task.name}${dueDateStr}${deferDateStr}${plannedDateStr}${statusStr}${estimateStr}\n`;
-              
-              if (task.note && task.note.trim()) {
-                output += `  📝 ${task.note.trim()}\n`;
-              }
-              
-              // Show all tags for this task
-              if (task.tags && task.tags.length > 0) {
-                const tagNames = task.tags.map((tag: any) => {
-                  // Highlight the matched tag
-                  return data.matchedTags && data.matchedTags.includes(tag.name) 
-                    ? `**${tag.name}**` 
-                    : tag.name;
-                }).join(', ');
-                output += `  🏷 ${tagNames}\n`;
-              }
-              
+            tasks.forEach((task: TaskTreeNode) => {
+              output += formatTaskTreeNode(task, '• ', { showSubtasks, matchedTags: data.matchedTags });
               output += '\n';
             });
           });

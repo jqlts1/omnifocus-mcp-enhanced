@@ -1,4 +1,5 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { dedupeExpandedTopLevelTasks, formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
 
 export interface FilterTasksOptions {
   // 🎯 任务状态过滤
@@ -60,6 +61,8 @@ export interface FilterTasksOptions {
   limit?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  showSubtasks?: boolean;
+  maxSubtaskDepth?: number;
 }
 
 export async function filterTasks(options: FilterTasksOptions = {}): Promise<string> {
@@ -107,8 +110,9 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       }
 
       if (data.tasks && Array.isArray(data.tasks)) {
-        const limitedTasks = data.tasks;
-        const taskCount = limitedTasks.length;
+        const matchedTasks = data.tasks as TaskTreeNode[];
+        const limitedTasks = dedupeExpandedTopLevelTasks(matchedTasks, options.showSubtasks === true);
+        const taskCount = matchedTasks.length;
         const totalCount = typeof data.filteredCount === 'number'
           ? data.filteredCount
           : taskCount;
@@ -128,6 +132,10 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
           }
           output += ':\n\n';
 
+          if (limitedTasks.length !== taskCount) {
+            output += `Displayed as ${limitedTasks.length} task tree${limitedTasks.length === 1 ? '' : 's'} to avoid duplicate subtasks.\n\n`;
+          }
+
           // 按项目分组显示任务
           const tasksByProject = groupTasksByProject(limitedTasks);
 
@@ -136,8 +144,8 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
               output += `## 📁 ${projectName}\n`;
             }
 
-            tasks.forEach((task: any) => {
-              output += formatTask(task);
+            tasks.forEach((task: TaskTreeNode) => {
+              output += formatTaskTreeNode(task, '', { showSubtasks: options.showSubtasks });
               output += '\n';
             });
 

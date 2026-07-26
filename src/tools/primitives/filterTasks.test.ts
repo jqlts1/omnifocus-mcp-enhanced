@@ -49,14 +49,20 @@ function task(id: string, overrides: TaskOverrides = {}) {
       id: { primaryKey: `tag-${index}-${name}` },
       name,
     })),
+    children: [],
   };
 }
 
 function runFilter(tasks: any[], args: Record<string, unknown>, now = new Date()): any {
-  const script = readFileSync(
+  const helper = readFileSync(
+    new URL('../../utils/omnifocusScripts/taskTreeHelpers.js', import.meta.url),
+    'utf8',
+  );
+  const filterScript = readFileSync(
     new URL('../../utils/omnifocusScripts/filterTasks.js', import.meta.url),
     'utf8',
   );
+  const script = `${helper}\n${filterScript}`;
 
   class FixedDate extends Date {
     constructor(...values: any[]) {

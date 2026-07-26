@@ -1,9 +1,12 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { dedupeExpandedTopLevelTasks, formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
 
 export interface GetForecastTasksOptions {
   days?: number;
   hideCompleted?: boolean;
   includeDeferredOnly?: boolean;
+  showSubtasks?: boolean;
+  maxSubtaskDepth?: number;
 }
 
 export function parseLocalDateKey(dateKey: string): Date {
@@ -36,14 +39,16 @@ export function getForecastDateCategory(taskDate: Date, now = new Date()): 'over
 }
 
 export async function getForecastTasks(options: GetForecastTasksOptions = {}): Promise<string> {
-  const { days = 7, hideCompleted = true, includeDeferredOnly = false } = options;
+  const { days = 7, hideCompleted = true, includeDeferredOnly = false, showSubtasks = false, maxSubtaskDepth } = options;
   
   try {
     // Execute the forecast tasks script
     const result = await executeOmniFocusScript('@forecastTasks.js', { 
       days: days,
       hideCompleted: hideCompleted,
-      includeDeferredOnly: includeDeferredOnly
+      includeDeferredOnly,
+      showSubtasks,
+      maxSubtaskDepth
     });
     
     if (typeof result === 'string') {
@@ -63,12 +68,17 @@ export async function getForecastTasks(options: GetForecastTasksOptions = {}): P
       
       if (data.tasksByDate && typeof data.tasksByDate === 'object') {
         const dates = Object.keys(data.tasksByDate).sort();
+        const allTasks = dates.flatMap(date => data.tasksByDate[date] as TaskTreeNode[]);
+        const displayedTaskIds = new Set(
+          dedupeExpandedTopLevelTasks(allTasks, showSubtasks).map(task => task.id),
+        );
         
         if (dates.length === 0) {
           output += "🎉 No tasks due in the forecast period - enjoy the calm!\n";
         } else {
           dates.forEach(dateStr => {
-            const tasks = data.tasksByDate[dateStr];
+            const tasks = (data.tasksByDate[dateStr] as TaskTreeNode[])
+              .filter(task => displayedTaskIds.has(task.id));
             if (!tasks || tasks.length === 0) return;
             
             const taskDate = parseLocalDateKey(dateStr);
@@ -88,18 +98,9 @@ export async function getForecastTasks(options: GetForecastTasksOptions = {}): P
             
             output += `${dateHeader}\n`;
             
-            tasks.forEach((task: any) => {
-              const flagSymbol = task.flagged ? '🚩 ' : '';
-              const projectStr = task.projectName ? ` (${task.projectName})` : ' (Inbox)';
-              const statusStr = task.taskStatus !== 'Available' ? ` [${task.taskStatus}]` : '';
-              const estimateStr = task.estimatedMinutes ? ` ⏱${task.estimatedMinutes}m` : '';
+            tasks.forEach((task: TaskTreeNode & { isDue?: boolean }) => {
               const typeIndicator = task.isDue ? '📅' : '🚀'; // Due vs Deferred
-              
-              output += `• ${typeIndicator} ${flagSymbol}${task.name}${projectStr}${statusStr}${estimateStr}\n`;
-              
-              if (task.note && task.note.trim()) {
-                output += `  📝 ${task.note.trim()}\n`;
-              }
+              output += formatTaskTreeNode(task, `• ${typeIndicator} `, { showSubtasks });
             });
             
             output += '\n';

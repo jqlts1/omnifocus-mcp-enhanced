@@ -1,12 +1,6 @@
 // OmniJS script to get forecast tasks from OmniFocus
 (() => {
   try {
-    // Helper function to format dates consistently
-    function formatDate(date) {
-      if (!date) return null;
-      return date.toISOString();
-    }
-    
     // Helper function to get date without time for grouping
     function getDateKey(date) {
       if (!date) return null;
@@ -15,21 +9,6 @@
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
-    }
-    
-    // Get task status enum mapping
-    const taskStatusMap = {
-      [Task.Status.Available]: "Available",
-      [Task.Status.Blocked]: "Blocked", 
-      [Task.Status.Completed]: "Completed",
-      [Task.Status.Dropped]: "Dropped",
-      [Task.Status.DueSoon]: "DueSoon",
-      [Task.Status.Next]: "Next",
-      [Task.Status.Overdue]: "Overdue"
-    };
-    
-    function getTaskStatus(status) {
-      return taskStatusMap[status] || "Unknown";
     }
     
     const exportData = {
@@ -102,25 +81,8 @@
             exportData.tasksByDate[dateKey] = [];
           }
           
-          const taskData = {
-            id: task.id.primaryKey,
-            name: task.name,
-            note: task.note || "",
-            taskStatus: getTaskStatus(task.taskStatus),
-            flagged: task.flagged,
-            dueDate: formatDate(task.dueDate),
-            deferDate: formatDate(task.deferDate),
-            plannedDate: formatDate(task.plannedDate),
-            estimatedMinutes: task.estimatedMinutes,
-            projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
-            projectName: task.containingProject ? task.containingProject.name : null,
-            inInbox: task.inInbox,
-            isDue: isDue, // Whether this is due or just becoming available
-            tags: task.tags.map(tag => ({
-              id: tag.id.primaryKey,
-              name: tag.name
-            }))
-          };
+          const taskData = omnifocusMcpSerializeTask(task, injectedArgs || {}, hideCompleted);
+          taskData.isDue = isDue;
           
           exportData.tasksByDate[dateKey].push(taskData);
         }

@@ -2,13 +2,16 @@ import { z } from 'zod';
 import { getTaskById, GetTaskByIdParams } from '../primitives/getTaskById.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { formatAttachmentSize } from '../primitives/taskAttachments.js';
+import { formatTaskTreeNode } from '../primitives/taskTreeFormatter.js';
 
 export const schema = z.object({
   taskId: z.string().optional().describe("The ID of the task to retrieve"),
-  taskName: z.string().optional().describe("The name of the task to retrieve (alternative to taskId)")
+  taskName: z.string().optional().describe("The name of the task to retrieve (alternative to taskId)"),
+  showSubtasks: z.boolean().optional().describe("Expand the task's subtask tree (default: false)"),
+  maxSubtaskDepth: z.number().int().min(0).optional().describe("Maximum subtask levels to expand; omitted means unlimited")
 });
 
-export function formatTaskInfo(task: Awaited<ReturnType<typeof getTaskById>> extends { task?: infer T } ? T : never): string {
+export function formatTaskInfo(task: NonNullable<Awaited<ReturnType<typeof getTaskById>>['task']>, showSubtasks = false): string {
   let infoText = `📋 **Task Information**\n`;
   infoText += `• **Name**: ${task.name}\n`;
   infoText += `• **ID**: ${task.id}\n`;
@@ -38,6 +41,16 @@ export function formatTaskInfo(task: Awaited<ReturnType<typeof getTaskById>> ext
   }
 
   infoText += `• **Has Children**: ${task.hasChildren ? `Yes (${task.childrenCount} subtasks)` : 'No'}\n`;
+
+  if (showSubtasks && task.children.length > 0) {
+    infoText += `\n**Subtasks**\n`;
+    task.children.forEach((child, index) => {
+      infoText += formatTaskTreeNode(child, `${index + 1}. `, { showSubtasks: true });
+    });
+  } else if (showSubtasks && task.childrenTruncated && task.childrenCount > 0) {
+    infoText += `\n**Subtasks**: ${task.childrenCount} not expanded at the requested depth.\n`;
+  }
+
   infoText += `• **Attachments**: ${task.attachments.length}\n`;
 
   if (task.attachments.length > 0) {
@@ -70,7 +83,7 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       return {
         content: [{
           type: "text" as const,
-          text: formatTaskInfo(result.task)
+          text: formatTaskInfo(result.task, args.showSubtasks === true)
         }]
       };
     } else {

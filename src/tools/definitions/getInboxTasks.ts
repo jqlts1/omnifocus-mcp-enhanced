@@ -3,13 +3,17 @@ import { getInboxTasks } from '../primitives/getInboxTasks.js';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export const schema = z.object({
-  hideCompleted: z.boolean().optional().describe("Set to false to show completed tasks in inbox (default: true)")
+  hideCompleted: z.boolean().optional().describe("Set to false to show completed tasks in inbox (default: true)"),
+  showSubtasks: z.boolean().optional().describe("Expand each matching task's subtask tree (default: false)"),
+  maxSubtaskDepth: z.number().int().min(0).optional().describe("Maximum subtask levels to expand; omitted means unlimited")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
   try {
     const result = await getInboxTasks({
-      hideCompleted: args.hideCompleted !== false // Default to true
+      hideCompleted: args.hideCompleted !== false,
+      showSubtasks: args.showSubtasks === true,
+      maxSubtaskDepth: args.maxSubtaskDepth
     });
     
     return {

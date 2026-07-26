@@ -1,16 +1,21 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import { dedupeExpandedTopLevelTasks, formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
 
 export interface GetInboxTasksOptions {
   hideCompleted?: boolean;
+  showSubtasks?: boolean;
+  maxSubtaskDepth?: number;
 }
 
 export async function getInboxTasks(options: GetInboxTasksOptions = {}): Promise<string> {
-  const { hideCompleted = true } = options;
+  const { hideCompleted = true, showSubtasks = false, maxSubtaskDepth } = options;
 
   try {
     // Execute the inbox script
     const result = await executeOmniFocusScript('@inboxTasks.js', {
-      hideCompleted: hideCompleted
+      hideCompleted,
+      showSubtasks,
+      maxSubtaskDepth
     });
 
     if (typeof result === 'string') {
@@ -34,17 +39,12 @@ export async function getInboxTasks(options: GetInboxTasksOptions = {}): Promise
         } else {
           output += `📥 Found ${data.tasks.length} task${data.tasks.length === 1 ? '' : 's'} in inbox:\n\n`;
 
-          data.tasks.forEach((task: any, index: number) => {
-            const flagSymbol = task.flagged ? '🚩 ' : '';
-            const dueDateStr = task.dueDate ? ` [DUE: ${new Date(task.dueDate).toLocaleDateString()}]` : '';
-            const plannedDateStr = task.plannedDate ? ` [PLAN: ${new Date(task.plannedDate).toLocaleDateString()}]` : '';
-            const statusStr = task.taskStatus !== 'Available' ? ` (${task.taskStatus})` : '';
-
-            output += `${index + 1}. ${flagSymbol}${task.name}${dueDateStr}${plannedDateStr}${statusStr}\n`;
-
-            if (task.note && task.note.trim()) {
-              output += `   📝 ${task.note.trim()}\n`;
-            }
+          const displayedTasks = dedupeExpandedTopLevelTasks(data.tasks as TaskTreeNode[], showSubtasks);
+          if (displayedTasks.length !== data.tasks.length) {
+            output += `Displayed as ${displayedTasks.length} task tree${displayedTasks.length === 1 ? '' : 's'} to avoid duplicate subtasks.\n\n`;
+          }
+          displayedTasks.forEach((task, index) => {
+            output += formatTaskTreeNode(task, `${index + 1}. `, { showSubtasks });
           });
         }
       } else {

@@ -1,30 +1,6 @@
 // OmniJS script to get inbox tasks from OmniFocus
 (() => {
   try {
-    // Use default values since parameters are not easily available in JXA mode
-    const hideCompleted = true; // Default to true
-    
-    // Helper function to format dates consistently
-    function formatDate(date) {
-      if (!date) return null;
-      return date.toISOString();
-    }
-    
-    // Get task status enum mapping
-    const taskStatusMap = {
-      [Task.Status.Available]: "Available",
-      [Task.Status.Blocked]: "Blocked", 
-      [Task.Status.Completed]: "Completed",
-      [Task.Status.Dropped]: "Dropped",
-      [Task.Status.DueSoon]: "DueSoon",
-      [Task.Status.Next]: "Next",
-      [Task.Status.Overdue]: "Overdue"
-    };
-    
-    function getTaskStatus(status) {
-      return taskStatusMap[status] || "Unknown";
-    }
-    
     const exportData = {
       exportDate: new Date().toISOString(),
       tasks: []
@@ -52,22 +28,7 @@
     // Process each inbox task
     filteredTasks.forEach(task => {
       try {
-        const taskData = {
-          id: task.id.primaryKey,
-          name: task.name,
-          note: task.note || "",
-          taskStatus: getTaskStatus(task.taskStatus),
-          flagged: task.flagged,
-          dueDate: formatDate(task.dueDate),
-          deferDate: formatDate(task.deferDate),
-          plannedDate: formatDate(task.plannedDate),
-          estimatedMinutes: task.estimatedMinutes,
-          tags: task.tags.map(tag => ({
-            id: tag.id.primaryKey,
-            name: tag.name
-          })),
-          inInbox: true // All these tasks are in inbox by definition
-        };
+        const taskData = omnifocusMcpSerializeTask(task, injectedArgs || {}, hideCompleted);
         
         exportData.tasks.push(taskData);
       } catch (taskError) {

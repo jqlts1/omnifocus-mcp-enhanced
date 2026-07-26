@@ -112,6 +112,24 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     
     // Read the script file
     let scriptContent = readFileSync(actualPath, 'utf8');
+
+    const taskTreeScripts = new Set([
+      'inboxTasks.js',
+      'flaggedTasks.js',
+      'forecastTasks.js',
+      'tasksByTag.js',
+      'filterTasks.js',
+      'getTaskById.js',
+    ]);
+    if (taskTreeScripts.has(scriptName)) {
+      const helperDistPath = join(__dirname, '..', 'utils', 'omnifocusScripts', 'taskTreeHelpers.js');
+      const helperSrcPath = join(__dirname, '..', '..', 'src', 'utils', 'omnifocusScripts', 'taskTreeHelpers.js');
+      const helperPath = existsSync(helperDistPath) ? helperDistPath : helperSrcPath;
+      if (!existsSync(helperPath)) {
+        throw new Error('OmniFocus task tree helper not found');
+      }
+      scriptContent = readFileSync(helperPath, 'utf8') + '\n' + scriptContent;
+    }
     
     // If arguments are provided, inject them into the script
     if (args && Object.keys(args).length > 0) {

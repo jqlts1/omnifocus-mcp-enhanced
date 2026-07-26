@@ -62,25 +62,16 @@
       .map(fileUrl => serializeLinkedFileURL(fileUrl))
       .filter(Boolean);
 
+    const serializedTask = omnifocusMcpSerializeTask(task, injectedArgs || {}, false);
+
     return JSON.stringify({
       success: true,
       task: {
-        id: task.id.primaryKey,
-        name: task.name,
-        note: task.note || '',
+        ...serializedTask,
         parentId: parentTask ? parentTask.id.primaryKey : null,
         parentName: parentTask ? parentTask.name : null,
-        projectId: containingProject ? containingProject.id.primaryKey : null,
-        projectName: containingProject ? containingProject.name : null,
-        hasChildren: (task.children || []).length > 0,
-        childrenCount: (task.children || []).length,
-        tags: (task.tags || []).map(tag => tag.name),
-        dueDate: formatDate(task.dueDate),
-        deferDate: formatDate(task.deferDate),
-        plannedDate: formatDate(task.plannedDate),
-        flagged: !!task.flagged,
+        hasChildren: serializedTask.childrenCount > 0,
         completed: !!task.completed,
-        estimatedMinutes: task.estimatedMinutes || null,
         attachments,
         linkedFileURLs
       }

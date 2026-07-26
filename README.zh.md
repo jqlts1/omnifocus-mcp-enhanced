@@ -40,6 +40,7 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.13.0** - 读取工具支持任务树：`get_inbox_tasks`、`get_flagged_tasks`、`get_forecast_tasks`、`get_tasks_by_tag`、`filter_tasks` 和 `get_task_by_id` 默认显示可见直属子任务数量，并可通过 `showSubtasks`、`maxSubtaskDepth` 按需递归展开。展开列表会避免把已经显示在树内的后代再次作为顶层任务重复显示，子任务继承完成状态可见性规则，并通过 500 节点安全上限和明确截断提示避免响应失控。内置 `omnifocus-cli` Skill 已同步新工作流，安装时也会验证生成 CLI 包含两个任务树参数。
 - **v1.12.0** - 可靠性版本：重写 `filter_tasks` / `count_tasks` 的统一过滤引擎，截止/推迟/计划/完成日期、估时、备注、标签、Inbox、项目和组合过滤现在都会真正生效；`count_tasks` 改为低开销聚合模式；新增 `get_projects` 和 `get_projects_due_for_review`，可读取 OmniFocus 原生回顾日期和周期；MCP SDK 升级至 1.29.0，并清空生产依赖安全告警；Claude Skill 更新到 37 个工具，生成文件改为 `.cjs`，可安全安装在 ESM 项目中。
 - **v1.11.1** - Claude Skill 默认安装到当前项目的 `.claude/skills/omnifocus-cli/`，并使用项目级 mcporter 配置；只有显式传入 `--global` 才会安装到 `~/.claude/skills/`。
 - **v1.11.0** - 新增可一键安装的 `omnifocus-cli` Skill，让 AI 通过本地 CLI 调用 MCP，避免在上下文中加载全部工具 schema。
@@ -263,7 +264,12 @@ get_forecast_tasks {"days": 7, "hideCompleted": true}
 
 # 按标签查找任务
 get_tasks_by_tag {"tagName": "AI", "exactMatch": false}
+
+# 每条结果都会显示直属子任务数量；需要时再展开任务树
+get_inbox_tasks {"showSubtasks": true, "maxSubtaskDepth": 2}
 ```
+
+`showSubtasks` 默认为 `false`。`maxSubtaskDepth` 必须是非负整数：`0` 不展开，`1` 只显示直属子任务，不传则允许完整递归。列表命令对子任务沿用完成状态可见性规则；展开的子任务用于说明结构，本身不需要命中顶层过滤条件。
 
 ### 3. 🚀 终极任务过滤器
 
@@ -294,6 +300,13 @@ filter_tasks {
 filter_tasks {
   "projectFilter": "网站重设计",
   "taskStatus": ["Overdue", "DueSoon"]
+}
+
+# 保持相同匹配规则，同时展示两层任务结构
+filter_tasks {
+  "flagged": true,
+  "showSubtasks": true,
+  "maxSubtaskDepth": 2
 }
 ```
 

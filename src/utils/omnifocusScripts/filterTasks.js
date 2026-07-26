@@ -277,25 +277,11 @@
     const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 100;
     const limitedTasks = filteredTasks.slice(0, limit);
 
-    const tasks = limitedTasks.map((task) => ({
-      id: task.id.primaryKey,
-      name: task.name,
-      note: task.note || "",
-      taskStatus: getTaskStatus(task.taskStatus),
-      flagged: !!task.flagged,
-      dueDate: formatDate(task.dueDate),
-      deferDate: formatDate(task.deferDate),
-      plannedDate: formatDate(task.plannedDate),
-      completedDate: formatDate(task.completionDate),
-      estimatedMinutes: task.estimatedMinutes,
-      projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
-      projectName: task.containingProject ? task.containingProject.name : null,
-      inInbox: !!task.inInbox,
-      tags: (task.tags || []).map((tag) => ({
-        id: tag.id.primaryKey,
-        name: tag.name,
-      })),
-    }));
+    const tasks = limitedTasks.map((task) => {
+      const serialized = omnifocusMcpSerializeTask(task, args, true);
+      serialized.completedDate = formatDate(task.completionDate);
+      return serialized;
+    });
 
     return JSON.stringify({
       success: true,

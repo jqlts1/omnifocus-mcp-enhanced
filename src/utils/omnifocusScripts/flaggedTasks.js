@@ -1,30 +1,7 @@
 // OmniJS script to get flagged tasks from OmniFocus
 (() => {
   try {
-    // Use default values since parameters are not easily available in JXA mode
-    const hideCompleted = true; // Default to true
-    const projectFilter = null;
-    
-    // Helper function to format dates consistently
-    function formatDate(date) {
-      if (!date) return null;
-      return date.toISOString();
-    }
-    
-    // Get task status enum mapping
-    const taskStatusMap = {
-      [Task.Status.Available]: "Available",
-      [Task.Status.Blocked]: "Blocked", 
-      [Task.Status.Completed]: "Completed",
-      [Task.Status.Dropped]: "Dropped",
-      [Task.Status.DueSoon]: "DueSoon",
-      [Task.Status.Next]: "Next",
-      [Task.Status.Overdue]: "Overdue"
-    };
-    
-    function getTaskStatus(status) {
-      return taskStatusMap[status] || "Unknown";
-    }
+    const projectFilter = injectedArgs.projectFilter || null;
     
     const exportData = {
       exportDate: new Date().toISOString(),
@@ -56,24 +33,7 @@
     // Process each flagged task
     flaggedTasks.forEach(task => {
       try {
-        const taskData = {
-          id: task.id.primaryKey,
-          name: task.name,
-          note: task.note || "",
-          taskStatus: getTaskStatus(task.taskStatus),
-          flagged: task.flagged, // Should always be true for flagged tasks
-          dueDate: formatDate(task.dueDate),
-          deferDate: formatDate(task.deferDate),
-          plannedDate: formatDate(task.plannedDate),
-          estimatedMinutes: task.estimatedMinutes,
-          projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
-          projectName: task.containingProject ? task.containingProject.name : null,
-          inInbox: task.inInbox,
-          tags: task.tags.map(tag => ({
-            id: tag.id.primaryKey,
-            name: tag.name
-          }))
-        };
+        const taskData = omnifocusMcpSerializeTask(task, injectedArgs || {}, hideCompleted);
         
         exportData.tasks.push(taskData);
       } catch (taskError) {

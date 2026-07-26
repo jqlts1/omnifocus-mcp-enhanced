@@ -2,36 +2,11 @@
 (() => {
   try {
     // Parameters will be injected by the script execution system
-    const tagName = injectedArgs ? injectedArgs.tagName : "编程"; // Default for testing
-    const hideCompleted = injectedArgs ? injectedArgs.hideCompleted : true; // Default to true
-    const exactMatch = injectedArgs ? injectedArgs.exactMatch : false;
-    
     if (!tagName) {
       return JSON.stringify({
         success: false,
         error: "Tag name is required"
       });
-    }
-    
-    // Helper function to format dates consistently
-    function formatDate(date) {
-      if (!date) return null;
-      return date.toISOString();
-    }
-    
-    // Get task status enum mapping
-    const taskStatusMap = {
-      [Task.Status.Available]: "Available",
-      [Task.Status.Blocked]: "Blocked", 
-      [Task.Status.Completed]: "Completed",
-      [Task.Status.Dropped]: "Dropped",
-      [Task.Status.DueSoon]: "DueSoon",
-      [Task.Status.Next]: "Next",
-      [Task.Status.Overdue]: "Overdue"
-    };
-    
-    function getTaskStatus(status) {
-      return taskStatusMap[status] || "Unknown";
     }
     
     const exportData = {
@@ -99,24 +74,7 @@
     // Process each matching task
     matchingTasks.forEach(task => {
       try {
-        const taskData = {
-          id: task.id.primaryKey,
-          name: task.name,
-          note: task.note || "",
-          taskStatus: getTaskStatus(task.taskStatus),
-          flagged: task.flagged,
-          dueDate: formatDate(task.dueDate),
-          deferDate: formatDate(task.deferDate),
-          plannedDate: formatDate(task.plannedDate),
-          estimatedMinutes: task.estimatedMinutes,
-          projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
-          projectName: task.containingProject ? task.containingProject.name : null,
-          inInbox: task.inInbox,
-          tags: task.tags.map(tag => ({
-            id: tag.id.primaryKey,
-            name: tag.name
-          }))
-        };
+        const taskData = omnifocusMcpSerializeTask(task, injectedArgs || {}, hideCompleted);
         
         exportData.tasks.push(taskData);
       } catch (taskError) {

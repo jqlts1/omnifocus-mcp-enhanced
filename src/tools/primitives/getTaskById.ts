@@ -1,14 +1,17 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { RawTaskAttachment, TaskAttachmentInfo, normalizeTaskAttachments } from './taskAttachments.js';
+import { TaskTreeNode } from './taskTreeFormatter.js';
 
 // Interface for task lookup parameters
 export interface GetTaskByIdParams {
   taskId?: string;
   taskName?: string;
+  showSubtasks?: boolean;
+  maxSubtaskDepth?: number;
 }
 
 // Interface for task information result
-export interface TaskInfo {
+export interface TaskInfo extends TaskTreeNode {
   id: string;
   name: string;
   note: string;
@@ -18,7 +21,9 @@ export interface TaskInfo {
   projectName?: string;
   hasChildren: boolean;
   childrenCount: number;
-  tags: string[];
+  tags: Array<{ id?: string; name: string }>;
+  children: TaskTreeNode[];
+  childrenTruncated: boolean;
   dueDate?: string;
   deferDate?: string;
   plannedDate?: string;
@@ -39,7 +44,9 @@ interface RawTaskInfo {
   projectName?: string | null;
   hasChildren: boolean;
   childrenCount: number;
-  tags?: string[];
+  tags?: Array<{ id?: string; name: string }>;
+  children?: TaskTreeNode[];
+  childrenTruncated?: boolean;
   dueDate?: string | null;
   deferDate?: string | null;
   plannedDate?: string | null;
@@ -90,6 +97,8 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{ success:
       hasChildren: Boolean(rawTask.hasChildren),
       childrenCount: rawTask.childrenCount || 0,
       tags: rawTask.tags || [],
+      children: rawTask.children || [],
+      childrenTruncated: Boolean(rawTask.childrenTruncated),
       dueDate: rawTask.dueDate || undefined,
       deferDate: rawTask.deferDate || undefined,
       plannedDate: rawTask.plannedDate || undefined,

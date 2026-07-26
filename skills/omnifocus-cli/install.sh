@@ -179,6 +179,19 @@ fi
 
 ok "All ${#REQUIRED_COMMANDS[@]} tools present"
 
+TASK_TREE_COMMANDS=(
+  get-inbox-tasks get-flagged-tasks get-forecast-tasks
+  get-tasks-by-tag filter-tasks get-task-by-id
+)
+for cmd in "${TASK_TREE_COMMANDS[@]}"; do
+  TASK_TREE_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs "$cmd" --help 2>&1 || true)"
+  if ! grep -q -- "--show-subtasks" <<<"$TASK_TREE_HELP" ||
+     ! grep -q -- "--max-subtask-depth" <<<"$TASK_TREE_HELP"; then
+    fail "The generated CLI command '$cmd' is missing v1.13 task-tree flags. Refresh the package and retry."
+  fi
+done
+ok "Task-tree flags present on all ${#TASK_TREE_COMMANDS[@]} read commands"
+
 # Confirm the CLI can actually reach OmniFocus, but do not hard-fail: the user
 # may simply not have OmniFocus running right now.
 if "$TARGET_DIR/bin/omnifocus-enhanced.cjs" count-tasks --perspective inbox >/dev/null 2>&1; then

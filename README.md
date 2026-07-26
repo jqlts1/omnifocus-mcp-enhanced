@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.13.0** - Task-tree-aware reads: `get_inbox_tasks`, `get_flagged_tasks`, `get_forecast_tasks`, `get_tasks_by_tag`, `filter_tasks`, and `get_task_by_id` now show visible direct subtask counts by default and support on-demand recursive expansion with `showSubtasks` and `maxSubtaskDepth`. Expanded lists suppress duplicate top-level descendants, inherit completion visibility rules, and enforce a 500-node safety cap with explicit truncation output. The bundled `omnifocus-cli` Skill documents the new workflow and verifies both generated CLI flags during installation.
 - **v1.12.0** - Reliability release: rebuilt `filter_tasks` and `count_tasks` on one complete OmniJS predicate (due/defer/planned/completion dates, estimates, notes, tags, inbox, project, status, and combined filters now actually work); added low-overhead `countOnly` aggregation; added `get_projects` and `get_projects_due_for_review` with native OmniFocus review metadata; upgraded the MCP SDK to 1.29.0 and cleared all production audit findings; updated the Claude skill to 37 tools and changed its generated bundle to `.cjs` so project-local installs work inside ESM repositories.
 - **v1.11.1** - Fixed skill installation scope for Claude Code: `install-skill` now installs into the **current project's** `.claude/skills/omnifocus-cli/` and writes a project-scoped mcporter config by default. Pass `--global` to opt into `~/.claude/skills/omnifocus-cli/` and the home mcporter config. `CLAUDE_SKILLS_DIR` can override the skill root.
 - **v1.11.0** - Added a bundled **agent skill** (`omnifocus-cli`). One command (`npx omnifocus-mcp-enhanced install-skill`) generates a local CLI covering all 35 tools, so AI agents can drive OmniFocus through shell commands instead of loading 35 tool schemas into context. The CLI is generated on your machine from your installed server version, so it never drifts out of sync.
@@ -285,7 +286,12 @@ get_forecast_tasks {"days": 7, "hideCompleted": true}
 
 # Tasks by tag
 get_tasks_by_tag {"tagName": "AI", "exactMatch": false}
+
+# Every result shows its direct subtask count; expand the task tree on demand
+get_inbox_tasks {"showSubtasks": true, "maxSubtaskDepth": 2}
 ```
+
+`showSubtasks` defaults to `false`. `maxSubtaskDepth` is a non-negative integer: `0` expands nothing, `1` shows direct children, and omitting it allows full recursion. List commands apply their completed-task visibility to descendants. Expanded descendants provide structure and do not need to match the top-level filter themselves.
 
 ### 3. 🚀 Ultimate Task Filter
 
@@ -316,6 +322,13 @@ filter_tasks {
 filter_tasks {
   "projectFilter": "Website Redesign",
   "taskStatus": ["Overdue", "DueSoon"]
+}
+
+# Keep the same matching rules, but include two levels of task structure
+filter_tasks {
+  "flagged": true,
+  "showSubtasks": true,
+  "maxSubtaskDepth": 2
 }
 ```
 
