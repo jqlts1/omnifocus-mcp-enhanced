@@ -92,6 +92,10 @@ export interface ProjectMinimal extends DatabaseObject {
   parentFolder: FolderMinimal | null;
   tags: TagMinimal[];
   tasks: TaskMinimal[];
+  // Review fields (OmniFocus native)
+  nextReviewDate: Date | null;
+  lastReviewDate: Date | null;
+  reviewInterval: any; // OmniFocus Project.ReviewInterval object
 }
 export interface FolderMinimal extends DatabaseObject {
   name: string;

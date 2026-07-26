@@ -160,7 +160,10 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
         note: String(project.note || ""),
         tasks: project.tasks || [],
         flagged: false, // Default value
-        estimatedMinutes: null // Default value
+        estimatedMinutes: null, // Default value
+        nextReviewDate: null,
+        lastReviewDate: null,
+        reviewInterval: null
       };
     }
   }
