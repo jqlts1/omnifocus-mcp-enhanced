@@ -8,8 +8,9 @@ export interface FilterTasksOptions {
   perspective?: 'inbox' | 'flagged' | 'all' | 'custom';
 
   // 💫 自定义透视参数
-  customPerspectiveName?: string;
-  customPerspectiveId?: string;
+  // Custom perspectives are intentionally not accepted here. Native custom
+  // perspective membership must be read through get_custom_perspective_tasks;
+  // pretending to combine it with arbitrary filters produced incorrect results.
 
   // 📁 项目/标签过滤
   projectFilter?: string;
@@ -61,235 +62,6 @@ export interface FilterTasksOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
-function parseDate(value?: string | null): Date | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function startOfDay(date: Date): Date {
-  const result = new Date(date);
-  result.setHours(0, 0, 0, 0);
-  return result;
-}
-
-function isDateInTodayRange(date: Date): boolean {
-  const todayStart = startOfDay(new Date());
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(todayStart.getDate() + 1);
-  return date >= todayStart && date < tomorrowStart;
-}
-
-function isDateInCurrentWeek(date: Date): boolean {
-  const today = new Date();
-  const currentDay = today.getDay(); // Sunday = 0
-  const mondayOffset = (currentDay + 6) % 7;
-  const weekStart = startOfDay(today);
-  weekStart.setDate(today.getDate() - mondayOffset);
-
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7);
-
-  return date >= weekStart && date < weekEnd;
-}
-
-function isDateInCurrentMonth(date: Date): boolean {
-  const now = new Date();
-  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
-}
-
-function normalizeTaskTagNames(task: any): string[] {
-  if (!Array.isArray(task?.tags)) {
-    return [];
-  }
-
-  return task.tags
-    .map((tag: any) => {
-      if (typeof tag === 'string') return tag;
-      if (tag && typeof tag.name === 'string') return tag.name;
-      return '';
-    })
-    .filter((name: string) => name.trim() !== '')
-    .map((name: string) => name.toLowerCase());
-}
-
-function matchesTagFilter(task: any, tagFilters: string[], exactTagMatch: boolean): boolean {
-  const taskTagNames = normalizeTaskTagNames(task);
-  if (taskTagNames.length === 0) return false;
-
-  return tagFilters.some(filterTag => {
-    return taskTagNames.some(taskTagName => {
-      if (exactTagMatch) {
-        return taskTagName === filterTag;
-      }
-      return taskTagName.includes(filterTag);
-    });
-  });
-}
-
-function shouldApplyClientSideFilters(options: FilterTasksOptions): boolean {
-  return Boolean(
-    options.tagFilter ||
-    options.deferToday ||
-    options.deferThisWeek ||
-    options.deferAvailable ||
-    options.deferBefore ||
-    options.deferAfter ||
-    options.plannedToday ||
-    options.plannedThisWeek ||
-    options.plannedThisMonth ||
-    options.plannedBefore ||
-    options.plannedAfter
-  );
-}
-
-function sortTasks(tasks: any[], sortBy: string, sortOrder: 'asc' | 'desc'): any[] {
-  const copy = [...tasks];
-  const direction = sortOrder === 'desc' ? -1 : 1;
-
-  const compareDate = (a: any, b: any, key: 'dueDate' | 'deferDate' | 'plannedDate' | 'completedDate') => {
-    const dateA = parseDate(a?.[key]);
-    const dateB = parseDate(b?.[key]);
-    const valueA = dateA ? dateA.getTime() : Number.POSITIVE_INFINITY;
-    const valueB = dateB ? dateB.getTime() : Number.POSITIVE_INFINITY;
-    return (valueA - valueB) * direction;
-  };
-
-  copy.sort((a: any, b: any) => {
-    switch (sortBy) {
-      case 'dueDate':
-        return compareDate(a, b, 'dueDate');
-      case 'deferDate':
-        return compareDate(a, b, 'deferDate');
-      case 'plannedDate':
-        return compareDate(a, b, 'plannedDate');
-      case 'completedDate':
-        return compareDate(a, b, 'completedDate');
-      case 'flagged': {
-        const flaggedA = a?.flagged ? 1 : 0;
-        const flaggedB = b?.flagged ? 1 : 0;
-        return (flaggedA - flaggedB) * direction;
-      }
-      case 'project': {
-        const projectA = (a?.projectName || '').toLowerCase();
-        const projectB = (b?.projectName || '').toLowerCase();
-        return projectA.localeCompare(projectB) * direction;
-      }
-      case 'name':
-      default: {
-        const nameA = (a?.name || '').toLowerCase();
-        const nameB = (b?.name || '').toLowerCase();
-        return nameA.localeCompare(nameB) * direction;
-      }
-    }
-  });
-
-  return copy;
-}
-
-export function applyClientSideFilters(tasks: any[], options: FilterTasksOptions): any[] {
-  let filteredTasks = tasks;
-
-  if (options.tagFilter) {
-    const exactTagMatch = options.exactTagMatch ?? false;
-    const rawFilters = Array.isArray(options.tagFilter) ? options.tagFilter : [options.tagFilter];
-    const normalizedFilters = rawFilters
-      .map(tag => tag.trim().toLowerCase())
-      .filter(tag => tag.length > 0);
-
-    if (normalizedFilters.length > 0) {
-      filteredTasks = filteredTasks.filter(task =>
-        matchesTagFilter(task, normalizedFilters, exactTagMatch)
-      );
-    }
-  }
-
-  if (options.deferToday) {
-    filteredTasks = filteredTasks.filter(task => {
-      const deferDate = parseDate(task?.deferDate);
-      return deferDate ? isDateInTodayRange(deferDate) : false;
-    });
-  }
-
-  if (options.deferThisWeek) {
-    filteredTasks = filteredTasks.filter(task => {
-      const deferDate = parseDate(task?.deferDate);
-      return deferDate ? isDateInCurrentWeek(deferDate) : false;
-    });
-  }
-
-  if (options.deferBefore) {
-    const deferBefore = parseDate(options.deferBefore);
-    if (deferBefore) {
-      filteredTasks = filteredTasks.filter(task => {
-        const deferDate = parseDate(task?.deferDate);
-        return deferDate ? deferDate < deferBefore : false;
-      });
-    }
-  }
-
-  if (options.deferAfter) {
-    const deferAfter = parseDate(options.deferAfter);
-    if (deferAfter) {
-      filteredTasks = filteredTasks.filter(task => {
-        const deferDate = parseDate(task?.deferDate);
-        return deferDate ? deferDate > deferAfter : false;
-      });
-    }
-  }
-
-  if (options.deferAvailable) {
-    const now = new Date();
-    filteredTasks = filteredTasks.filter(task => {
-      const deferDate = parseDate(task?.deferDate);
-      return !deferDate || deferDate <= now;
-    });
-  }
-
-  if (options.plannedToday) {
-    filteredTasks = filteredTasks.filter(task => {
-      const plannedDate = parseDate(task?.plannedDate);
-      return plannedDate ? isDateInTodayRange(plannedDate) : false;
-    });
-  }
-
-  if (options.plannedThisWeek) {
-    filteredTasks = filteredTasks.filter(task => {
-      const plannedDate = parseDate(task?.plannedDate);
-      return plannedDate ? isDateInCurrentWeek(plannedDate) : false;
-    });
-  }
-
-  if (options.plannedThisMonth) {
-    filteredTasks = filteredTasks.filter(task => {
-      const plannedDate = parseDate(task?.plannedDate);
-      return plannedDate ? isDateInCurrentMonth(plannedDate) : false;
-    });
-  }
-
-  if (options.plannedBefore) {
-    const plannedBefore = parseDate(options.plannedBefore);
-    if (plannedBefore) {
-      filteredTasks = filteredTasks.filter(task => {
-        const plannedDate = parseDate(task?.plannedDate);
-        return plannedDate ? plannedDate < plannedBefore : false;
-      });
-    }
-  }
-
-  if (options.plannedAfter) {
-    const plannedAfter = parseDate(options.plannedAfter);
-    if (plannedAfter) {
-      filteredTasks = filteredTasks.filter(task => {
-        const plannedDate = parseDate(task?.plannedDate);
-        return plannedDate ? plannedDate > plannedAfter : false;
-      });
-    }
-  }
-
-  return filteredTasks;
-}
-
 export async function filterTasks(options: FilterTasksOptions = {}): Promise<string> {
   try {
     // 设置默认值
@@ -301,16 +73,14 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       sortOrder = 'asc'
     } = options;
 
-    const needsClientSideFiltering = shouldApplyClientSideFilters(options);
-    const needsClientSideSorting = !['name', 'completedDate'].includes(sortBy);
-    const sourceLimit = (needsClientSideFiltering || needsClientSideSorting) ? Math.max(limit * 20, 1000) : limit;
-
-    // 执行常规过滤脚本
+    // The OmniJS script is the single source of truth for filtering, sorting,
+    // counting, and limiting. Keeping those operations inside OmniFocus avoids
+    // truncating large databases before client-side filters are applied.
     const result = await executeOmniFocusScript('@filterTasks.js', {
       ...options,
       perspective,
       exactTagMatch,
-      limit: sourceLimit,
+      limit,
       sortBy,
       sortOrder
     });
@@ -337,11 +107,11 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       }
 
       if (data.tasks && Array.isArray(data.tasks)) {
-        const postFilteredTasks = applyClientSideFilters(data.tasks, options);
-        const sortedTasks = sortTasks(postFilteredTasks, sortBy, sortOrder);
-        const limitedTasks = sortedTasks.slice(0, limit);
+        const limitedTasks = data.tasks;
         const taskCount = limitedTasks.length;
-        const totalCount = sortedTasks.length;
+        const totalCount = typeof data.filteredCount === 'number'
+          ? data.filteredCount
+          : taskCount;
 
         if (taskCount === 0) {
           output += '🎯 No tasks match your filter criteria.\n';

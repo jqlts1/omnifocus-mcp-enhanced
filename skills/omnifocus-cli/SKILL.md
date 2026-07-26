@@ -1,6 +1,6 @@
 ---
 name: omnifocus-cli
-description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 35 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
+description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 37 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
 ---
 
 # OmniFocus CLI
@@ -8,10 +8,10 @@ description: Use a generated local CLI for OmniFocus MCP operations (tasks, proj
 ## Overview
 
 Use the local bundled CLI instead of direct MCP tool-calling for OmniFocus requests.
-The MCP server exposes 35 tools; loading all their schemas into chat is expensive.
+The MCP server exposes 37 tools; loading all their schemas into chat is expensive.
 This CLI gives you the same capabilities as deterministic shell commands.
 
-CLI location: `bin/omnifocus-enhanced.js` (relative to this skill directory).
+CLI location: `bin/omnifocus-enhanced.cjs` (relative to this skill directory).
 
 ## Flag Conventions
 
@@ -27,20 +27,20 @@ These matter — getting them wrong causes confusing errors:
 
 ```bash
 # Perspectives
-bin/omnifocus-enhanced.js get-inbox-tasks
-bin/omnifocus-enhanced.js get-flagged-tasks
-bin/omnifocus-enhanced.js get-forecast-tasks --days 7
-bin/omnifocus-enhanced.js get-tasks-by-tag --tag-name "work"
+bin/omnifocus-enhanced.cjs get-inbox-tasks
+bin/omnifocus-enhanced.cjs get-flagged-tasks
+bin/omnifocus-enhanced.cjs get-forecast-tasks --days 7
+bin/omnifocus-enhanced.cjs get-tasks-by-tag --tag-name "work"
 
 # Custom perspectives (OmniFocus Pro) — these are user-defined views, NOT tags
-bin/omnifocus-enhanced.js list-custom-perspectives
-bin/omnifocus-enhanced.js get-custom-perspective-tasks --perspective-name "今日计划"
+bin/omnifocus-enhanced.cjs list-custom-perspectives
+bin/omnifocus-enhanced.cjs get-custom-perspective-tasks --perspective-name "今日计划"
 
 # Single task with attachment metadata
-bin/omnifocus-enhanced.js get-task-by-id --task-id "<id>"
+bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>"
 
 # Completed today
-bin/omnifocus-enhanced.js get-today-completed-tasks
+bin/omnifocus-enhanced.cjs get-today-completed-tasks
 ```
 
 ## Filtering and Counting
@@ -51,45 +51,45 @@ the user asks "how many"**, since it avoids pulling full task lists.
 
 ```bash
 # Powerful filtering
-bin/omnifocus-enhanced.js filter-tasks --task-status Available,Next --due-this-week true
-bin/omnifocus-enhanced.js filter-tasks --estimate-max 30 --flagged true
-bin/omnifocus-enhanced.js filter-tasks --planned-today true --sort-by plannedDate
-bin/omnifocus-enhanced.js filter-tasks --project-filter "Website" --task-status Overdue
+bin/omnifocus-enhanced.cjs filter-tasks --task-status Available,Next --due-this-week true
+bin/omnifocus-enhanced.cjs filter-tasks --estimate-max 30 --flagged true
+bin/omnifocus-enhanced.cjs filter-tasks --planned-today true --sort-by plannedDate
+bin/omnifocus-enhanced.cjs filter-tasks --project-filter "Website" --task-status Overdue
 
 # Fast counts (low token cost)
-bin/omnifocus-enhanced.js count-tasks --flagged true
-bin/omnifocus-enhanced.js count-tasks --project-filter "Website Redesign"
-bin/omnifocus-enhanced.js count-tasks --task-status Available,Next --due-this-week true
+bin/omnifocus-enhanced.cjs count-tasks --flagged true
+bin/omnifocus-enhanced.cjs count-tasks --project-filter "Website Redesign"
+bin/omnifocus-enhanced.cjs count-tasks --task-status Available,Next --due-this-week true
 ```
 
 ## Creating and Editing Tasks
 
 ```bash
 # Create
-bin/omnifocus-enhanced.js add-omnifocus-task --name "Review PR" --project-name "AICoding"
-bin/omnifocus-enhanced.js add-omnifocus-task --name "Design page" --parent-task-name "Launch" --estimated-minutes 120
+bin/omnifocus-enhanced.cjs add-omnifocus-task --name "Review PR" --project-name "AICoding"
+bin/omnifocus-enhanced.cjs add-omnifocus-task --name "Design page" --parent-task-name "Launch" --estimated-minutes 120
 
 # Edit (prefer --id when names may be ambiguous)
-bin/omnifocus-enhanced.js edit-item --item-type task --id "<id>" --new-name "Updated title"
-bin/omnifocus-enhanced.js edit-item --item-type task --id "<id>" --new-status completed
+bin/omnifocus-enhanced.cjs edit-item --item-type task --id "<id>" --new-name "Updated title"
+bin/omnifocus-enhanced.cjs edit-item --item-type task --id "<id>" --new-status completed
 
 # Move
-bin/omnifocus-enhanced.js move-task --id "<id>" --target-project-name "Planning"
-bin/omnifocus-enhanced.js move-task --id "<id>" --target-parent-task-id "<parent-id>"
-bin/omnifocus-enhanced.js move-task --id "<id>" --target-inbox true
+bin/omnifocus-enhanced.cjs move-task --id "<id>" --target-project-name "Planning"
+bin/omnifocus-enhanced.cjs move-task --id "<id>" --target-parent-task-id "<parent-id>"
+bin/omnifocus-enhanced.cjs move-task --id "<id>" --target-inbox true
 
 # Duplicate (template workflows; subtasks included by default)
-bin/omnifocus-enhanced.js duplicate-task --task-name "Weekly Checklist" --new-name "Week 12"
-bin/omnifocus-enhanced.js duplicate-task --task-id "<id>" --include-subtasks false
+bin/omnifocus-enhanced.cjs duplicate-task --task-name "Weekly Checklist" --new-name "Week 12"
+bin/omnifocus-enhanced.cjs duplicate-task --task-id "<id>" --include-subtasks false
 
 # Append to a note WITHOUT overwriting it
-bin/omnifocus-enhanced.js append-to-note --item-type task --name "Write report" --text "Drafted section 1"
+bin/omnifocus-enhanced.cjs append-to-note --item-type task --name "Write report" --text "Drafted section 1"
 
 # Repeat rules
-bin/omnifocus-enhanced.js set-repetition-rule --task-id "<id>" --rule "FREQ=WEEKLY" --schedule-type Regularly
+bin/omnifocus-enhanced.cjs set-repetition-rule --task-id "<id>" --rule "FREQ=WEEKLY" --schedule-type Regularly
 
 # Delete
-bin/omnifocus-enhanced.js remove-item --item-type task --id "<id>"
+bin/omnifocus-enhanced.cjs remove-item --item-type task --id "<id>"
 ```
 
 ### Batch operations
@@ -97,7 +97,7 @@ bin/omnifocus-enhanced.js remove-item --item-type task --id "<id>"
 Nested arrays are far more reliable via `--raw`:
 
 ```bash
-bin/omnifocus-enhanced.js batch-add-items --raw '{
+bin/omnifocus-enhanced.cjs batch-add-items --raw '{
   "items": [
     { "type": "task", "name": "Parent A", "projectName": "My Project" },
     { "type": "task", "name": "Child A1", "parentTaskName": "Parent A" }
@@ -111,20 +111,24 @@ bin/omnifocus-enhanced.js batch-add-items --raw '{
 ## Projects
 
 ```bash
-bin/omnifocus-enhanced.js add-project --name "New Project" --folder-name "Work"
-bin/omnifocus-enhanced.js edit-item --item-type project --id "<id>" --new-project-status onHold
-bin/omnifocus-enhanced.js append-to-note --item-type project --name "New Project" --text "Kickoff notes"
+bin/omnifocus-enhanced.cjs get-projects --status Active
+bin/omnifocus-enhanced.cjs get-projects --status Active,OnHold --folder-name "Work"
+bin/omnifocus-enhanced.cjs get-projects-due-for-review
+bin/omnifocus-enhanced.cjs get-projects-due-for-review --include-on-hold true
+bin/omnifocus-enhanced.cjs add-project --name "New Project" --folder-name "Work"
+bin/omnifocus-enhanced.cjs edit-item --item-type project --id "<id>" --new-project-status onHold
+bin/omnifocus-enhanced.cjs append-to-note --item-type project --name "New Project" --text "Kickoff notes"
 ```
 
 ## Folders
 
 ```bash
-bin/omnifocus-enhanced.js list-folders
-bin/omnifocus-enhanced.js get-folder --name "Work"
-bin/omnifocus-enhanced.js add-folder --name "Clients" --parent-folder-name "Work"
-bin/omnifocus-enhanced.js edit-folder --name "Clients" --new-name "Key Clients"
-bin/omnifocus-enhanced.js edit-folder --name "Key Clients" --new-parent-folder-name ""   # move to root
-bin/omnifocus-enhanced.js remove-folder --name "Old Archive"
+bin/omnifocus-enhanced.cjs list-folders
+bin/omnifocus-enhanced.cjs get-folder --name "Work"
+bin/omnifocus-enhanced.cjs add-folder --name "Clients" --parent-folder-name "Work"
+bin/omnifocus-enhanced.cjs edit-folder --name "Clients" --new-name "Key Clients"
+bin/omnifocus-enhanced.cjs edit-folder --name "Key Clients" --new-parent-folder-name ""   # move to root
+bin/omnifocus-enhanced.cjs remove-folder --name "Old Archive"
 ```
 
 ⚠️ **`remove-folder` also permanently deletes every project and task inside it.**
@@ -133,14 +137,14 @@ Always confirm with the user first, and mention the cascade counts it reports.
 ## Tags
 
 ```bash
-bin/omnifocus-enhanced.js list-tags
-bin/omnifocus-enhanced.js search-tags --query "work"
-bin/omnifocus-enhanced.js add-tag --name "Deep Work"
-bin/omnifocus-enhanced.js add-tag --name "Client A" --parent-tag-name "Clients"
-bin/omnifocus-enhanced.js edit-tag --name "Deep Work" --new-name "Focus"
-bin/omnifocus-enhanced.js edit-tag --name "Focus" --new-status onHold
-bin/omnifocus-enhanced.js edit-tag --name "Client A" --new-parent-tag-name ""   # move to root
-bin/omnifocus-enhanced.js remove-tag --name "Obsolete"
+bin/omnifocus-enhanced.cjs list-tags
+bin/omnifocus-enhanced.cjs search-tags --query "work"
+bin/omnifocus-enhanced.cjs add-tag --name "Deep Work"
+bin/omnifocus-enhanced.cjs add-tag --name "Client A" --parent-tag-name "Clients"
+bin/omnifocus-enhanced.cjs edit-tag --name "Deep Work" --new-name "Focus"
+bin/omnifocus-enhanced.cjs edit-tag --name "Focus" --new-status onHold
+bin/omnifocus-enhanced.cjs edit-tag --name "Client A" --new-parent-tag-name ""   # move to root
+bin/omnifocus-enhanced.cjs remove-tag --name "Obsolete"
 ```
 
 Removing a tag does not delete tasks — they just lose the tag. Child tags ARE deleted with the parent.
@@ -148,16 +152,16 @@ Removing a tag does not delete tasks — they just lose the tag. Child tags ARE 
 ## Notifications (reminders)
 
 ```bash
-bin/omnifocus-enhanced.js list-task-notifications --task-name "Submit report"
+bin/omnifocus-enhanced.cjs list-task-notifications --task-name "Submit report"
 
 # Fixed time
-bin/omnifocus-enhanced.js add-task-notification --task-name "Submit report" --absolute-date "2026-03-05T09:00:00"
+bin/omnifocus-enhanced.cjs add-task-notification --task-name "Submit report" --absolute-date "2026-03-05T09:00:00"
 
 # 30 minutes before the due date (task MUST have a due date)
-bin/omnifocus-enhanced.js add-task-notification --task-name "Submit report" --relative-minutes -30
+bin/omnifocus-enhanced.cjs add-task-notification --task-name "Submit report" --relative-minutes -30
 
-bin/omnifocus-enhanced.js remove-task-notification --task-name "Submit report" --index 0
-bin/omnifocus-enhanced.js remove-task-notification --task-name "Submit report" --remove-all true
+bin/omnifocus-enhanced.cjs remove-task-notification --task-name "Submit report" --index 0
+bin/omnifocus-enhanced.cjs remove-task-notification --task-name "Submit report" --remove-all true
 ```
 
 ## Working Guidelines
@@ -188,10 +192,11 @@ For a globally installed skill, preserve that scope when refreshing:
 npx -y omnifocus-mcp-enhanced@latest install-skill --global
 ```
 
-The installer pins the MCP package and mcporter to `@latest`, regenerates the
-CLI, verifies all 35 commands, and checks the live OmniFocus connection. To
+The installer pins the MCP server to the exact package version that shipped the
+skill (and mcporter to `@latest`), regenerates the
+CLI, verifies all 37 commands, and checks the live OmniFocus connection. To
 inspect the generated command count manually:
 
 ```bash
-bin/omnifocus-enhanced.js --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 38 (35 tools + built-ins)
+bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 40 (37 tools + built-ins)
 ```

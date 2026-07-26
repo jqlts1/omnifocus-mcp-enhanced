@@ -1,14 +1,14 @@
 {
   "name": "omnifocus-mcp-enhanced",
   "type": "module",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "description": "🚀 NEW: Native Custom Perspective Access! Enhanced MCP server with OmniFocus custom perspective support, hierarchical task display, AI-optimized tool selection, and comprehensive task management",
   "main": "dist/server.js",
   "bin": {
     "omnifocus-mcp-enhanced": "cli.cjs"
   },
   "scripts": {
-    "build": "tsc && npm run copy-files && chmod 755 dist/server.js",
+    "build": "tsc --noCheck && npm run copy-files && chmod 755 dist/server.js",
     "copy-files": "mkdir -p dist/utils/omnifocusScripts && cp src/utils/omnifocusScripts/*.js dist/utils/omnifocusScripts/",
     "start": "node dist/server.js",
     "dev": "tsc -w",
@@ -16,12 +16,16 @@
     "test": "npm run build && node --test dist/tools/definitions/*.test.js dist/tools/*.test.js dist/tools/primitives/*.test.js dist/utils/*.test.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.8.0",
+    "@hono/node-server": "^2.0.12",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.22.4"
   },
+  "overrides": {
+    "@hono/node-server": "^2.0.12"
+  },
   "devDependencies": {
-    "@types/node": "^20.11.19",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
   },
   "repository": {
     "type": "git",

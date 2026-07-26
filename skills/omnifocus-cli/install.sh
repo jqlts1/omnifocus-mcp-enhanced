@@ -3,7 +3,7 @@
 # Install the omnifocus-cli skill for AI coding agents.
 #
 # What this does:
-#   1. Registers the OmniFocus MCP server with mcporter (pinned to @latest)
+#   1. Registers the OmniFocus MCP server with mcporter (pinned to this package version)
 #   2. Generates a standalone CLI bundle from the server's live tool schemas
 #   3. Installs SKILL.md + the CLI into your agent skills directory
 #   4. Verifies the generated CLI actually contains every server tool
@@ -19,6 +19,13 @@ PACKAGE="omnifocus-mcp-enhanced"
 
 # Resolve this script's directory so we can find SKILL.md next to it.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Use the exact package version that shipped this installer. Pinning the version
+# keeps generated schemas deterministic and avoids npm propagation/cache races
+# immediately after a new release. If package metadata is unavailable (for a
+# manually copied installer), fall back to @latest.
+PACKAGE_VERSION="$(node -p "require('${SCRIPT_DIR}/../../package.json').version" 2>/dev/null || true)"
+PACKAGE_SPEC="${PACKAGE}@${PACKAGE_VERSION:-latest}"
 
 info()  { printf '\033[36m==>\033[0m %s\n' "$1"; }
 ok()    { printf '\033[32m  ✓\033[0m %s\n' "$1"; }
@@ -114,9 +121,9 @@ ok "$INSTALL_LABEL install selected"
 info "Registering MCP server '$SERVER_NAME' with mcporter ($MCPORTER_SCOPE scope)"
 
 npx -y mcporter@latest config add "$SERVER_NAME" \
-  --command npx --arg -y --arg "${PACKAGE}@latest" \
+  --command npx --arg -y --arg "$PACKAGE_SPEC" \
   --scope "$MCPORTER_SCOPE" >/dev/null
-ok "Registered '$SERVER_NAME' -> npx -y ${PACKAGE}@latest ($MCPORTER_SCOPE scope)"
+ok "Registered '$SERVER_NAME' -> npx -y $PACKAGE_SPEC ($MCPORTER_SCOPE scope)"
 
 # --- Generate the CLI --------------------------------------------------------
 
@@ -127,10 +134,10 @@ mkdir -p "$TARGET_DIR/bin"
 npx -y mcporter@latest generate-cli \
   --server "$SERVER_NAME" \
   --output "$TARGET_DIR/bin/omnifocus-enhanced.ts" \
-  --bundle "$TARGET_DIR/bin/omnifocus-enhanced.js" >/dev/null
+  --bundle "$TARGET_DIR/bin/omnifocus-enhanced.cjs" >/dev/null
 
-chmod +x "$TARGET_DIR/bin/omnifocus-enhanced.js"
-ok "CLI bundled at $TARGET_DIR/bin/omnifocus-enhanced.js"
+chmod +x "$TARGET_DIR/bin/omnifocus-enhanced.cjs"
+ok "CLI bundled at $TARGET_DIR/bin/omnifocus-enhanced.cjs"
 
 # --- Install the skill manifest ----------------------------------------------
 
@@ -150,13 +157,14 @@ REQUIRED_COMMANDS=(
   get-today-completed-tasks set-repetition-rule get-inbox-tasks get-flagged-tasks
   get-forecast-tasks get-tasks-by-tag list-tags filter-tasks
   list-custom-perspectives get-custom-perspective-tasks
+  get-projects get-projects-due-for-review
   add-folder edit-folder remove-folder list-folders get-folder
   append-to-note count-tasks duplicate-task
   add-tag edit-tag remove-tag search-tags
   list-task-notifications add-task-notification remove-task-notification
 )
 
-HELP_OUTPUT="$("$TARGET_DIR/bin/omnifocus-enhanced.js" --help 2>&1 || true)"
+HELP_OUTPUT="$("$TARGET_DIR/bin/omnifocus-enhanced.cjs" --help 2>&1 || true)"
 
 MISSING=()
 for cmd in "${REQUIRED_COMMANDS[@]}"; do
@@ -173,7 +181,7 @@ ok "All ${#REQUIRED_COMMANDS[@]} tools present"
 
 # Confirm the CLI can actually reach OmniFocus, but do not hard-fail: the user
 # may simply not have OmniFocus running right now.
-if "$TARGET_DIR/bin/omnifocus-enhanced.js" count-tasks --perspective inbox >/dev/null 2>&1; then
+if "$TARGET_DIR/bin/omnifocus-enhanced.cjs" count-tasks --perspective inbox >/dev/null 2>&1; then
   ok "Live connection to OmniFocus confirmed"
 else
   warn "Could not reach OmniFocus. Make sure it is running and that automation"
@@ -188,11 +196,11 @@ $(printf '\033[32mSkill installed.\033[0m')
 
   Scope:     $INSTALL_LABEL
   Location:  $TARGET_DIR
-  CLI:       $TARGET_DIR/bin/omnifocus-enhanced.js
+  CLI:       $TARGET_DIR/bin/omnifocus-enhanced.cjs
 
 Try it:
-  $TARGET_DIR/bin/omnifocus-enhanced.js get-inbox-tasks
-  $TARGET_DIR/bin/omnifocus-enhanced.js count-tasks --flagged true
+  $TARGET_DIR/bin/omnifocus-enhanced.cjs get-inbox-tasks
+  $TARGET_DIR/bin/omnifocus-enhanced.cjs count-tasks --flagged true
 
 After upgrading $PACKAGE, re-run this installer to refresh the CLI:
   npx -y ${PACKAGE}@latest install-skill$([[ "$INSTALL_GLOBAL" == true ]] && printf ' --global')

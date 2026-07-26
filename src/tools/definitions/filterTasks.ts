@@ -29,30 +29,30 @@ export const schema = z.object({
   exactTagMatch: z.boolean().optional().describe("Set to true for exact tag name match, false for partial (default: false)"),
 
   // 📅 截止日期过滤
-  dueBefore: z.string().optional().describe("Show tasks due before this date (ISO format: YYYY-MM-DD)"),
-  dueAfter: z.string().optional().describe("Show tasks due after this date (ISO format: YYYY-MM-DD)"),
+  dueBefore: z.string().optional().describe("Show tasks due strictly before this date/time (ISO format: YYYY-MM-DD or full ISO)"),
+  dueAfter: z.string().optional().describe("Show tasks due strictly after this date/time (ISO format: YYYY-MM-DD or full ISO)"),
   dueToday: z.boolean().optional().describe("Show tasks due today"),
   dueThisWeek: z.boolean().optional().describe("Show tasks due this week"),
   dueThisMonth: z.boolean().optional().describe("Show tasks due this month"),
   overdue: z.boolean().optional().describe("Show overdue tasks only"),
 
   // 🚀 推迟日期过滤
-  deferBefore: z.string().optional().describe("Show tasks with defer date before this date (ISO format: YYYY-MM-DD)"),
-  deferAfter: z.string().optional().describe("Show tasks with defer date after this date (ISO format: YYYY-MM-DD)"),
+  deferBefore: z.string().optional().describe("Show tasks with defer date strictly before this date/time (ISO format: YYYY-MM-DD or full ISO)"),
+  deferAfter: z.string().optional().describe("Show tasks with defer date strictly after this date/time (ISO format: YYYY-MM-DD or full ISO)"),
   deferToday: z.boolean().optional().describe("Show tasks deferred to today"),
   deferThisWeek: z.boolean().optional().describe("Show tasks deferred to this week"),
   deferAvailable: z.boolean().optional().describe("Show tasks whose defer date has passed (now available)"),
 
   // 🗓 计划日期过滤
-  plannedBefore: z.string().optional().describe("Show tasks planned before this date (ISO format: YYYY-MM-DD)"),
-  plannedAfter: z.string().optional().describe("Show tasks planned after this date (ISO format: YYYY-MM-DD)"),
+  plannedBefore: z.string().optional().describe("Show tasks planned strictly before this date/time (ISO format: YYYY-MM-DD or full ISO)"),
+  plannedAfter: z.string().optional().describe("Show tasks planned strictly after this date/time (ISO format: YYYY-MM-DD or full ISO)"),
   plannedToday: z.boolean().optional().describe("Show tasks planned for today"),
   plannedThisWeek: z.boolean().optional().describe("Show tasks planned for this week"),
   plannedThisMonth: z.boolean().optional().describe("Show tasks planned for this month"),
 
   // ✅ 完成日期过滤
-  completedBefore: z.string().optional().describe("Show tasks completed before this date (ISO format: YYYY-MM-DD)"),
-  completedAfter: z.string().optional().describe("Show tasks completed after this date (ISO format: YYYY-MM-DD)"),
+  completedBefore: z.string().optional().describe("Show tasks completed strictly before this date/time (ISO format: YYYY-MM-DD or full ISO)"),
+  completedAfter: z.string().optional().describe("Show tasks completed strictly after this date/time (ISO format: YYYY-MM-DD or full ISO)"),
   completedToday: z.boolean().optional().describe("Show tasks completed today"),
   completedThisWeek: z.boolean().optional().describe("Show tasks completed this week"),
   completedThisMonth: z.boolean().optional().describe("Show tasks completed this month"),

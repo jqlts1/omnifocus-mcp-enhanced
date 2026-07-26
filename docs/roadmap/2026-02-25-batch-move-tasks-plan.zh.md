@@ -58,8 +58,8 @@
 这一阶段补上 OmniFocus 里非常关键、也非常适合 AI 接管的两块能力：Review 和重复任务。
 
 核心内容：
-- `repetitionRule` 支持
-- `get_review_projects`
+- 重复规则读取和创建时设置
+- `get_projects` / `get_projects_due_for_review`（已完成）
 - `mark_project_reviewed`
 - `set_review_interval`
 
@@ -71,7 +71,7 @@
 这一阶段让 AI 不只是“加任务”，而是能真正帮用户把任务结构整理成更合理的项目。
 
 核心内容：
-- `duplicate_task`
+- `duplicate_task`（已完成）
 - `convert_tasks_to_projects`
 - 更顺手的项目模板化流程
 
@@ -177,11 +177,11 @@ API 草案：
 - 强化批量校验和逐项反馈
 
 ### 接下来
-- 增加重复任务规则支持
-- 增加 Review 工作流工具
+- 补齐重复规则读取和创建时设置
+- 增加 Review 写入工具（`mark_project_reviewed`、`set_review_interval`）
 
 ### 后续
-- 增加复制 / 转项目能力
+- 增加转项目 / 项目模板能力
 - 增加同步 / 保存 / 标签组支持
 
 ## 总原则

@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.12.0** - Reliability release: rebuilt `filter_tasks` and `count_tasks` on one complete OmniJS predicate (due/defer/planned/completion dates, estimates, notes, tags, inbox, project, status, and combined filters now actually work); added low-overhead `countOnly` aggregation; added `get_projects` and `get_projects_due_for_review` with native OmniFocus review metadata; upgraded the MCP SDK to 1.29.0 and cleared all production audit findings; updated the Claude skill to 37 tools and changed its generated bundle to `.cjs` so project-local installs work inside ESM repositories.
 - **v1.11.1** - Fixed skill installation scope for Claude Code: `install-skill` now installs into the **current project's** `.claude/skills/omnifocus-cli/` and writes a project-scoped mcporter config by default. Pass `--global` to opt into `~/.claude/skills/omnifocus-cli/` and the home mcporter config. `CLAUDE_SKILLS_DIR` can override the skill root.
 - **v1.11.0** - Added a bundled **agent skill** (`omnifocus-cli`). One command (`npx omnifocus-mcp-enhanced install-skill`) generates a local CLI covering all 35 tools, so AI agents can drive OmniFocus through shell commands instead of loading 35 tool schemas into context. The CLI is generated on your machine from your installed server version, so it never drifts out of sync.
 - **v1.10.0** - Major capability expansion: **Tag Management** (`add_tag`, `edit_tag`, `remove_tag`, `search_tags`), **Task Notifications** (`list_task_notifications`, `add_task_notification`, `remove_task_notification` — absolute or due-relative reminders), plus first-class MCP **Prompts** (4 guided review workflows) and **Resources** (3 live JSON snapshots). Now 35 tools, 4 prompts, and 3 resources.
@@ -75,7 +76,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **🔔 Task Notifications** - List, add, and remove reminders (absolute time or relative to due date)
 - **💬 MCP Prompts** - 4 guided review workflows (daily, weekly, inbox processing, project planning)
 - **📡 MCP Resources** - 3 live JSON snapshots (inbox, today, active projects)
-- **🛠️ Agent Skill** - One-command install of a local CLI covering all 35 tools, to keep AI context usage low
+- **🛠️ Agent Skill** - One-command install of a local CLI covering all 37 tools, to keep AI context usage low
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -535,20 +536,24 @@ read_task_attachment {
 24. **count_tasks** - 🆕 **NEW**: Fast "how many" queries with a status breakdown (same filters as filter_tasks)
 25. **duplicate_task** - 🆕 **NEW**: Clone a task with/without subtasks, optionally renamed
 
+### 📋 Project Review Tools (NEW)
+26. **get_projects** - List/filter projects with native review dates and intervals
+27. **get_projects_due_for_review** - List projects whose next review date has arrived, most overdue first
+
 ### 🏷️ Tag Management Tools (NEW)
-26. **list_tags** - List all tags with IDs, parents, and active status
-27. **add_tag** - 🆕 **NEW**: Create a tag, optionally nested under a parent tag
-28. **edit_tag** - 🆕 **NEW**: Rename, change status (active/onHold/dropped), or move a tag
-29. **remove_tag** - 🆕 **NEW**: Delete a tag (tasks are kept, they just lose the tag)
-30. **search_tags** - 🆕 **NEW**: Search tags by name (fuzzy or exact)
+28. **list_tags** - List all tags with IDs, parents, and active status
+29. **add_tag** - 🆕 **NEW**: Create a tag, optionally nested under a parent tag
+30. **edit_tag** - 🆕 **NEW**: Rename, change status (active/onHold/dropped), or move a tag
+31. **remove_tag** - 🆕 **NEW**: Delete a tag (tasks are kept, they just lose the tag)
+32. **search_tags** - 🆕 **NEW**: Search tags by name (fuzzy or exact)
 
 ### 🔔 Notification Tools (NEW)
-31. **list_task_notifications** - 🆕 **NEW**: List reminders set on a task
-32. **add_task_notification** - 🆕 **NEW**: Add a reminder (absolute time or minutes relative to due date)
-33. **remove_task_notification** - 🆕 **NEW**: Remove a reminder by index, or remove all
+33. **list_task_notifications** - 🆕 **NEW**: List reminders set on a task
+34. **add_task_notification** - 🆕 **NEW**: Add a reminder (absolute time or minutes relative to due date)
+35. **remove_task_notification** - 🆕 **NEW**: Remove a reminder by index, or remove all
 
 ### 📊 Analytics & Tracking
-34. **get_today_completed_tasks** - View today's completed tasks
+36. **get_today_completed_tasks** - View today's completed tasks
 
 > Note: `get_tasks_by_tag` (#14) and `list_tags` (#26) were available in earlier versions; the tag CRUD tools are new in v1.10.0.
 
@@ -575,7 +580,7 @@ Live JSON snapshots your AI client can read without calling a tool.
 
 ## 🛠️ Agent Skill (NEW in v1.11.0)
 
-With 35 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
+With 37 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
 
 ### Install
 
@@ -589,7 +594,7 @@ By default, this installs **only in the current project**:
 your-project/
 ├── .claude/skills/omnifocus-cli/
 │   ├── SKILL.md
-│   └── bin/omnifocus-enhanced.js
+│   └── bin/omnifocus-enhanced.cjs
 └── config/mcporter.json
 ```
 
@@ -604,10 +609,10 @@ The global skill is installed in `~/.claude/skills/omnifocus-cli/`, and its MCP
 server registration is written to the home mcporter configuration.
 
 That single command:
-1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter) (pinned to `@latest`)
+1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter), pinned to the exact package version that shipped the installer
 2. Generates a standalone CLI from the server's live tool schemas (~20s)
 3. Installs `SKILL.md` + the CLI into the current project's `.claude/skills/omnifocus-cli/` (or `~/.claude/skills/omnifocus-cli/` with `--global`)
-4. Verifies all 35 tools are present and that OmniFocus is reachable
+4. Verifies all 37 tools are present and that OmniFocus is reachable
 
 Install elsewhere with `CLAUDE_SKILLS_DIR=/custom/path npx -y omnifocus-mcp-enhanced@latest install-skill` (`AGENT_SKILLS_DIR` remains available as a legacy alias).
 
@@ -618,7 +623,7 @@ The CLI is **not** shipped pre-built. It is generated on your machine from the s
 ### Usage
 
 ```bash
-CLI=.claude/skills/omnifocus-cli/bin/omnifocus-enhanced.js
+CLI=.claude/skills/omnifocus-cli/bin/omnifocus-enhanced.cjs
 
 $CLI get-inbox-tasks
 $CLI count-tasks --flagged true

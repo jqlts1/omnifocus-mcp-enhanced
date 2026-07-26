@@ -40,6 +40,12 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.12.0** - 可靠性版本：重写 `filter_tasks` / `count_tasks` 的统一过滤引擎，截止/推迟/计划/完成日期、估时、备注、标签、Inbox、项目和组合过滤现在都会真正生效；`count_tasks` 改为低开销聚合模式；新增 `get_projects` 和 `get_projects_due_for_review`，可读取 OmniFocus 原生回顾日期和周期；MCP SDK 升级至 1.29.0，并清空生产依赖安全告警；Claude Skill 更新到 37 个工具，生成文件改为 `.cjs`，可安全安装在 ESM 项目中。
+- **v1.11.1** - Claude Skill 默认安装到当前项目的 `.claude/skills/omnifocus-cli/`，并使用项目级 mcporter 配置；只有显式传入 `--global` 才会安装到 `~/.claude/skills/`。
+- **v1.11.0** - 新增可一键安装的 `omnifocus-cli` Skill，让 AI 通过本地 CLI 调用 MCP，避免在上下文中加载全部工具 schema。
+- **v1.10.0** - 新增标签 CRUD、任务提醒、4 个 MCP Prompts 和 3 个 MCP Resources。
+- **v1.9.0** - 新增 `append_to_note`、`count_tasks`、`duplicate_task`。
+- **v1.8.0** - 新增完整 Folder CRUD（创建、读取、编辑、删除、列表）。
 - **v1.7.0** - 新增 OmniFocus 4.7+ 重复规则支持（`set_repetition_rule`：ICS 规则、重复方式、锚定日期、自动追平、结束日期、重复次数），新增互斥标签支持（`exclusiveTags`），并补全计划日期编辑测试。
 - **v1.6.10** - 修复 `edit_item` 无法完成 Inbox 任务的问题，修复 AppleScript 对单引号/反斜杠等特殊字符的处理，修复特殊字符导致的 JSON 返回解析失败，并补充 `batch_add_items` / `mcporter` 的可直接运行示例与说明。
 - **v1.6.9** - 新增任务附件支持：`get_task_by_id` 会返回附件元信息，`dump_database` 导出附件/链接元信息，并新增 `read_task_attachment`，可在支持时直接把图片附件作为 MCP 图片内容返回。
@@ -91,6 +97,30 @@ git clone https://github.com/jqlts1/omnifocus-mcp-enhanced.git
 cd omnifocus-mcp-enhanced
 npm install && npm run build
 claude mcp add omnifocus-enhanced -- node "/path/to/omnifocus-mcp-enhanced/dist/server.js"
+```
+
+### 安装 Claude Skill（默认仅当前项目）
+
+在希望使用 OmniFocus 的 Claude Code 项目根目录运行：
+
+```bash
+npx -y omnifocus-mcp-enhanced@latest install-skill
+```
+
+它会生成：
+
+```text
+当前项目/
+├── .claude/skills/omnifocus-cli/
+│   ├── SKILL.md
+│   └── bin/omnifocus-enhanced.cjs
+└── config/mcporter.json
+```
+
+只有确实希望所有项目都能使用时才执行：
+
+```bash
+npx -y omnifocus-mcp-enhanced@latest install-skill --global
 ```
 
 ## 📋 系统要求
@@ -472,8 +502,36 @@ read_task_attachment {
 16. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
 17. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
 
+### 📋 项目与回顾
+18. **get_projects** - 轻量列出/过滤项目，包含原生回顾日期和周期
+19. **get_projects_due_for_review** - 列出已到回顾日期的项目，最逾期的排在最前
+
+### 📁 Folder 管理
+20. **add_folder** - 创建文件夹，可指定父文件夹
+21. **edit_folder** - 改名或移动文件夹
+22. **remove_folder** - 删除文件夹及其中项目/任务
+23. **list_folders** - 列出文件夹层级和项目数
+24. **get_folder** - 查看文件夹的直属项目和子文件夹
+
+### ⚡ 生产力工具
+25. **append_to_note** - 追加备注而不覆盖原内容
+26. **count_tasks** - 使用与 `filter_tasks` 相同的条件做低开销统计
+27. **duplicate_task** - 复制任务，可选择是否包含子任务
+
+### 🏷️ 标签管理
+28. **list_tags** - 列出标签
+29. **add_tag** - 创建标签
+30. **edit_tag** - 改名、改状态或移动标签
+31. **remove_tag** - 删除标签（不会删除任务）
+32. **search_tags** - 模糊或精确搜索标签
+
+### 🔔 任务提醒
+33. **list_task_notifications** - 列出任务提醒
+34. **add_task_notification** - 添加绝对时间或相对截止时间的提醒
+35. **remove_task_notification** - 删除单个或全部提醒
+
 ### 📊 分析与跟踪
-18. **get_today_completed_tasks** - 查看今日完成的任务
+36. **get_today_completed_tasks** - 查看今日完成的任务
 
 批量转移功能后续计划（Roadmap）：[docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md)
 

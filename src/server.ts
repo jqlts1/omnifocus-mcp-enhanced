@@ -56,7 +56,7 @@ import { registerResources } from './context/resources.js';
 // Create an MCP server
 const server = new McpServer({
   name: "OmniFocus MCP",
-  version: "1.11.1"
+  version: "1.12.0"
 });
 
 // Register tools

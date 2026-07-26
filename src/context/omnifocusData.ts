@@ -1,5 +1,5 @@
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
-import { FilterTasksOptions, applyClientSideFilters } from '../tools/primitives/filterTasks.js';
+import { FilterTasksOptions } from '../tools/primitives/filterTasks.js';
 
 export interface RawTask {
   id: string;
@@ -42,8 +42,7 @@ export async function fetchTasks(options: FilterTasksOptions = {}, limit = 1000)
     throw new Error(data.error);
   }
 
-  const tasks: RawTask[] = Array.isArray(data.tasks) ? data.tasks : [];
-  return applyClientSideFilters(tasks, options).slice(0, limit);
+  return Array.isArray(data.tasks) ? data.tasks.slice(0, limit) : [];
 }
 
 /**

@@ -58,8 +58,8 @@ Why it matters:
 This phase closes two major OmniFocus loops that AI assistants should handle well: weekly review and repeating commitments.
 
 Primary focus:
-- `repetitionRule` support
-- `get_review_projects`
+- repetition rule read-back and creation-time support
+- `get_projects` / `get_projects_due_for_review` (completed)
 - `mark_project_reviewed`
 - `set_review_interval`
 
@@ -71,7 +71,7 @@ Why it matters:
 This phase makes it easier for AI to restructure work, not just create isolated tasks.
 
 Primary focus:
-- `duplicate_task`
+- `duplicate_task` (completed)
 - `convert_tasks_to_projects`
 - better project templating flows
 
@@ -177,11 +177,11 @@ Needed roadmap pieces:
 - improve batch validation and item-level feedback
 
 ### After that
-- add repetition rule support
-- add review workflow tools
+- complete repetition rule read/write integration
+- add review write tools (`mark_project_reviewed`, `set_review_interval`)
 
 ### Later
-- add duplication / conversion workflows
+- add conversion / project templating workflows
 - add sync / save / tag group support
 
 ## Guiding Principle
