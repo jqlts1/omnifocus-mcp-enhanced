@@ -175,26 +175,23 @@ bin/omnifocus-enhanced.js remove-task-notification --task-name "Submit report" -
 ## Maintenance
 
 Regenerate the CLI after upgrading the MCP server (a stale CLI silently lacks
-new commands — this is the most common failure mode):
+new commands — this is the most common failure mode). Run this from the project
+where the skill is installed:
 
 ```bash
-npx -y mcporter@latest generate-cli \
-  --server omnifocus-enhanced \
-  --output bin/omnifocus-enhanced.ts \
-  --bundle bin/omnifocus-enhanced.js
-chmod +x bin/omnifocus-enhanced.js
+npx omnifocus-mcp-enhanced install-skill
 ```
 
-Then verify the command count matches the server's tool count:
+For a globally installed skill, preserve that scope when refreshing:
+
+```bash
+npx omnifocus-mcp-enhanced install-skill --global
+```
+
+The installer pins the MCP package and mcporter to `@latest`, regenerates the
+CLI, verifies all 35 commands, and checks the live OmniFocus connection. To
+inspect the generated command count manually:
 
 ```bash
 bin/omnifocus-enhanced.js --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 38 (35 tools + built-ins)
-```
-
-If commands are missing, the mcporter config is likely pinned to a stale
-package version. It must use `@latest`, otherwise npx serves a cached old build:
-
-```bash
-npx -y mcporter@latest config add omnifocus-enhanced \
-  --command npx --arg -y --arg omnifocus-mcp-enhanced@latest --scope home
 ```

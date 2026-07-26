@@ -20,7 +20,9 @@ if (subcommand === '--help' || subcommand === '-h') {
 
 Usage:
   omnifocus-mcp-enhanced                 Start the MCP server (stdio transport)
-  omnifocus-mcp-enhanced install-skill   Install the omnifocus-cli agent skill
+  omnifocus-mcp-enhanced install-skill   Install into ./.claude/skills
+  omnifocus-mcp-enhanced install-skill --global
+                                         Install into ~/.claude/skills
   omnifocus-mcp-enhanced --version       Print the package version
 
 The server is normally launched by an MCP client rather than run by hand.

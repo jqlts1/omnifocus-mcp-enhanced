@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.11.1** - Fixed skill installation scope for Claude Code: `install-skill` now installs into the **current project's** `.claude/skills/omnifocus-cli/` and writes a project-scoped mcporter config by default. Pass `--global` to opt into `~/.claude/skills/omnifocus-cli/` and the home mcporter config. `CLAUDE_SKILLS_DIR` can override the skill root.
 - **v1.11.0** - Added a bundled **agent skill** (`omnifocus-cli`). One command (`npx omnifocus-mcp-enhanced install-skill`) generates a local CLI covering all 35 tools, so AI agents can drive OmniFocus through shell commands instead of loading 35 tool schemas into context. The CLI is generated on your machine from your installed server version, so it never drifts out of sync.
 - **v1.10.0** - Major capability expansion: **Tag Management** (`add_tag`, `edit_tag`, `remove_tag`, `search_tags`), **Task Notifications** (`list_task_notifications`, `add_task_notification`, `remove_task_notification` — absolute or due-relative reminders), plus first-class MCP **Prompts** (4 guided review workflows) and **Resources** (3 live JSON snapshots). Now 35 tools, 4 prompts, and 3 resources.
 - **v1.9.0** - Added 3 productivity tools: `append_to_note` (append text to a task/project note without overwriting), `count_tasks` (fast "how many" aggregate queries with a status breakdown, using the same filters as `filter_tasks`), and `duplicate_task` (clone a task with or without its subtasks, optionally renamed).
@@ -582,13 +583,33 @@ With 35 tools, loading every MCP tool schema into an AI conversation costs a lot
 npx omnifocus-mcp-enhanced install-skill
 ```
 
+By default, this installs **only in the current project**:
+
+```text
+your-project/
+├── .claude/skills/omnifocus-cli/
+│   ├── SKILL.md
+│   └── bin/omnifocus-enhanced.js
+└── config/mcporter.json
+```
+
+Use `--global` only when you intentionally want the skill available in every
+project:
+
+```bash
+npx omnifocus-mcp-enhanced install-skill --global
+```
+
+The global skill is installed in `~/.claude/skills/omnifocus-cli/`, and its MCP
+server registration is written to the home mcporter configuration.
+
 That single command:
 1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter) (pinned to `@latest`)
 2. Generates a standalone CLI from the server's live tool schemas (~20s)
-3. Installs `SKILL.md` + the CLI into `~/.agents/skills/omnifocus-cli/`
+3. Installs `SKILL.md` + the CLI into the current project's `.claude/skills/omnifocus-cli/` (or `~/.claude/skills/omnifocus-cli/` with `--global`)
 4. Verifies all 35 tools are present and that OmniFocus is reachable
 
-Install elsewhere with `AGENT_SKILLS_DIR=/custom/path npx omnifocus-mcp-enhanced install-skill`.
+Install elsewhere with `CLAUDE_SKILLS_DIR=/custom/path npx omnifocus-mcp-enhanced install-skill` (`AGENT_SKILLS_DIR` remains available as a legacy alias).
 
 ### Why generate the CLI locally?
 
@@ -597,7 +618,7 @@ The CLI is **not** shipped pre-built. It is generated on your machine from the s
 ### Usage
 
 ```bash
-CLI=~/.agents/skills/omnifocus-cli/bin/omnifocus-enhanced.js
+CLI=.claude/skills/omnifocus-cli/bin/omnifocus-enhanced.js
 
 $CLI get-inbox-tasks
 $CLI count-tasks --flagged true

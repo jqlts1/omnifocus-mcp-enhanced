@@ -20,14 +20,66 @@ PACKAGE="omnifocus-mcp-enhanced"
 # Resolve this script's directory so we can find SKILL.md next to it.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Allow overriding the install root; default to the shared agent skills dir.
-SKILLS_ROOT="${AGENT_SKILLS_DIR:-$HOME/.agents/skills}"
-TARGET_DIR="$SKILLS_ROOT/$SKILL_NAME"
-
 info()  { printf '\033[36m==>\033[0m %s\n' "$1"; }
 ok()    { printf '\033[32m  ✓\033[0m %s\n' "$1"; }
 warn()  { printf '\033[33m  !\033[0m %s\n' "$1"; }
 fail()  { printf '\033[31m  ✗\033[0m %s\n' "$1" >&2; exit 1; }
+
+# Capture the caller's working directory. The default installation is local to
+# this project; --global opts into the shared user-level skill and MCP config.
+PROJECT_ROOT="$PWD"
+INSTALL_GLOBAL=false
+
+usage() {
+  cat <<EOF
+Install the omnifocus-cli agent skill.
+
+Usage:
+  npx $PACKAGE install-skill             Install in the current project
+  npx $PACKAGE install-skill --global    Install for all projects
+
+Default project locations:
+  Skill:     ./.claude/skills/$SKILL_NAME
+  mcporter:  ./config/mcporter.json
+
+Global locations:
+  Skill:     ~/.claude/skills/$SKILL_NAME
+  mcporter:  ~/.mcporter/mcporter.json
+
+Environment:
+  CLAUDE_SKILLS_DIR  Override only the Claude skill installation root.
+  AGENT_SKILLS_DIR   Legacy alias for CLAUDE_SKILLS_DIR.
+EOF
+}
+
+while (( $# > 0 )); do
+  case "$1" in
+    --global|-g)
+      INSTALL_GLOBAL=true
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "Unknown option: $1 (use --help for usage)."
+      ;;
+  esac
+  shift
+done
+
+if [[ "$INSTALL_GLOBAL" == true ]]; then
+  MCPORTER_SCOPE="home"
+  DEFAULT_SKILLS_ROOT="$HOME/.claude/skills"
+  INSTALL_LABEL="global"
+else
+  MCPORTER_SCOPE="project"
+  DEFAULT_SKILLS_ROOT="$PROJECT_ROOT/.claude/skills"
+  INSTALL_LABEL="project-local"
+fi
+
+SKILLS_ROOT="${CLAUDE_SKILLS_DIR:-${AGENT_SKILLS_DIR:-$DEFAULT_SKILLS_ROOT}}"
+TARGET_DIR="$SKILLS_ROOT/$SKILL_NAME"
 
 # --- Preflight ---------------------------------------------------------------
 
@@ -52,23 +104,19 @@ if [[ ! -f "$SCRIPT_DIR/SKILL.md" ]]; then
   fail "SKILL.md not found next to this script (looked in $SCRIPT_DIR)."
 fi
 ok "SKILL.md found"
+ok "$INSTALL_LABEL install selected"
 
 # --- Register the MCP server -------------------------------------------------
 #
 # Pin the package to @latest. Without the tag, npx may serve a stale cached
 # build, which silently produces a CLI missing the newest tools.
 
-info "Registering MCP server '$SERVER_NAME' with mcporter"
-
-if npx -y mcporter@latest config get "$SERVER_NAME" --json >/dev/null 2>&1; then
-  warn "Server already registered; re-registering it pinned to @latest"
-  npx -y mcporter@latest config remove "$SERVER_NAME" --scope home >/dev/null 2>&1 || true
-fi
+info "Registering MCP server '$SERVER_NAME' with mcporter ($MCPORTER_SCOPE scope)"
 
 npx -y mcporter@latest config add "$SERVER_NAME" \
   --command npx --arg -y --arg "${PACKAGE}@latest" \
-  --scope home >/dev/null
-ok "Registered '$SERVER_NAME' -> npx -y ${PACKAGE}@latest"
+  --scope "$MCPORTER_SCOPE" >/dev/null
+ok "Registered '$SERVER_NAME' -> npx -y ${PACKAGE}@latest ($MCPORTER_SCOPE scope)"
 
 # --- Generate the CLI --------------------------------------------------------
 
@@ -138,6 +186,7 @@ cat <<EOF
 
 $(printf '\033[32mSkill installed.\033[0m')
 
+  Scope:     $INSTALL_LABEL
   Location:  $TARGET_DIR
   CLI:       $TARGET_DIR/bin/omnifocus-enhanced.js
 
@@ -146,6 +195,6 @@ Try it:
   $TARGET_DIR/bin/omnifocus-enhanced.js count-tasks --flagged true
 
 After upgrading $PACKAGE, re-run this installer to refresh the CLI:
-  npx $PACKAGE install-skill
+  npx $PACKAGE install-skill$([[ "$INSTALL_GLOBAL" == true ]] && printf ' --global')
 
 EOF
