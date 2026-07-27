@@ -1,6 +1,6 @@
 ---
 name: omnifocus-cli
-description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 38 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
+description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 39 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
 ---
 
 # OmniFocus CLI
@@ -8,7 +8,7 @@ description: Use a generated local CLI for OmniFocus MCP operations (tasks, proj
 ## Overview
 
 Use the local bundled CLI instead of direct MCP tool-calling for OmniFocus requests.
-The MCP server exposes 38 tools; loading all their schemas into chat is expensive.
+The MCP server exposes 39 tools; loading all their schemas into chat is expensive.
 This CLI gives you the same capabilities as deterministic shell commands.
 
 CLI location: `bin/omnifocus-enhanced.cjs` (relative to this skill directory).
@@ -155,11 +155,18 @@ bin/omnifocus-enhanced.cjs batch-add-items --raw '{
 
 ## Projects
 
+For a weekly review, first read projects due for review and discuss their
+outcomes, next actions, and risks. Discussion is not confirmation. Present the
+final project IDs and call `mark-projects-reviewed` only after the user
+explicitly confirms that set. The server preflights the whole set and verifies
+the saved review dates automatically.
+
 ```bash
 bin/omnifocus-enhanced.cjs get-projects --status Active
 bin/omnifocus-enhanced.cjs get-projects --status Active,OnHold --folder-name "Work"
 bin/omnifocus-enhanced.cjs get-projects-due-for-review
 bin/omnifocus-enhanced.cjs get-projects-due-for-review --include-on-hold true
+bin/omnifocus-enhanced.cjs mark-projects-reviewed --project-ids "<project-1>,<project-2>"
 bin/omnifocus-enhanced.cjs add-project --name "New Project" --folder-name "Work"
 bin/omnifocus-enhanced.cjs edit-item --item-type project --id "<id>" --new-project-status onHold
 bin/omnifocus-enhanced.cjs append-to-note --item-type project --name "New Project" --text "Kickoff notes"
@@ -243,5 +250,5 @@ CLI, verifies all 37 commands, and checks the live OmniFocus connection. To
 inspect the generated command count manually:
 
 ```bash
-bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 41 (38 tools + built-ins)
+bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 42 (39 tools + built-ins)
 ```

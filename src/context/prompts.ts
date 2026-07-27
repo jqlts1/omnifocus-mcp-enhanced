@@ -82,6 +82,15 @@ ${JSON.stringify(flagged.map(slimTask))}
    - key risks and blockers
    - cleanup actions (drop, defer, delegate, or someday/maybe)
 
+review completion rules:
+- after discussing projects, present the final set that is ready to be marked reviewed,
+  including each stable project id.
+- do not call mark_projects_reviewed until the user explicitly confirms that final set.
+- discussion or display alone is not confirmation.
+- after confirmation, call mark_projects_reviewed once. it validates the complete
+  batch and verifies lastReviewDate, nextReviewDate, and the unchanged interval.
+- report projects still due for review after the action.
+
 ${ENGAGEMENT_PROTOCOL}
 
 active_projects_json:

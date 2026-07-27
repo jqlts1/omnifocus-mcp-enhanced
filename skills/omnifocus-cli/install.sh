@@ -157,7 +157,7 @@ REQUIRED_COMMANDS=(
   get-today-completed-tasks set-repetition-rule get-inbox-tasks get-flagged-tasks
   get-forecast-tasks get-tasks-by-tag list-tags filter-tasks
   list-custom-perspectives get-custom-perspective-tasks
-  get-projects get-projects-due-for-review
+  get-projects get-projects-due-for-review mark-projects-reviewed
   add-folder edit-folder remove-folder list-folders get-folder
   append-to-note count-tasks duplicate-task
   add-tag edit-tag remove-tag search-tags

@@ -29,6 +29,7 @@ import * as filterTasksTool from './tools/definitions/filterTasks.js';
 // Import project tools
 import * as getProjectsTool from './tools/definitions/getProjects.js';
 import * as getProjectsDueForReviewTool from './tools/definitions/getProjectsDueForReview.js';
+import * as markProjectsReviewedTool from './tools/definitions/markProjectsReviewed.js';
 // Import custom perspective tools
 import * as listCustomPerspectivesTool from './tools/definitions/listCustomPerspectives.js';
 import * as getCustomPerspectiveTasksTool from './tools/definitions/getCustomPerspectiveTasks.js';
@@ -211,6 +212,13 @@ server.tool(
   "Get OmniFocus projects that are due for review (nextReviewDate <= now). Returns projects sorted by most overdue first. Use for weekly review project health checks.",
   getProjectsDueForReviewTool.schema.shape,
   getProjectsDueForReviewTool.handler,
+);
+
+server.tool(
+  "mark_projects_reviewed",
+  "Mark a user-confirmed set of active or on-hold projects reviewed. The complete batch is validated first and review dates are verified afterward.",
+  markProjectsReviewedTool.schema.shape,
+  markProjectsReviewedTool.handler,
 );
 
 // Custom perspective tools

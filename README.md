@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.15.0** - Weekly Review completion: added the narrow `mark_projects_reviewed` tool for marking a user-confirmed set of active or on-hold projects reviewed. The server validates every project and its review metadata before writing, uses one timestamp for the complete batch, restores prior review dates after execution or verification failures, and verifies `lastReviewDate`, the OmniFocus-generated `nextReviewDate`, and the unchanged review interval. The Weekly Review Prompt and Skill now guide discovery, discussion, confirmation, marking, and remaining-review reporting. Now 39 tools, 4 prompts, and 3 resources.
 - **v1.14.0** - Safe Inbox organization: added the intentionally narrow `batch_move_tasks` tool for executing a user-confirmed move proposal using stable task and destination IDs. The server preflights the complete batch before changing anything, blocks invalid destinations and hierarchy cycles, rolls back completed moves after execution failures, and verifies every final destination. The `inbox_processing` Prompt and bundled Skill now guide AI clients through read, propose, confirm, execute, and report. Now 38 tools, 4 prompts, and 3 resources.
 - **v1.13.1** - Maintenance release: MCP server metadata now reads its version from `package.json`, preventing the MCP handshake, CLI, NPM package, and GitHub release versions from drifting apart. The published Skill installation was also verified end to end with all 37 commands, all six task-tree flag pairs, and a live OmniFocus connection.
 - **v1.13.0** - Task-tree-aware reads: `get_inbox_tasks`, `get_flagged_tasks`, `get_forecast_tasks`, `get_tasks_by_tag`, `filter_tasks`, and `get_task_by_id` now show visible direct subtask counts by default and support on-demand recursive expansion with `showSubtasks` and `maxSubtaskDepth`. Expanded lists suppress duplicate top-level descendants, inherit completion visibility rules, and enforce a 500-node safety cap with explicit truncation output. The bundled `omnifocus-cli` Skill documents the new workflow and verifies both generated CLI flags during installation.
@@ -555,6 +556,7 @@ read_task_attachment {
 ### 📋 Project Review Tools (NEW)
 26. **get_projects** - List/filter projects with native review dates and intervals
 27. **get_projects_due_for_review** - List projects whose next review date has arrived, most overdue first
+28. **mark_projects_reviewed** - Atomically mark a confirmed set of eligible projects reviewed and verify their next review dates
 
 ### 🏷️ Tag Management Tools (NEW)
 28. **list_tags** - List all tags with IDs, parents, and active status

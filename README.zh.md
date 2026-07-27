@@ -40,6 +40,7 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.15.0** - 每周回顾闭环：新增保持简单的 `mark_projects_reviewed`，用于把用户已确认的一组 Active 或 OnHold 项目标记为已回顾。服务端会先验证所有项目及回顾元数据，整批使用同一时间戳；执行或验证失败时恢复原回顾日期，并验证 `lastReviewDate`、OmniFocus 生成的 `nextReviewDate` 和未被改变的回顾周期。Weekly Review Prompt 和 Skill 已同步“发现、讨论、确认、标记、汇报剩余项目”的完整流程。当前共 39 个工具、4 个 Prompts 和 3 个 Resources。
 - **v1.14.0** - 安全整理 Inbox：新增保持简单的 `batch_move_tasks`，只使用稳定任务 ID 和目标 ID 执行用户已确认的移动方案。服务端会在修改前预检完整批次，阻止无效目标和层级循环；执行失败时回滚已经完成的移动，并验证每个任务的最终位置。`inbox_processing` Prompt 和内置 Skill 已同步“读取、建议、确认、执行、汇报”流程。当前共 38 个工具、4 个 Prompts 和 3 个 Resources。
 - **v1.13.1** - 维护版本：MCP Server 元数据改为从 `package.json` 读取版本，避免 MCP 握手、CLI、NPM 包和 GitHub Release 的版本再次漂移；同时完成已发布 Skill 的端到端安装验证，确认 37 个命令、六个任务树命令的两项参数以及真实 OmniFocus 连接均正常。
 - **v1.13.0** - 读取工具支持任务树：`get_inbox_tasks`、`get_flagged_tasks`、`get_forecast_tasks`、`get_tasks_by_tag`、`filter_tasks` 和 `get_task_by_id` 默认显示可见直属子任务数量，并可通过 `showSubtasks`、`maxSubtaskDepth` 按需递归展开。展开列表会避免把已经显示在树内的后代再次作为顶层任务重复显示，子任务继承完成状态可见性规则，并通过 500 节点安全上限和明确截断提示避免响应失控。内置 `omnifocus-cli` Skill 已同步新工作流，安装时也会验证生成 CLI 包含两个任务树参数。
@@ -521,6 +522,7 @@ read_task_attachment {
 ### 📋 项目与回顾
 18. **get_projects** - 轻量列出/过滤项目，包含原生回顾日期和周期
 19. **get_projects_due_for_review** - 列出已到回顾日期的项目，最逾期的排在最前
+20. **mark_projects_reviewed** - 原子标记用户已确认的项目为已回顾，并验证下一回顾日期
 
 ### 📁 Folder 管理
 20. **add_folder** - 创建文件夹，可指定父文件夹
