@@ -1,5 +1,10 @@
 # OmniFocus MCP Enhanced Roadmap
 
+> This historical roadmap has been superseded for active sequencing by
+> `docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md` and its companion
+> implementation plan. The original document remains as context for earlier
+> product decisions.
+
 Date: 2026-02-25
 
 ## Vision
