@@ -1,5 +1,6 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
 import { dedupeExpandedTopLevelTasks, formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
+import { decodeFilterTasksCursor, encodeFilterTasksCursor } from './filterTasksCursor.js';
 
 export interface FilterTasksOptions {
   // 🎯 任务状态过滤
@@ -64,6 +65,7 @@ export interface FilterTasksOptions {
   showSubtasks?: boolean;
   maxSubtaskDepth?: number;
   outputMode?: 'detailed' | 'compact';
+  cursor?: string;
 }
 
 export async function filterTasks(options: FilterTasksOptions = {}): Promise<string> {
@@ -76,6 +78,9 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       sortBy = 'name',
       sortOrder = 'asc'
     } = options;
+    const continuation = options.cursor
+      ? decodeFilterTasksCursor(options.cursor, options)
+      : undefined;
 
     // The OmniJS script is the single source of truth for filtering, sorting,
     // counting, and limiting. Keeping those operations inside OmniFocus avoids
@@ -86,7 +91,8 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
       exactTagMatch,
       limit,
       sortBy,
-      sortOrder
+      sortOrder,
+      continuation
     });
 
     if (typeof result === 'string') {
@@ -129,9 +135,16 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
         } else {
           output += `Found ${taskCount} task${taskCount === 1 ? '' : 's'}`;
           if (taskCount < totalCount) {
-            output += ` (showing first ${taskCount} of ${totalCount})`;
+            output += options.cursor
+              ? ` (showing a page of ${totalCount} current matches)`
+              : ` (showing first ${taskCount} of ${totalCount})`;
           }
           output += ':\n\n';
+          if (options.cursor || data.hasMore) {
+            output += `Page: ${taskCount} task${taskCount === 1 ? '' : 's'}\n`;
+            if (data.hasMore) output += 'More results available.\n';
+            output += '\n';
+          }
 
           if (limitedTasks.length !== taskCount) {
             output += `Displayed as ${limitedTasks.length} task tree${limitedTasks.length === 1 ? '' : 's'} to avoid duplicate subtasks.\n\n`;
@@ -159,6 +172,15 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
 
           // 显示排序信息
           output += `\n📊 **Sorted by**: ${sortBy} (${sortOrder})\n`;
+          if (data.hasMore && data.lastSortTuple) {
+            const nextCursor = encodeFilterTasksCursor(options, {
+              sortBy,
+              sortOrder,
+              lastValue: data.lastSortTuple.value ?? null,
+              lastId: data.lastSortTuple.id,
+            });
+            output += `Next cursor: ${nextCursor}\n`;
+          }
         }
       } else {
         output += 'No task data available\n';

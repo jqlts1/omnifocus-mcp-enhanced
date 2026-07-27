@@ -197,6 +197,10 @@ if ! grep -q -- "--output-mode" <<<"$FILTER_HELP"; then
   fail "The generated filter-tasks command is missing the v1.16 compact output flag. Refresh the package and retry."
 fi
 ok "Compact output flag present on filter-tasks"
+if ! grep -q -- "--cursor" <<<"$FILTER_HELP"; then
+  fail "The generated filter-tasks command is missing the v1.17 cursor flag. Refresh the package and retry."
+fi
+ok "Pagination cursor flag present on filter-tasks"
 
 # Confirm the CLI can actually reach OmniFocus, but do not hard-fail: the user
 # may simply not have OmniFocus running right now.

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { formatCompactTaskTreeNode } from './filterTasks.js';
+import { readFile } from 'node:fs/promises';
 import { formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
 
 const task: TaskTreeNode = {
@@ -54,4 +55,9 @@ test('detailed output remains available with notes and tags', () => {
   const output = formatTaskTreeNode(task, '', { showSubtasks: false });
   assert.match(output, /Sensitive planning note/);
   assert.match(output, /private-tag/);
+});
+
+test('default no-cursor output adds page metadata only when another page exists', async () => {
+  const source = await readFile(new URL('./filterTasks.js', import.meta.url), 'utf8');
+  assert.match(source, /if \(options\.cursor \|\| data\.hasMore\)/);
 });

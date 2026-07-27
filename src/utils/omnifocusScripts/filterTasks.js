@@ -231,13 +231,13 @@
     }
 
     const filteredTasks = flattenedTasks.filter(matches);
-    const byStatus = {};
-    filteredTasks.forEach((task) => {
-      const status = getTaskStatus(task.taskStatus);
-      byStatus[status] = (byStatus[status] || 0) + 1;
-    });
 
     if (args.countOnly) {
+      const byStatus = {};
+      filteredTasks.forEach((task) => {
+        const status = getTaskStatus(task.taskStatus);
+        byStatus[status] = (byStatus[status] || 0) + 1;
+      });
       return JSON.stringify({
         success: true,
         exportDate: now.toISOString(),
@@ -250,6 +250,18 @@
     const sortOrder = args.sortOrder === "desc" ? "desc" : "asc";
     const direction = sortOrder === "desc" ? -1 : 1;
 
+    function normalizeSortValue(task) {
+      if (sortBy === "dueDate") return formatDate(task.dueDate);
+      if (sortBy === "deferDate") return formatDate(task.deferDate);
+      if (sortBy === "plannedDate") return formatDate(task.plannedDate);
+      if (sortBy === "completedDate") return formatDate(task.completionDate);
+      if (sortBy === "flagged") return task.flagged ? 1 : 0;
+      if (sortBy === "project") {
+        return task.containingProject ? String(task.containingProject.name || "").toLowerCase() : null;
+      }
+      return String(task.name || "").toLowerCase();
+    }
+
     function compareNullable(a, b) {
       if (a === b) return 0;
       if (a === null || a === undefined || a === "") return 1;
@@ -259,29 +271,84 @@
       return 0;
     }
 
-    filteredTasks.sort((a, b) => {
-      if (sortBy === "dueDate") return compareNullable(a.dueDate, b.dueDate);
-      if (sortBy === "deferDate") return compareNullable(a.deferDate, b.deferDate);
-      if (sortBy === "plannedDate") return compareNullable(a.plannedDate, b.plannedDate);
-      if (sortBy === "completedDate") return compareNullable(a.completionDate, b.completionDate);
-      if (sortBy === "flagged") return compareNullable(a.flagged ? 1 : 0, b.flagged ? 1 : 0);
-      if (sortBy === "project") {
-        const projectA = a.containingProject ? String(a.containingProject.name || "").toLowerCase() : "";
-        const projectB = b.containingProject ? String(b.containingProject.name || "").toLowerCase() : "";
-        return compareNullable(projectA, projectB);
+    function compareTuple(valueA, idA, valueB, idB) {
+      const primary = compareNullable(valueA, valueB);
+      if (primary !== 0) return primary;
+      if (idA < idB) return -1 * direction;
+      if (idA > idB) return 1 * direction;
+      return 0;
+    }
+
+    function compareTasks(a, b) {
+      return compareTuple(
+        normalizeSortValue(a),
+        String(a.id.primaryKey),
+        normalizeSortValue(b),
+        String(b.id.primaryKey),
+      );
+    }
+
+    const continuation = args.continuation;
+    if (continuation && (continuation.sortBy !== sortBy || continuation.sortOrder !== sortOrder)) {
+      throw new Error("Cursor sort metadata does not match the request");
+    }
+    if (continuation) {
+      const validValue = continuation.lastValue === null ||
+        (sortBy === "flagged"
+          ? (continuation.lastValue === 0 || continuation.lastValue === 1)
+          : typeof continuation.lastValue === "string");
+      if (!validValue || typeof continuation.lastId !== "string" || continuation.lastId.length === 0) {
+        throw new Error("Cursor continuation value is invalid");
       }
-      return compareNullable(String(a.name || "").toLowerCase(), String(b.name || "").toLowerCase());
-    });
+    }
+
+    function parentTaskId(task) {
+      try {
+        return task.parent ? String(task.parent.id.primaryKey) : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    const filteredIds = {};
+    filteredTasks.forEach((task) => { filteredIds[String(task.id.primaryKey)] = true; });
+    const tasksById = {};
+    flattenedTasks.forEach((task) => { tasksById[String(task.id.primaryKey)] = task; });
+    const paginatedTasks = args.showSubtasks === true
+      ? filteredTasks.filter((task) => {
+          let parentId = parentTaskId(task);
+          const visited = {};
+          while (parentId && !visited[parentId]) {
+            visited[parentId] = true;
+            if (filteredIds[parentId]) return false;
+            const parentTask = tasksById[parentId];
+            parentId = parentTask ? parentTaskId(parentTask) : null;
+          }
+          return true;
+        })
+      : filteredTasks;
+    const remainingTasks = continuation
+      ? paginatedTasks.filter((task) => compareTuple(
+          normalizeSortValue(task),
+          String(task.id.primaryKey),
+          continuation.lastValue,
+          continuation.lastId,
+        ) > 0)
+      : paginatedTasks.slice();
+    remainingTasks.sort(compareTasks);
 
     const requestedLimit = Number(args.limit);
     const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 100;
-    const limitedTasks = filteredTasks.slice(0, limit);
+    const pageWithLookahead = remainingTasks.slice(0, limit + 1);
+    const hasMore = pageWithLookahead.length > limit;
+    const limitedTasks = pageWithLookahead.slice(0, limit);
 
     const tasks = limitedTasks.map((task) => {
       const serialized = omnifocusMcpSerializeTask(task, args, true);
       serialized.completedDate = formatDate(task.completionDate);
       return serialized;
     });
+    const lastTask = limitedTasks.length > 0 ? limitedTasks[limitedTasks.length - 1] : null;
 
     return JSON.stringify({
       success: true,
@@ -290,7 +357,11 @@
       totalCount: flattenedTasks.length,
       filteredCount: filteredTasks.length,
       returnedCount: tasks.length,
-      byStatus,
+      hasMore,
+      lastSortTuple: lastTask ? {
+        value: normalizeSortValue(lastTask),
+        id: String(lastTask.id.primaryKey),
+      } : null,
       sortedBy: sortBy,
       sortOrder,
     });

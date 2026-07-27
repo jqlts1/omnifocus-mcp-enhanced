@@ -45,3 +45,23 @@ test('task tree serializer enforces maxSubtaskDepth', () => {
   assert.equal(result.children[0].childrenTruncated, true);
   assert.equal(result.children[0].childrenCount, 1);
 });
+
+test('task tree serializer omits notes and tags throughout compact trees', () => {
+  const serialize = loadSerializer();
+  const child = task('child');
+  child.note = 'child secret';
+  child.tags = [{ id: { primaryKey: 'tag-child' }, name: 'private' }];
+  const parent = task('parent', STATUS.Available, [child]);
+  parent.note = 'parent secret';
+  parent.tags = [{ id: { primaryKey: 'tag-parent' }, name: 'private' }];
+
+  const compact = serialize(parent, { showSubtasks: true, outputMode: 'compact' }, true);
+  assert.equal('note' in compact, false);
+  assert.equal('tags' in compact, false);
+  assert.equal('note' in compact.children[0], false);
+  assert.equal('tags' in compact.children[0], false);
+
+  const detailed = serialize(parent, { showSubtasks: true }, true);
+  assert.equal(detailed.note, 'parent secret');
+  assert.equal(detailed.tags[0].name, 'private');
+});

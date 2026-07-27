@@ -95,6 +95,11 @@ test('filter_tasks schema supports only detailed or compact output', () => {
   assert.throws(() => filterTasksSchema.parse({ outputMode: 'custom' }));
 });
 
+test('filter_tasks schema accepts a bounded opaque cursor', () => {
+  assert.equal(filterTasksSchema.parse({ cursor: 'abc' }).cursor, 'abc');
+  assert.throws(() => filterTasksSchema.parse({ cursor: 'a'.repeat(2049) }));
+});
+
 test('add_omnifocus_task schema preserves exclusiveTags', () => {
   const parsed = addTaskSchema.parse({
     name: 'Task with exclusive tags',

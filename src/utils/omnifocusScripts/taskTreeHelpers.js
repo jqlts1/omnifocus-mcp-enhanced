@@ -40,7 +40,6 @@ function omnifocusMcpSerializeTaskNode(task, options, depth, state) {
   const node = {
     id: task.id.primaryKey,
     name: task.name,
-    note: task.note || "",
     taskStatus: omnifocusMcpTaskStatus(task.taskStatus),
     flagged: !!task.flagged,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
@@ -51,14 +50,17 @@ function omnifocusMcpSerializeTaskNode(task, options, depth, state) {
     projectName: task.containingProject ? task.containingProject.name : null,
     parentId: task.parent ? task.parent.id.primaryKey : null,
     inInbox: !!task.inInbox,
-    tags: (task.tags || []).map((tag) => ({
-      id: tag.id.primaryKey,
-      name: tag.name,
-    })),
     childrenCount: visibleChildren.length,
     children: [],
     childrenTruncated: false,
   };
+  if (!options.compact) {
+    node.note = task.note || "";
+    node.tags = (task.tags || []).map((tag) => ({
+      id: tag.id.primaryKey,
+      name: tag.name,
+    }));
+  }
 
   if (canExpand) {
     for (let index = 0; index < visibleChildren.length; index += 1) {
@@ -95,6 +97,7 @@ function omnifocusMcpSerializeTask(task, args, hideCompleted) {
       hideCompleted: hideCompleted !== false,
       showSubtasks: args.showSubtasks === true,
       maxSubtaskDepth,
+      compact: args.outputMode === "compact",
       // A hard safety cap prevents accidental multi-thousand-node MCP responses.
       maxSubtaskNodes: 500,
     },

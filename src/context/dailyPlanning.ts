@@ -22,14 +22,15 @@ interface DailyPlanningDependencies {
 }
 
 const sourceFilters: Record<DailyPlanningSource, FilterTasksOptions> = {
-  overdue: { overdue: true, sortBy: 'dueDate', sortOrder: 'asc' },
-  dueToday: { dueToday: true, sortBy: 'dueDate', sortOrder: 'asc' },
-  plannedToday: { plannedToday: true, sortBy: 'plannedDate', sortOrder: 'asc' },
+  overdue: { overdue: true, sortBy: 'dueDate', sortOrder: 'asc', outputMode: 'compact' },
+  dueToday: { dueToday: true, sortBy: 'dueDate', sortOrder: 'asc', outputMode: 'compact' },
+  plannedToday: { plannedToday: true, sortBy: 'plannedDate', sortOrder: 'asc', outputMode: 'compact' },
   flagged: {
     flagged: true,
     taskStatus: ['Available', 'Next', 'DueSoon', 'Overdue', 'Blocked'],
     sortBy: 'dueDate',
     sortOrder: 'asc',
+    outputMode: 'compact',
   },
 };
 

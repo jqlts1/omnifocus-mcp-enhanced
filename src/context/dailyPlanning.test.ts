@@ -30,11 +30,11 @@ test('daily planning sorts bounded source reads by their risk date', async () =>
     },
   });
 
-  assert.deepEqual(options.map(option => [option.sortBy, option.sortOrder]), [
-    ['dueDate', 'asc'],
-    ['dueDate', 'asc'],
-    ['plannedDate', 'asc'],
-    ['dueDate', 'asc'],
+  assert.deepEqual(options.map(option => [option.sortBy, option.sortOrder, option.outputMode]), [
+    ['dueDate', 'asc', 'compact'],
+    ['dueDate', 'asc', 'compact'],
+    ['plannedDate', 'asc', 'compact'],
+    ['dueDate', 'asc', 'compact'],
   ]);
 });
 

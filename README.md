@@ -44,6 +44,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.17.0** - Filter pagination and query efficiency: `filter_tasks` now returns stateless opaque keyset cursors for real-time best-effort traversal, with stable ID tie-breaking and strict query/sort validation. Compact reads omit notes and tags inside OmniJS, normal list reads skip unused status aggregation, and later pages use cursor boundaries plus one-item lookahead. The privacy-safe benchmark now records first- and second-page metrics. The surface remains 39 tools, 4 prompts, and 3 resources.
+
 - **v1.16.0** - Daily Planning Assistant: `daily_review` now uses exact count-first discovery and bounded, deduplicated candidates to produce three priorities plus next actions, blockers, and capacity/deadline risks. Its optional `availableMinutes` input compares only known estimates and preserves missing estimates as uncertainty. `filter_tasks` adds opt-in `compact` output for broad planning reads without notes or full tags, and a privacy-safe local benchmark provides numeric regression evidence. The surface remains 39 tools, 4 prompts, and 3 resources.
 
 - **v1.15.0** - Weekly Review completion: added the narrow `mark_projects_reviewed` tool for marking a user-confirmed set of active or on-hold projects reviewed. The server validates every project and its review metadata before writing, uses one timestamp for the complete batch, restores prior review dates after execution or verification failures, and verifies `lastReviewDate`, the OmniFocus-generated `nextReviewDate`, and the unchanged review interval. The Weekly Review Prompt and Skill now guide discovery, discussion, confirmation, marking, and remaining-review reporting. Now 39 tools, 4 prompts, and 3 resources.
@@ -345,6 +347,20 @@ filter_tasks {
 ```
 
 `daily_review` is the one-step daily-planning Prompt. Optionally provide `availableMinutes`; when omitted, it does not assume an eight-hour day. It starts with exact counts, reads bounded candidates, selects exactly three priorities when possible, and returns `今日重点`, `可执行下一步`, `阻塞项`, and `容量/截止风险`. Any proposed OmniFocus changes are grouped into one confirmation request.
+
+When a filtered result has more tasks, `filter_tasks` returns an opaque next cursor. Pass it back with the same filters and sorting:
+
+```json
+{
+  "flagged": true,
+  "limit": 30,
+  "sortBy": "dueDate",
+  "outputMode": "compact",
+  "cursor": "<next cursor>"
+}
+```
+
+Changing filters or sorting invalidates the cursor. `limit`, `outputMode`, and task-tree rendering may change between pages. Each page reads current OmniFocus state, so pagination is real-time best effort rather than a snapshot.
 
 ### 4. 🌟 **NEW: Native Custom Perspective Access**
 

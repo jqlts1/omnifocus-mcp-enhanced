@@ -12,7 +12,8 @@ npm run benchmark:smoke
 The command builds the project and measures:
 
 - overdue and flagged counts;
-- compact planned-today filtering;
+- compact first-page and next-page filtering;
+- detailed first-page filtering;
 - Inbox;
 - seven-day Forecast;
 - Inbox task-tree expansion to depth two.
@@ -21,7 +22,8 @@ Output contains numeric summaries only:
 
 - success state;
 - elapsed milliseconds;
-- result count;
+- full match count and returned page count;
+- whether another page exists;
 - UTF-8 response bytes.
 
 It does not print or persist task names, IDs, notes, tags, dates, or other

@@ -40,6 +40,8 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.17.0** - 筛选分页与查询效率：`filter_tasks` 现在使用无状态、不透明的 Keyset Cursor 提供实时最佳努力分页，以稳定任务 ID 处理相同排序值，并严格校验筛选和排序是否变化。Compact 查询会在 OmniJS 内省略备注和标签，普通列表查询不再计算无用的状态聚合，后续页使用游标边界及一个任务的前瞻判断。隐私安全 benchmark 也新增第一页和第二页指标。工具面保持 39 个工具、4 个 Prompts 和 3 个 Resources。
+
 - **v1.16.0** - 每日规划助手：`daily_review` 现在会先进行精确统计，再有界读取并按 ID 合并候选任务，输出三个今日重点、可执行下一步、阻塞项及容量/截止风险。可选的 `availableMinutes` 只与已知估时比较，缺失估时会保留为不确定性。`filter_tasks` 新增可选的 `compact` 输出，适合不读取备注和完整标签的广泛规划查询；同时新增仅输出数字指标的隐私安全本地 benchmark。工具面保持 39 个工具、4 个 Prompts 和 3 个 Resources。
 
 - **v1.15.0** - 每周回顾闭环：新增保持简单的 `mark_projects_reviewed`，用于把用户已确认的一组 Active 或 OnHold 项目标记为已回顾。服务端会先验证所有项目及回顾元数据，整批使用同一时间戳；执行或验证失败时恢复原回顾日期，并验证 `lastReviewDate`、OmniFocus 生成的 `nextReviewDate` 和未被改变的回顾周期。Weekly Review Prompt 和 Skill 已同步“发现、讨论、确认、标记、汇报剩余项目”的完整流程。当前共 39 个工具、4 个 Prompts 和 3 个 Resources。
@@ -323,6 +325,20 @@ filter_tasks {
 ```
 
 `daily_review` 是一句话每日规划入口，可选传入 `availableMinutes`；不传时不会假设一天有八小时。它会先精确统计，再有界读取候选任务，在条件允许时自动选择三个重点，并固定输出 `今日重点`、`可执行下一步`、`阻塞项` 和 `容量/截止风险`。所有 OmniFocus 调整建议会合并成一次确认请求。
+
+当筛选结果还有更多任务时，`filter_tasks` 会返回不透明的下一页游标。使用相同筛选和排序参数原样传回：
+
+```json
+{
+  "flagged": true,
+  "limit": 30,
+  "sortBy": "dueDate",
+  "outputMode": "compact",
+  "cursor": "<下一页游标>"
+}
+```
+
+修改筛选或排序会使游标失效；翻页时可以修改 `limit`、`outputMode` 和任务树展示参数。每页都会读取 OmniFocus 当前状态，因此这是实时最佳努力分页，而不是固定快照。
 
 ### 4. 🌟 **新功能：原生自定义透视访问**
 

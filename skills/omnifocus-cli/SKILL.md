@@ -123,6 +123,20 @@ If the user gives available minutes, compare only known estimates against that
 capacity and list missing estimates as uncertainty. Never assume missing
 estimates are zero or assume an eight-hour day.
 
+## Paginating Filtered Tasks
+
+`filter-tasks` returns an opaque next cursor when more matches exist. Pass it
+back unchanged with the same filters and sorting:
+
+```bash
+bin/omnifocus-enhanced.cjs filter-tasks --flagged true --limit 20 --sort-by dueDate --output-mode compact
+bin/omnifocus-enhanced.cjs filter-tasks --flagged true --limit 20 --sort-by dueDate --output-mode compact --cursor '<next cursor>'
+```
+
+Changing filters or sorting invalidates the cursor. Page size, output mode, and
+task-tree rendering may change between pages. Pagination reads current
+OmniFocus state on every page, so it is best-effort rather than a snapshot.
+
 ## Creating and Editing Tasks
 
 ```bash

@@ -26,11 +26,12 @@ interface TaskOverrides {
   inInbox?: boolean;
   projectName?: string | null;
   tags?: string[];
+  children?: any[];
 }
 
 function task(id: string, overrides: TaskOverrides = {}) {
   const projectName = overrides.projectName === undefined ? 'Alpha' : overrides.projectName;
-  return {
+  const value: any = {
     id: { primaryKey: id },
     name: overrides.name || id,
     note: overrides.note || '',
@@ -49,8 +50,10 @@ function task(id: string, overrides: TaskOverrides = {}) {
       id: { primaryKey: `tag-${index}-${name}` },
       name,
     })),
-    children: [],
+    children: overrides.children || [],
   };
+  value.children.forEach((child: any) => { child.parent = value; });
+  return value;
 }
 
 function runFilter(tasks: any[], args: Record<string, unknown>, now = new Date()): any {
@@ -235,7 +238,107 @@ test('filterTasks OmniJS sorts before applying limit and reports full filtered c
 
   assert.equal(result.filteredCount, 3);
   assert.equal(result.returnedCount, 2);
+  assert.equal(result.hasMore, true);
   assert.deepEqual(result.tasks.map((item: any) => item.name), ['Alpha', 'Bravo']);
+});
+
+test('filterTasks OmniJS traverses stable keyset pages without duplicates', () => {
+  const tasks = [
+    task('c', { name: 'Same' }),
+    task('a', { name: 'Same' }),
+    task('b', { name: 'Same' }),
+    task('d', { name: 'Zulu' }),
+  ];
+  const first = runFilter(tasks, { sortBy: 'name', sortOrder: 'asc', limit: 2 }, NOW);
+  const second = runFilter(tasks, {
+    sortBy: 'name',
+    sortOrder: 'asc',
+    limit: 2,
+    continuation: {
+      sortBy: 'name',
+      sortOrder: 'asc',
+      lastValue: first.lastSortTuple.value,
+      lastId: first.lastSortTuple.id,
+    },
+  }, NOW);
+
+  assert.deepEqual(first.tasks.map((item: any) => item.id), ['a', 'b']);
+  assert.deepEqual(second.tasks.map((item: any) => item.id), ['c', 'd']);
+  assert.equal(first.hasMore, true);
+  assert.equal(second.hasMore, false);
+  assert.equal(second.filteredCount, 4);
+});
+
+test('filterTasks OmniJS supports all stable sort fields', () => {
+  const fields = ['deferDate', 'plannedDate', 'completedDate', 'flagged', 'project'];
+  const tasks = [
+    task('b', {
+      deferDate: local(2026, 7, 30), plannedDate: local(2026, 7, 30),
+      completionDate: local(2026, 7, 30), flagged: true, projectName: 'Zulu',
+    }),
+    task('a', {
+      deferDate: local(2026, 7, 29), plannedDate: local(2026, 7, 29),
+      completionDate: local(2026, 7, 29), flagged: false, projectName: 'Alpha',
+    }),
+  ];
+  fields.forEach(sortBy => {
+    const result = runFilter(tasks, {
+      sortBy, sortOrder: 'asc', taskStatus: sortBy === 'completedDate' ? ['Available'] : undefined,
+    }, NOW);
+    assert.deepEqual(result.tasks.map((item: any) => item.id), ['a', 'b'], sortBy);
+  });
+});
+
+test('filterTasks OmniJS applies best-effort boundaries to changed live data', () => {
+  const original = [
+    task('a', { name: 'Alpha' }), task('b', { name: 'Bravo' }), task('c', { name: 'Charlie' }),
+  ];
+  const first = runFilter(original, { sortBy: 'name', limit: 2 }, NOW);
+  const continuation = {
+    sortBy: 'name', sortOrder: 'asc',
+    lastValue: first.lastSortTuple.value, lastId: first.lastSortTuple.id,
+  };
+  const changed = [
+    task('new-before', { name: 'Aardvark' }),
+    task('c', { name: 'Charlie' }),
+    task('new-after', { name: 'Delta' }),
+  ];
+  const second = runFilter(changed, { sortBy: 'name', limit: 10, continuation }, NOW);
+  assert.deepEqual(second.tasks.map((item: any) => item.id), ['c', 'new-after']);
+});
+
+test('filterTasks OmniJS paginates null-last values in both directions', () => {
+  const tasks = [
+    task('none-b'), task('dated', { dueDate: local(2026, 7, 29) }), task('none-a'),
+  ];
+  const first = runFilter(tasks, { sortBy: 'dueDate', sortOrder: 'desc', limit: 2 }, NOW);
+  const second = runFilter(tasks, {
+    sortBy: 'dueDate', sortOrder: 'desc', limit: 2,
+    continuation: { sortBy: 'dueDate', sortOrder: 'desc', ...first.lastSortTuple, lastValue: first.lastSortTuple.value, lastId: first.lastSortTuple.id },
+  }, NOW);
+  assert.deepEqual(first.tasks.map((item: any) => item.id), ['dated', 'none-b']);
+  assert.deepEqual(second.tasks.map((item: any) => item.id), ['none-a']);
+});
+
+test('filterTasks OmniJS compact serialization omits notes and tags', () => {
+  const result = runFilter([
+    task('private', { note: 'secret', tags: ['private'] }),
+  ], { outputMode: 'compact' }, NOW);
+  assert.equal('note' in result.tasks[0], false);
+  assert.equal('tags' in result.tasks[0], false);
+});
+
+test('filterTasks OmniJS keeps top-level page slots independent of expanded descendants', () => {
+  const child = task('child', { name: 'Child' });
+  const first = task('first', { name: 'Alpha', children: [child] });
+  const second = task('second', { name: 'Bravo' });
+  const result = runFilter([first, child, second], {
+    sortBy: 'name', limit: 1, showSubtasks: true, maxSubtaskDepth: 2,
+  }, NOW);
+  assert.equal(result.returnedCount, 1);
+  assert.equal(result.hasMore, true);
+  assert.equal(result.lastSortTuple.id, 'first');
+  assert.deepEqual(Array.from(result.tasks[0].children, (item: any) => item.id), ['child']);
 });
 
 test('filterTasks countOnly uses the identical predicate and returns status aggregates', () => {
@@ -252,6 +355,7 @@ test('filterTasks countOnly uses the identical predicate and returns status aggr
   assert.equal(counted.total, listed.filteredCount);
   assert.deepEqual(counted.byStatus, { Available: 1, Blocked: 1 });
   assert.equal(counted.tasks, undefined);
+  assert.equal(listed.byStatus, undefined);
 });
 
 test('filterTasks local date-only parsing remains stable across DST boundaries', () => {
