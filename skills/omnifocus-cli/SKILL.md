@@ -1,6 +1,6 @@
 ---
 name: omnifocus-cli
-description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 37 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
+description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 38 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
 ---
 
 # OmniFocus CLI
@@ -8,7 +8,7 @@ description: Use a generated local CLI for OmniFocus MCP operations (tasks, proj
 ## Overview
 
 Use the local bundled CLI instead of direct MCP tool-calling for OmniFocus requests.
-The MCP server exposes 37 tools; loading all their schemas into chat is expensive.
+The MCP server exposes 38 tools; loading all their schemas into chat is expensive.
 This CLI gives you the same capabilities as deterministic shell commands.
 
 CLI location: `bin/omnifocus-enhanced.cjs` (relative to this skill directory).
@@ -62,6 +62,22 @@ bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>" --show-subtasks true
 bin/omnifocus-enhanced.cjs get-today-completed-tasks
 ```
 
+## Inbox Organization
+
+When the user asks to clean up Inbox:
+
+1. Read Inbox and inspect parent tasks before treating them as leaf actions.
+2. Resolve destination projects or parent tasks to stable IDs.
+3. Present one compact proposal grouped by destination.
+4. Ask for explicit confirmation of that proposal.
+5. Call `batch-move-tasks` once. Do not add tag/date/name edits to this batch.
+6. Report verified moves and read Inbox again to show what remains.
+
+`batch-move-tasks` is intentionally simple: no preview, verification, or
+partial-success flags are needed. Proposal review happens before the call; the
+server always preflights the complete batch, executes atomically, and verifies
+the result.
+
 ## Filtering and Counting
 
 `filter-tasks` is the most powerful read tool. `count-tasks` takes the same
@@ -97,6 +113,15 @@ bin/omnifocus-enhanced.cjs edit-item --item-type task --id "<id>" --new-status c
 bin/omnifocus-enhanced.cjs move-task --id "<id>" --target-project-name "Planning"
 bin/omnifocus-enhanced.cjs move-task --id "<id>" --target-parent-task-id "<parent-id>"
 bin/omnifocus-enhanced.cjs move-task --id "<id>" --target-inbox true
+
+# Move a user-confirmed Inbox organization plan atomically. Use stable IDs.
+# The server validates the complete batch and verifies every destination.
+bin/omnifocus-enhanced.cjs batch-move-tasks --raw '{
+  "moves": [
+    { "taskId": "<task-1>", "projectId": "<project-1>" },
+    { "taskId": "<task-2>", "parentTaskId": "<parent-task>" }
+  ]
+}'
 
 # Duplicate (template workflows; subtasks included by default)
 bin/omnifocus-enhanced.cjs duplicate-task --task-name "Weekly Checklist" --new-name "Week 12"
@@ -218,5 +243,5 @@ CLI, verifies all 37 commands, and checks the live OmniFocus connection. To
 inspect the generated command count manually:
 
 ```bash
-bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 40 (37 tools + built-ins)
+bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 41 (38 tools + built-ins)
 ```

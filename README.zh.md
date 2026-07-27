@@ -40,6 +40,7 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.14.0** - 安全整理 Inbox：新增保持简单的 `batch_move_tasks`，只使用稳定任务 ID 和目标 ID 执行用户已确认的移动方案。服务端会在修改前预检完整批次，阻止无效目标和层级循环；执行失败时回滚已经完成的移动，并验证每个任务的最终位置。`inbox_processing` Prompt 和内置 Skill 已同步“读取、建议、确认、执行、汇报”流程。当前共 38 个工具、4 个 Prompts 和 3 个 Resources。
 - **v1.13.1** - 维护版本：MCP Server 元数据改为从 `package.json` 读取版本，避免 MCP 握手、CLI、NPM 包和 GitHub Release 的版本再次漂移；同时完成已发布 Skill 的端到端安装验证，确认 37 个命令、六个任务树命令的两项参数以及真实 OmniFocus 连接均正常。
 - **v1.13.0** - 读取工具支持任务树：`get_inbox_tasks`、`get_flagged_tasks`、`get_forecast_tasks`、`get_tasks_by_tag`、`filter_tasks` 和 `get_task_by_id` 默认显示可见直属子任务数量，并可通过 `showSubtasks`、`maxSubtaskDepth` 按需递归展开。展开列表会避免把已经显示在树内的后代再次作为顶层任务重复显示，子任务继承完成状态可见性规则，并通过 500 节点安全上限和明确截断提示避免响应失控。内置 `omnifocus-cli` Skill 已同步新工作流，安装时也会验证生成 CLI 包含两个任务树参数。
 - **v1.12.0** - 可靠性版本：重写 `filter_tasks` / `count_tasks` 的统一过滤引擎，截止/推迟/计划/完成日期、估时、备注、标签、Inbox、项目和组合过滤现在都会真正生效；`count_tasks` 改为低开销聚合模式；新增 `get_projects` 和 `get_projects_due_for_review`，可读取 OmniFocus 原生回顾日期和周期；MCP SDK 升级至 1.29.0，并清空生产依赖安全告警；Claude Skill 更新到 37 个工具，生成文件改为 `.cjs`，可安全安装在 ESM 项目中。
@@ -500,10 +501,11 @@ read_task_attachment {
 4. **remove_item** - 删除任务或项目
 5. **edit_item** - 编辑任务或项目（现已支持任务转移：项目/父任务/Inbox）
 6. **move_task** - 将已有任务转移到项目/父任务/Inbox
-7. **batch_add_items** - 批量添加（增强子任务支持）
-8. **batch_remove_items** - 批量删除
-9. **get_task_by_id** - 查询任务信息，并返回附件元信息
-10. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
+7. **batch_move_tasks** - 原子执行并验证用户已确认的任务整理方案
+8. **batch_add_items** - 批量添加（增强子任务支持）
+9. **batch_remove_items** - 批量删除
+10. **get_task_by_id** - 查询任务信息，并返回附件元信息
+11. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
 
 ### 🔍 内置透视工具
 11. **get_inbox_tasks** - 收件箱透视
@@ -547,7 +549,7 @@ read_task_attachment {
 ### 📊 分析与跟踪
 36. **get_today_completed_tasks** - 查看今日完成的任务
 
-批量转移功能后续计划（Roadmap）：[docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.zh.md)
+接下来的 AI 任务助手计划：[docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md](docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md)
 
 ## 🚀 快速开始示例
 
@@ -600,7 +602,17 @@ move_task {
   "id": "task-id-123",
   "targetInbox": true
 }
+
+# 用户确认整理方案后，一次原子执行整批移动
+batch_move_tasks {
+  "moves": [
+    { "taskId": "task-1", "projectId": "project-1" },
+    { "taskId": "task-2", "parentTaskId": "parent-task-1" }
+  ]
+}
 ```
+
+`batch_move_tasks` 只接受稳定 ID，会在修改前验证完整方案、拒绝循环移动和无效目标，并在执行后验证每个任务的最终位置。预检失败时不会移动任何任务；只有用户确认已经展示的整理方案后才应调用。
 
 ### 智能任务发现
 ```bash

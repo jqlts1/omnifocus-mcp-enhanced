@@ -44,6 +44,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.14.0** - Safe Inbox organization: added the intentionally narrow `batch_move_tasks` tool for executing a user-confirmed move proposal using stable task and destination IDs. The server preflights the complete batch before changing anything, blocks invalid destinations and hierarchy cycles, rolls back completed moves after execution failures, and verifies every final destination. The `inbox_processing` Prompt and bundled Skill now guide AI clients through read, propose, confirm, execute, and report. Now 38 tools, 4 prompts, and 3 resources.
 - **v1.13.1** - Maintenance release: MCP server metadata now reads its version from `package.json`, preventing the MCP handshake, CLI, NPM package, and GitHub release versions from drifting apart. The published Skill installation was also verified end to end with all 37 commands, all six task-tree flag pairs, and a live OmniFocus connection.
 - **v1.13.0** - Task-tree-aware reads: `get_inbox_tasks`, `get_flagged_tasks`, `get_forecast_tasks`, `get_tasks_by_tag`, `filter_tasks`, and `get_task_by_id` now show visible direct subtask counts by default and support on-demand recursive expansion with `showSubtasks` and `maxSubtaskDepth`. Expanded lists suppress duplicate top-level descendants, inherit completion visibility rules, and enforce a 500-node safety cap with explicit truncation output. The bundled `omnifocus-cli` Skill documents the new workflow and verifies both generated CLI flags during installation.
 - **v1.12.0** - Reliability release: rebuilt `filter_tasks` and `count_tasks` on one complete OmniJS predicate (due/defer/planned/completion dates, estimates, notes, tags, inbox, project, status, and combined filters now actually work); added low-overhead `countOnly` aggregation; added `get_projects` and `get_projects_due_for_review` with native OmniFocus review metadata; upgraded the MCP SDK to 1.29.0 and cleared all production audit findings; updated the Claude skill to 37 tools and changed its generated bundle to `.cjs` so project-local installs work inside ESM repositories.
@@ -78,7 +79,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **🔔 Task Notifications** - List, add, and remove reminders (absolute time or relative to due date)
 - **💬 MCP Prompts** - 4 guided review workflows (daily, weekly, inbox processing, project planning)
 - **📡 MCP Resources** - 3 live JSON snapshots (inbox, today, active projects)
-- **🛠️ Agent Skill** - One-command install of a local CLI covering all 37 tools, to keep AI context usage low
+- **🛠️ Agent Skill** - One-command install of a local CLI covering all 38 tools, to keep AI context usage low
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -522,17 +523,18 @@ read_task_attachment {
 4. **remove_item** - Delete tasks or projects
 5. **edit_item** - Edit tasks or projects (now supports task moves: project/parent/inbox)
 6. **move_task** - Move an existing task to project/parent task/inbox
-7. **batch_add_items** - Bulk add (enhanced with subtask support)
-8. **batch_remove_items** - Bulk remove
-9. **get_task_by_id** - Query task information, including attachment metadata
-10. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
+7. **batch_move_tasks** - Atomically execute and verify a confirmed task organization plan
+8. **batch_add_items** - Bulk add (enhanced with subtask support)
+9. **batch_remove_items** - Bulk remove
+10. **get_task_by_id** - Query task information, including attachment metadata
+11. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
 
 ### 🔍 Built-in Perspective Tools
-11. **get_inbox_tasks** - Inbox perspective
-12. **get_flagged_tasks** - Flagged perspective
-13. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
-14. **get_tasks_by_tag** - Tag-based filtering
-15. **filter_tasks** - Ultimate filtering with unlimited combinations
+12. **get_inbox_tasks** - Inbox perspective
+13. **get_flagged_tasks** - Flagged perspective
+14. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
+15. **get_tasks_by_tag** - Tag-based filtering
+16. **filter_tasks** - Ultimate filtering with unlimited combinations
 
 ### 🌟 Custom Perspective Tools (NEW)
 16. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
@@ -594,7 +596,7 @@ Live JSON snapshots your AI client can read without calling a tool.
 
 ## 🛠️ Agent Skill (NEW in v1.11.0)
 
-With 37 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
+With 38 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
 
 ### Install
 
@@ -626,7 +628,7 @@ That single command:
 1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter), pinned to the exact package version that shipped the installer
 2. Generates a standalone CLI from the server's live tool schemas (~20s)
 3. Installs `SKILL.md` + the CLI into the current project's `.claude/skills/omnifocus-cli/` (or `~/.claude/skills/omnifocus-cli/` with `--global`)
-4. Verifies all 37 tools are present and that OmniFocus is reachable
+4. Verifies all 38 tools are present and that OmniFocus is reachable
 
 Install elsewhere with `CLAUDE_SKILLS_DIR=/custom/path npx -y omnifocus-mcp-enhanced@latest install-skill` (`AGENT_SKILLS_DIR` remains available as a legacy alias).
 
@@ -709,12 +711,22 @@ move_task {
   "id": "task-id-123",
   "targetInbox": true
 }
+
+# Execute a user-confirmed organization plan as one atomic batch
+batch_move_tasks {
+  "moves": [
+    { "taskId": "task-1", "projectId": "project-1" },
+    { "taskId": "task-2", "parentTaskId": "parent-task-1" }
+  ]
+}
 ```
 
 Task move safety rules:
 - Name lookups fail fast on duplicates and ask you to use IDs.
 - Destination must be exactly one type: project OR parent task OR inbox.
 - Moving a task into itself/its descendants is blocked to prevent cycles.
+- `batch_move_tasks` accepts stable IDs only, validates the complete plan before changing anything, and verifies every final destination.
+- If batch preflight fails, no task is moved. Call it only after the user confirms the displayed organization proposal.
 
 You can also move with `edit_item` and combine move + field updates:
 ```bash

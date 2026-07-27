@@ -153,7 +153,7 @@ info "Verifying the generated CLI"
 
 REQUIRED_COMMANDS=(
   dump-database add-omnifocus-task add-project remove-item edit-item move-task
-  batch-add-items batch-remove-items get-task-by-id read-task-attachment
+  batch-move-tasks batch-add-items batch-remove-items get-task-by-id read-task-attachment
   get-today-completed-tasks set-repetition-rule get-inbox-tasks get-flagged-tasks
   get-forecast-tasks get-tasks-by-tag list-tags filter-tasks
   list-custom-perspectives get-custom-perspective-tasks

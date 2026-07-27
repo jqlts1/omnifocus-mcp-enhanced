@@ -107,7 +107,7 @@ ${JSON.stringify(availableTasks.map(slimTask))}
 
       const text = `run a gtd inbox processing session using the inbox data below.
 
-for each inbox item, guide a decision in this order:
+for each inbox item, prepare a safe organization proposal in this order:
 1) clarify the desired outcome and the very next action.
 2) decide whether to delete, defer, delegate, or keep it.
 3) if kept, assign the best target project (or keep in inbox if truly unassigned).
@@ -118,7 +118,16 @@ for each inbox item, guide a decision in this order:
 respond with:
 - a prioritized processing queue
 - concrete update recommendations per item
-- a short batch action plan for the first five items
+- a compact move proposal grouped by destination, showing task and destination ids
+- items that should remain in inbox or need clarification
+
+execution rules:
+- do not call batch_move_tasks until the user explicitly confirms the displayed proposal.
+- after confirmation, call batch_move_tasks once with stable ids. it automatically
+  validates the complete batch, executes atomically, and verifies every destination.
+- do not combine moving with deletion, tag changes, date changes, or renaming in
+  the same batch. handle those separately after the move result.
+- after execution, report verified moves and re-read inbox to show remaining items.
 
 ${ENGAGEMENT_PROTOCOL}
 

@@ -11,6 +11,7 @@ import * as addProjectTool from './tools/definitions/addProject.js';
 import * as removeItemTool from './tools/definitions/removeItem.js';
 import * as editItemTool from './tools/definitions/editItem.js';
 import * as moveTaskTool from './tools/definitions/moveTask.js';
+import * as batchMoveTasksTool from './tools/definitions/batchMoveTasks.js';
 import * as batchAddItemsTool from './tools/definitions/batchAddItems.js';
 import * as batchRemoveItemsTool from './tools/definitions/batchRemoveItems.js';
 import * as getTaskByIdTool from './tools/definitions/getTaskById.js';
@@ -101,6 +102,13 @@ server.tool(
   "Move an existing task to a project, parent task, or inbox",
   moveTaskTool.schema.shape,
   moveTaskTool.handler
+);
+
+server.tool(
+  "batch_move_tasks",
+  "Move a confirmed set of tasks to projects, parent tasks, or Inbox. The complete batch is validated before any change and every destination is verified afterward.",
+  batchMoveTasksTool.schema.shape,
+  batchMoveTasksTool.handler
 );
 
 server.tool(
