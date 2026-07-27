@@ -98,6 +98,31 @@ bin/omnifocus-enhanced.cjs count-tasks --project-filter "Website Redesign"
 bin/omnifocus-enhanced.cjs count-tasks --task-status Available,Next --due-this-week true
 ```
 
+## Daily Planning
+
+Use a count-first workflow so broad planning does not load large notes or task
+lists unnecessarily:
+
+1. Count overdue, due-today, planned-today, and flagged remaining work.
+2. Fetch bounded candidates with `filter-tasks --output-mode compact`.
+3. Deduplicate candidates by stable task ID.
+4. Select exactly three priorities when at least three eligible tasks exist.
+5. Output `今日重点`, `可执行下一步`, `阻塞项`, and `容量/截止风险`.
+6. Summarize proposed changes and ask once before applying them.
+
+```bash
+bin/omnifocus-enhanced.cjs count-tasks --overdue true
+bin/omnifocus-enhanced.cjs count-tasks --due-today true
+bin/omnifocus-enhanced.cjs count-tasks --planned-today true
+bin/omnifocus-enhanced.cjs count-tasks --flagged true
+bin/omnifocus-enhanced.cjs filter-tasks --due-today true --limit 30 --output-mode compact
+bin/omnifocus-enhanced.cjs filter-tasks --planned-today true --limit 30 --output-mode compact
+```
+
+If the user gives available minutes, compare only known estimates against that
+capacity and list missing estimates as uncertainty. Never assume missing
+estimates are zero or assume an eight-hour day.
+
 ## Creating and Editing Tasks
 
 ```bash

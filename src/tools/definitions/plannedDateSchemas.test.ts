@@ -89,6 +89,12 @@ test('filter_tasks schema supports planned date filters and sorting', () => {
   assert.equal(parsed.sortBy, 'plannedDate');
 });
 
+test('filter_tasks schema supports only detailed or compact output', () => {
+  assert.equal(filterTasksSchema.parse({ outputMode: 'compact' }).outputMode, 'compact');
+  assert.equal(filterTasksSchema.parse({ outputMode: 'detailed' }).outputMode, 'detailed');
+  assert.throws(() => filterTasksSchema.parse({ outputMode: 'custom' }));
+});
+
 test('add_omnifocus_task schema preserves exclusiveTags', () => {
   const parsed = addTaskSchema.parse({
     name: 'Task with exclusive tags',

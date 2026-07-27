@@ -49,6 +49,7 @@ function omnifocusMcpSerializeTaskNode(task, options, depth, state) {
     estimatedMinutes: task.estimatedMinutes,
     projectId: task.containingProject ? task.containingProject.id.primaryKey : null,
     projectName: task.containingProject ? task.containingProject.name : null,
+    parentId: task.parent ? task.parent.id.primaryKey : null,
     inInbox: !!task.inInbox,
     tags: (task.tags || []).map((tag) => ({
       id: tag.id.primaryKey,

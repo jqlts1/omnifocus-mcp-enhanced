@@ -192,6 +192,12 @@ for cmd in "${TASK_TREE_COMMANDS[@]}"; do
 done
 ok "Task-tree flags present on all ${#TASK_TREE_COMMANDS[@]} read commands"
 
+FILTER_HELP="$("$TARGET_DIR/bin/omnifocus-enhanced.cjs" filter-tasks --help 2>&1 || true)"
+if ! grep -q -- "--output-mode" <<<"$FILTER_HELP"; then
+  fail "The generated filter-tasks command is missing the v1.16 compact output flag. Refresh the package and retry."
+fi
+ok "Compact output flag present on filter-tasks"
+
 # Confirm the CLI can actually reach OmniFocus, but do not hard-fail: the user
 # may simply not have OmniFocus running right now.
 if "$TARGET_DIR/bin/omnifocus-enhanced.cjs" count-tasks --perspective inbox >/dev/null 2>&1; then

@@ -10,6 +10,7 @@ export interface TaskTreeNode {
   estimatedMinutes?: number | null;
   projectId?: string | null;
   projectName?: string | null;
+  parentId?: string | null;
   inInbox?: boolean;
   tags?: Array<{ id?: string; name: string }>;
   childrenCount?: number;

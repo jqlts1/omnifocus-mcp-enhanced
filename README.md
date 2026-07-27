@@ -44,6 +44,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.16.0** - Daily Planning Assistant: `daily_review` now uses exact count-first discovery and bounded, deduplicated candidates to produce three priorities plus next actions, blockers, and capacity/deadline risks. Its optional `availableMinutes` input compares only known estimates and preserves missing estimates as uncertainty. `filter_tasks` adds opt-in `compact` output for broad planning reads without notes or full tags, and a privacy-safe local benchmark provides numeric regression evidence. The surface remains 39 tools, 4 prompts, and 3 resources.
+
 - **v1.15.0** - Weekly Review completion: added the narrow `mark_projects_reviewed` tool for marking a user-confirmed set of active or on-hold projects reviewed. The server validates every project and its review metadata before writing, uses one timestamp for the complete batch, restores prior review dates after execution or verification failures, and verifies `lastReviewDate`, the OmniFocus-generated `nextReviewDate`, and the unchanged review interval. The Weekly Review Prompt and Skill now guide discovery, discussion, confirmation, marking, and remaining-review reporting. Now 39 tools, 4 prompts, and 3 resources.
 - **v1.14.0** - Safe Inbox organization: added the intentionally narrow `batch_move_tasks` tool for executing a user-confirmed move proposal using stable task and destination IDs. The server preflights the complete batch before changing anything, blocks invalid destinations and hierarchy cycles, rolls back completed moves after execution failures, and verifies every final destination. The `inbox_processing` Prompt and bundled Skill now guide AI clients through read, propose, confirm, execute, and report. Now 38 tools, 4 prompts, and 3 resources.
 - **v1.13.1** - Maintenance release: MCP server metadata now reads its version from `package.json`, preventing the MCP handshake, CLI, NPM package, and GitHub release versions from drifting apart. The published Skill installation was also verified end to end with all 37 commands, all six task-tree flag pairs, and a live OmniFocus connection.
@@ -333,7 +335,16 @@ filter_tasks {
   "showSubtasks": true,
   "maxSubtaskDepth": 2
 }
+
+# Compact broad discovery for planning (omits notes and full tags)
+filter_tasks {
+  "plannedToday": true,
+  "limit": 30,
+  "outputMode": "compact"
+}
 ```
+
+`daily_review` is the one-step daily-planning Prompt. Optionally provide `availableMinutes`; when omitted, it does not assume an eight-hour day. It starts with exact counts, reads bounded candidates, selects exactly three priorities when possible, and returns `今日重点`, `可执行下一步`, `阻塞项`, and `容量/截止风险`. Any proposed OmniFocus changes are grouped into one confirmation request.
 
 ### 4. 🌟 **NEW: Native Custom Perspective Access**
 

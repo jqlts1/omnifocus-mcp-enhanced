@@ -63,6 +63,7 @@ export interface FilterTasksOptions {
   sortOrder?: 'asc' | 'desc';
   showSubtasks?: boolean;
   maxSubtaskDepth?: number;
+  outputMode?: 'detailed' | 'compact';
 }
 
 export async function filterTasks(options: FilterTasksOptions = {}): Promise<string> {
@@ -145,7 +146,9 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
             }
 
             tasks.forEach((task: TaskTreeNode) => {
-              output += formatTaskTreeNode(task, '', { showSubtasks: options.showSubtasks });
+              output += options.outputMode === 'compact'
+                ? formatCompactTaskTreeNode(task, options.showSubtasks === true)
+                : formatTaskTreeNode(task, '', { showSubtasks: options.showSubtasks });
               output += '\n';
             });
 
@@ -169,6 +172,42 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
     console.error('Error in filterTasks:', error);
     throw new Error(`Failed to filter tasks: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+function compactMetadata(task: TaskTreeNode): string {
+  const values: string[] = [`ID: ${task.id}`];
+  if (task.taskStatus) values.push(`status: ${task.taskStatus}`);
+  values.push(`project: ${task.projectName || (task.inInbox ? 'Inbox' : 'No Project')}`);
+  if (task.dueDate) values.push(`due: ${new Date(task.dueDate).toLocaleDateString()}`);
+  if (task.deferDate) values.push(`defer: ${new Date(task.deferDate).toLocaleDateString()}`);
+  if (task.plannedDate) values.push(`planned: ${new Date(task.plannedDate).toLocaleDateString()}`);
+  if (task.flagged) values.push('flagged');
+  if (task.estimatedMinutes) values.push(`estimate: ${task.estimatedMinutes}m`);
+  values.push(`${task.childrenCount || 0} ${(task.childrenCount || 0) === 1 ? 'subtask' : 'subtasks'}`);
+  return values.join(' | ');
+}
+
+function formatCompactChild(task: TaskTreeNode, prefix: string, isLast: boolean): string {
+  const branch = isLast ? '└──' : '├──';
+  let output = `${prefix}${branch} ${task.name} [${compactMetadata(task)}]\n`;
+  const continuation = prefix + (isLast ? '    ' : '│   ');
+  (task.children || []).forEach((child, index) => {
+    output += formatCompactChild(child, continuation, index === task.children!.length - 1);
+  });
+  if (task.childrenTruncated && (task.childrenCount || 0) > (task.children?.length || 0)) {
+    output += `${continuation}… ${(task.childrenCount || 0) - (task.children?.length || 0)} subtask(s) not expanded\n`;
+  }
+  return output;
+}
+
+export function formatCompactTaskTreeNode(task: TaskTreeNode, showSubtasks: boolean): string {
+  let output = `${task.name} [${compactMetadata(task)}]\n`;
+  if (showSubtasks) {
+    (task.children || []).forEach((child, index) => {
+      output += formatCompactChild(child, '', index === task.children!.length - 1);
+    });
+  }
+  return output;
 }
 
 // 构建过滤条件摘要

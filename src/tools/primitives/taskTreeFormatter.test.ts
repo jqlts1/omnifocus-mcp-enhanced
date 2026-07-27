@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   dedupeExpandedTopLevelTasks,
@@ -55,4 +56,12 @@ test('dedupeExpandedTopLevelTasks removes a matching expanded descendant', () =>
 
   assert.deepEqual(dedupeExpandedTopLevelTasks([parent, child], true).map(task => task.id), ['parent']);
   assert.deepEqual(dedupeExpandedTopLevelTasks([parent, child], false).map(task => task.id), ['parent', 'child']);
+});
+
+test('serialized task nodes expose parent IDs for planning hierarchy', async () => {
+  const source = await readFile(
+    new URL('../../utils/omnifocusScripts/taskTreeHelpers.js', import.meta.url),
+    'utf8',
+  );
+  assert.match(source, /parentId: task\.parent \? task\.parent\.id\.primaryKey : null/);
 });

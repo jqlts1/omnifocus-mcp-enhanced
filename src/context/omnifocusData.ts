@@ -14,8 +14,10 @@ export interface RawTask {
   estimatedMinutes?: number | null;
   projectId?: string | null;
   projectName?: string | null;
+  parentId?: string | null;
   inInbox?: boolean;
   tags?: { id: string; name: string }[];
+  childrenCount?: number;
 }
 
 /**
@@ -28,7 +30,7 @@ export async function fetchTasks(options: FilterTasksOptions = {}, limit = 1000)
     ...options,
     perspective: options.perspective || 'all',
     exactTagMatch: options.exactTagMatch ?? false,
-    limit: Math.max(limit * 5, 2000),
+    limit,
     sortBy: options.sortBy || 'name',
     sortOrder: options.sortOrder || 'asc'
   });
@@ -42,7 +44,7 @@ export async function fetchTasks(options: FilterTasksOptions = {}, limit = 1000)
     throw new Error(data.error);
   }
 
-  return Array.isArray(data.tasks) ? data.tasks.slice(0, limit) : [];
+  return Array.isArray(data.tasks) ? data.tasks : [];
 }
 
 /**
@@ -60,6 +62,7 @@ export function slimTask(task: RawTask): Record<string, unknown> {
     plannedDate: task.plannedDate || null,
     estimatedMinutes: task.estimatedMinutes ?? null,
     projectName: task.projectName || null,
+    parentId: task.parentId || null,
     inInbox: !!task.inInbox,
     tags: (task.tags || []).map(tag => tag.name)
   };

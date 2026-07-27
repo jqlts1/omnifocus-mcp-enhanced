@@ -71,7 +71,8 @@ export const schema = z.object({
   sortBy: z.enum(["name", "dueDate", "deferDate", "plannedDate", "completedDate", "flagged", "project"]).optional().describe("Sort results by field"),
   sortOrder: z.enum(["asc", "desc"]).optional().describe("Sort order (default: asc)"),
   showSubtasks: z.boolean().optional().describe("Expand each matching task's subtask tree (default: false)"),
-  maxSubtaskDepth: z.number().int().min(0).optional().describe("Maximum subtask levels to expand; omitted means unlimited")
+  maxSubtaskDepth: z.number().int().min(0).optional().describe("Maximum subtask levels to expand; omitted means unlimited"),
+  outputMode: z.enum(["detailed", "compact"]).optional().describe("Output detail: detailed (default) or compact for broad planning queries")
 });
 
 export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
