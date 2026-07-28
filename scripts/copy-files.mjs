@@ -7,6 +7,7 @@ const scripts = [
   'applyTagsExclusive.js',
   'batchMoveTasks.js',
   'batchRemoveItems.js',
+  'createProjectFromOutline.js',
   'duplicateTask.js',
   'filterTasks.js',
   'flaggedTasks.js',

@@ -15,6 +15,7 @@ import * as batchAddItemsTool from './definitions/batchAddItems.js';
 import * as batchMoveTasksTool from './definitions/batchMoveTasks.js';
 import * as batchRemoveItemsTool from './definitions/batchRemoveItems.js';
 import * as countTasksTool from './definitions/countTasks.js';
+import * as createProjectFromOutlineTool from './definitions/createProjectFromOutline.js';
 import * as dumpDatabaseTool from './definitions/dumpDatabase.js';
 import * as duplicateTaskTool from './definitions/duplicateTask.js';
 import * as editFolderTool from './definitions/editFolder.js';
@@ -135,6 +136,13 @@ const TOOLS = [
       'Remove a user-confirmed set of tasks or projects by stable ID. The complete batch is validated before deletion and every ID is verified absent afterward.',
     tool: batchRemoveItemsTool,
     annotations: MUTATING_TOOL,
+  },
+  {
+    name: 'create_project_from_outline',
+    description:
+      'Create one user-confirmed project tree with stable folder/tag IDs. The complete outline is preflighted, created in one OmniFocus request, and read back for verification.',
+    tool: createProjectFromOutlineTool,
+    annotations: ADDITIVE_TOOL,
   },
   {
     name: 'get_task_by_id',

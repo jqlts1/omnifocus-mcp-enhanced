@@ -153,7 +153,7 @@ info "Verifying the generated CLI"
 
 REQUIRED_COMMANDS=(
   dump-database add-omnifocus-task add-project remove-item edit-item move-task
-  batch-move-tasks batch-add-items batch-remove-items get-task-by-id read-task-attachment
+  batch-move-tasks batch-add-items batch-remove-items create-project-from-outline get-task-by-id read-task-attachment
   get-today-completed-tasks set-repetition-rule get-inbox-tasks get-flagged-tasks
   get-forecast-tasks get-tasks-by-tag list-tags filter-tasks
   list-custom-perspectives get-custom-perspective-tasks
@@ -201,6 +201,13 @@ if ! grep -q -- "--cursor" <<<"$FILTER_HELP"; then
   fail "The generated filter-tasks command is missing the v1.17 cursor flag. Refresh the package and retry."
 fi
 ok "Pagination cursor flag present on filter-tasks"
+
+OUTLINE_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs create-project-from-outline --help 2>&1 || true)"
+if ! grep -q -- "--project" <<<"$OUTLINE_HELP" ||
+   ! grep -q -- "--raw" <<<"$OUTLINE_HELP"; then
+  fail "The generated create-project-from-outline command is missing its nested project input. Refresh the package and retry."
+fi
+ok "Nested project outline input present"
 
 # Confirm the CLI can actually reach OmniFocus, but do not hard-fail: the user
 # may simply not have OmniFocus running right now.

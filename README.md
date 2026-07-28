@@ -44,6 +44,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.19.0** - Project Shaping: added `create_project_from_outline` for turning one user-confirmed structured outline into a complete OmniFocus project tree. The tool accepts stable Folder/Tag IDs and core planning fields, enforces a 200-task/eight-level bound, preflights every reference before writing, creates the tree in one OmniJS request, reads every node and field back, and performs one bounded Undo if execution or verification fails. The new `project_shaping` Prompt and bundled Skill guide extract, disclose inferences, resolve IDs, confirm, create, and report. The surface is now 40 tools, 5 prompts, and 3 resources.
+
 - **v1.18.0** - Reliability release: upgraded the MCP SDK to 1.30.0 and Zod to 3.25.76; migrated Resources to `registerResource` with bounded task snapshots that distinguish `totalCount`, `returnedCount`, and truncation; restored the user's original OmniFocus perspective after custom-perspective reads; removed the unused incomplete Perspective V2/debug implementation; and rebuilt `batch_remove_items` around stable IDs, complete preflight, undo-based rollback on execution failure, cascade reporting, and post-delete verification.
 
 - **v1.17.1** - Maintenance release: migrated all 39 tools and 4 prompts to the current MCP registration APIs with read/additive/destructive annotations, restored mandatory strict TypeScript checking, raised the runtime baseline to Node.js 22, and reduced the npm tarball from about 2.27 MB to about 117 KB by publishing only runtime artifacts. The repository logo is now 512×341 and about 175 KB instead of 1.97 MB.
@@ -88,9 +90,9 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **📁 Folder Management** - Full CRUD for folders with nested hierarchy, move/rename, and content inspection
 - **🏷️ Tag Management** - Full CRUD for tags with nesting, status control, and fuzzy search
 - **🔔 Task Notifications** - List, add, and remove reminders (absolute time or relative to due date)
-- **💬 MCP Prompts** - 4 guided review workflows (daily, weekly, inbox processing, project planning)
+- **💬 MCP Prompts** - 5 guided workflows (daily, weekly, inbox processing, project planning, project shaping)
 - **📡 MCP Resources** - 3 live JSON snapshots (inbox, today, active projects)
-- **🛠️ Agent Skill** - One-command install of a local CLI covering all 38 tools, to keep AI context usage low
+- **🛠️ Agent Skill** - One-command install of a local CLI covering all 40 tools, to keep AI context usage low
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -531,6 +533,30 @@ mcporter call omnifocus.batch_add_items --args '{
 
 Because a subtask must inherit its project from the parent task.
 
+### 6. Project Shaping
+
+Use `project_shaping` to turn meeting notes, brainstorming, or a task list into a readable project tree. The assistant labels inferred metadata, resolves Folder and Tag stable IDs, and asks for explicit confirmation of the final tree before calling `create_project_from_outline` once.
+
+```json
+{
+  "project": {
+    "name": "Website launch",
+    "folderId": "folder-id",
+    "tagIds": ["tag-id"],
+    "sequential": true,
+    "tasks": [
+      {
+        "name": "Confirm information architecture",
+        "estimatedMinutes": 60,
+        "children": [{ "name": "Review navigation" }]
+      }
+    ]
+  }
+}
+```
+
+The action accepts structured, reviewed fields—not raw meeting notes. It supports at most 200 tasks and eight task levels. Missing references cause zero writes. Execution or read-back failure triggers one bounded OmniFocus Undo; if cleanup cannot be confirmed, the error includes the residual project ID.
+
 ### 6. 🖼️ Attachment Inspection
 
 Discover images and linked files on a task first, then read only the attachment you need:
@@ -563,8 +589,9 @@ read_task_attachment {
 7. **batch_move_tasks** - Atomically execute and verify a confirmed task organization plan
 8. **batch_add_items** - Bulk add (enhanced with subtask support)
 9. **batch_remove_items** - Preflight, undo-roll back, and verify a confirmed stable-ID deletion batch
-10. **get_task_by_id** - Query task information, including attachment metadata
-11. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
+10. **create_project_from_outline** - Create and verify one user-confirmed project tree using stable Folder/Tag IDs
+11. **get_task_by_id** - Query task information, including attachment metadata
+12. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
 
 ### 🔍 Built-in Perspective Tools
 
@@ -629,6 +656,7 @@ Guided review workflows that pull live OmniFocus data and hand the AI a structur
 | **weekly_review**    | –         | GTD weekly review: classifies active projects as on track / at risk / stalled, proposes next actions |
 | **inbox_processing** | –         | Walks inbox items one by one through GTD clarification (delete/defer/delegate/keep)                  |
 | **project_planning** | `project` | Breaks a project into sequenced, estimated next actions (fuzzy-matches the project name)             |
+| **project_shaping**  | –         | Turns conversation text into one reviewed, confirmed, verified project tree                          |
 
 ## 📡 MCP Resources (NEW in v1.10.0)
 
@@ -642,7 +670,7 @@ Live JSON snapshots your AI client can read without calling a tool.
 
 ## 🛠️ Agent Skill (NEW in v1.11.0)
 
-With 38 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
+With 40 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
 
 ### Install
 

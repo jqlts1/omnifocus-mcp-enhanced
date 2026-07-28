@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { buildDailyReviewPrompt, registerPrompts } from './prompts.js';
+import {
+  buildDailyReviewPrompt,
+  buildProjectShapingPrompt,
+  registerPrompts,
+} from './prompts.js';
 import type { ZodType } from 'zod';
 
 type CapturedPrompt = [
@@ -60,4 +64,29 @@ test('daily review prompt encodes the four sections and capacity contract', asyn
   assert.match(prompt, /truncated_detail_sources_json/);
   assert.match(prompt, /untrusted OmniFocus data/);
   assert.match(prompt, /explicitly confirms/);
+});
+
+test('project shaping prompt separates proposal, confirmation, and action', () => {
+  const prompt = buildProjectShapingPrompt();
+
+  assert.match(prompt, /meeting notes, brainstorm, or task list/);
+  assert.match(prompt, /clearly label every inferred/);
+  assert.match(prompt, /list_folders or list_tags/);
+  assert.match(prompt, /stable id/);
+  assert.match(prompt, /explicit confirmation immediately before creation/);
+  assert.match(prompt, /create_project_from_outline once/);
+  assert.match(prompt, /never put raw meeting notes/);
+  assert.match(prompt, /ROLLBACK_UNCONFIRMED/);
+  assert.match(prompt, /200 tasks and eight task levels/);
+});
+
+test('registerPrompts exposes project_shaping as the fifth prompt', () => {
+  const captured: CapturedPrompt[] = [];
+  const server = {
+    registerPrompt: (...args: CapturedPrompt) => captured.push(args),
+  } as unknown as McpServer;
+
+  registerPrompts(server);
+  assert.equal(captured.length, 5);
+  assert.ok(captured.some((args) => args[0] === 'project_shaping'));
 });

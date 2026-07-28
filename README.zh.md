@@ -40,6 +40,8 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.19.0** - 项目塑形：新增 `create_project_from_outline`，可把用户确认过的结构化方案一次创建为完整 OmniFocus 项目树。工具支持稳定 Folder/Tag ID 和核心规划字段，限制最多 200 个任务、8 层任务层级；写入前完整预检引用，在一次 OmniJS 请求中创建，并读回验证每个节点和字段；执行或验证失败时只进行一次受限 Undo。新的 `project_shaping` Prompt 与内置 Skill 会引导提取、披露推断、解析 ID、确认、创建和汇报。当前共 40 个工具、5 个 Prompts 和 3 个 Resources。
+
 - **v1.18.0** - 可靠性版本：MCP SDK 升级到 1.30.0，Zod 升级到 3.25.76；Resources 迁移到 `registerResource`，有界任务快照现在明确区分 `totalCount`、`returnedCount` 和截断状态；读取自定义透视后会恢复用户原来的 OmniFocus 透视；删除未使用且不完整的 Perspective V2 / 调试实现；`batch_remove_items` 改为稳定 ID、完整预检、执行失败时通过 Undo 回滚、级联影响汇报和删除后验证。
 
 - **v1.17.1** - 维护版本：39 个工具和 4 个 Prompts 已迁移到当前 MCP 注册接口，并补齐只读、追加、破坏性操作注解；构建重新强制执行严格 TypeScript 检查，Node.js 最低版本提升到 22。npm 压缩包通过只发布运行时产物，从约 2.27 MB 降至约 117 KB；仓库 Logo 从 1.97 MB 缩小为 512×341、约 175 KB。
@@ -80,6 +82,9 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 - **🎯 批量操作** - 高效添加/删除多个任务
 - **📊 智能查询** - 通过 ID、名称或复杂条件查找任务
 - **🔄 完整 CRUD 操作** - 创建、读取、更新、删除任务和项目
+- **🌳 项目塑形** - 把确认过的文本方案安全创建为经过读回验证的完整项目树
+- **💬 MCP Prompts** - 5 个引导式工作流（每日、每周、Inbox、项目规划、项目塑形）
+- **🛠️ Agent Skill** - 本地 CLI 覆盖全部 40 个工具，减少 AI 上下文占用
 - **📅 时间管理** - 截止日期、推迟日期、计划日期、估时和计划
 - **🏷️ 高级标签** - 基于标签的精确/模糊匹配过滤
 - **🚫 互斥标签** - 应用标签时自动遵守互斥标签组规则
@@ -508,6 +513,30 @@ mcporter call omnifocus.batch_add_items --args '{
 
 因为子任务必须继承父任务所在项目，不能再单独传 `projectName`。
 
+### 6. 项目塑形
+
+使用 `project_shaping` 把会议纪要、脑暴或任务清单整理成可读的项目树。助手会标明推断出的元数据，解析 Folder 与 Tag 的稳定 ID，并在调用一次 `create_project_from_outline` 前，要求用户明确确认最终项目树。
+
+```json
+{
+  "project": {
+    "name": "发布新网站",
+    "folderId": "folder-id",
+    "tagIds": ["tag-id"],
+    "sequential": true,
+    "tasks": [
+      {
+        "name": "确认信息架构",
+        "estimatedMinutes": 60,
+        "children": [{ "name": "评审导航" }]
+      }
+    ]
+  }
+}
+```
+
+操作工具只接受经过审阅的结构化字段，不接收原始会议纪要。最多支持 200 个任务、8 层任务层级。引用缺失时零写入；执行或读回验证失败时仅执行一次受限 OmniFocus Undo；如果无法确认清理完整，错误会返回残留项目 ID。
+
 ### 6. 🖼️ 附件查看
 
 先读取任务和附件元信息，再按需打开具体附件：
@@ -540,8 +569,9 @@ read_task_attachment {
 7. **batch_move_tasks** - 原子执行并验证用户已确认的任务整理方案
 8. **batch_add_items** - 批量添加（增强子任务支持）
 9. **batch_remove_items** - 按稳定 ID 预检、Undo 回滚并验证用户已确认的删除批次
-10. **get_task_by_id** - 查询任务信息，并返回附件元信息
-11. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
+10. **create_project_from_outline** - 使用稳定 Folder/Tag ID 创建并验证用户确认过的项目树
+11. **get_task_by_id** - 查询任务信息，并返回附件元信息
+12. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
 
 ### 🔍 内置透视工具
 
@@ -593,6 +623,16 @@ read_task_attachment {
 ### 📊 分析与跟踪
 
 36. **get_today_completed_tasks** - 查看今日完成的任务
+
+## 💬 MCP Prompts
+
+| Prompt               | 参数      | 用途                                       |
+| -------------------- | --------- | ------------------------------------------ |
+| **daily_review**     | –         | 按精确统计和有界候选生成每日计划           |
+| **weekly_review**    | –         | 完成项目风险检查和周回顾闭环               |
+| **inbox_processing** | –         | 引导 Inbox 澄清、建议、确认和执行          |
+| **project_planning** | `project` | 把已有项目拆成有顺序、带估时的下一步       |
+| **project_shaping**  | –         | 把对话文本整理成经审阅、确认和验证的项目树 |
 
 接下来的 AI 任务助手计划：[docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md](docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md)
 

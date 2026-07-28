@@ -1,6 +1,6 @@
 ---
 name: omnifocus-cli
-description: Use a generated local CLI for OmniFocus MCP operations (tasks, projects, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 39 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
+description: Use a generated local CLI for OmniFocus MCP operations (tasks, project outlines, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 40 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
 ---
 
 # OmniFocus CLI
@@ -8,7 +8,7 @@ description: Use a generated local CLI for OmniFocus MCP operations (tasks, proj
 ## Overview
 
 Use the local bundled CLI instead of direct MCP tool-calling for OmniFocus requests.
-The MCP server exposes 39 tools; loading all their schemas into chat is expensive.
+The MCP server exposes 40 tools; loading all their schemas into chat is expensive.
 This CLI gives you the same capabilities as deterministic shell commands.
 
 CLI location: `bin/omnifocus-enhanced.cjs` (relative to this skill directory).
@@ -201,6 +201,43 @@ bin/omnifocus-enhanced.cjs batch-add-items --raw '{
 **Subtask rule:** when passing `parentTaskName`/`parentTaskId`, do NOT also pass
 `projectName` — subtasks inherit the project from their parent. Doing both fails by design.
 
+## Project Shaping
+
+To turn meeting notes, brainstorming, or a task list into a new project:
+
+1. Extract a readable project tree and clearly label every inferred date, tag,
+   estimate, note, folder, flag, or sequential setting.
+2. Resolve folders and tags with `list-folders` and `list-tags`. Use their
+   stable IDs only; never guess by name or ask the action tool to create them.
+3. Show the complete final tree and ask for explicit confirmation immediately
+   before creation. An earlier draft approval is not confirmation.
+4. Call `create-project-from-outline` once with reviewed structured fields, not
+   raw meeting notes or conversational instructions.
+5. Report the verified project ID and every returned path-to-ID mapping. If the
+   result is `ROLLBACK_UNCONFIRMED`, show the residual project ID and recovery
+   instruction before retrying.
+
+The request supports at most 200 tasks and eight task levels. For nested input,
+use `--raw`:
+
+```bash
+bin/omnifocus-enhanced.cjs create-project-from-outline --raw '{
+  "project": {
+    "name": "Website launch",
+    "folderId": "<folder-id>",
+    "tagIds": ["<tag-id>"],
+    "sequential": true,
+    "tasks": [
+      {
+        "name": "Confirm information architecture",
+        "estimatedMinutes": 60,
+        "children": [{"name": "Review navigation"}]
+      }
+    ]
+  }
+}'
+```
+
 ## Projects
 
 For a weekly review, first read projects due for review and discuss their
@@ -294,9 +331,9 @@ npx -y omnifocus-mcp-enhanced@latest install-skill --global
 
 The installer pins the MCP server to the exact package version that shipped the
 skill (and mcporter to `@latest`), regenerates the
-CLI, verifies all 37 commands, and checks the live OmniFocus connection. To
+CLI, verifies all 40 commands, and checks the live OmniFocus connection. To
 inspect the generated command count manually:
 
 ```bash
-bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 42 (39 tools + built-ins)
+bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 43 (40 tools + built-ins)
 ```

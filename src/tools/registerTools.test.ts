@@ -24,10 +24,10 @@ function captureTools(): RegisteredToolCall[] {
   return calls;
 }
 
-test('registerTools exposes 39 unique tools through the modern MCP API', () => {
+test('registerTools exposes 40 unique tools through the modern MCP API', () => {
   const calls = captureTools();
 
-  assert.equal(calls.length, 39);
+  assert.equal(calls.length, 40);
   assert.equal(new Set(calls.map((call) => call.name)).size, calls.length);
 });
 
@@ -44,6 +44,12 @@ test('registerTools marks local reads and destructive writes accurately', () => 
     openWorldHint: false,
   });
   assert.deepEqual(byName.get('add_omnifocus_task'), {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false,
+  });
+  assert.deepEqual(byName.get('create_project_from_outline'), {
     readOnlyHint: false,
     destructiveHint: false,
     idempotentHint: false,
