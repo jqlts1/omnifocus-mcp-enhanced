@@ -1,5 +1,7 @@
 # 🚀 OmniFocus MCP Enhanced
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fjqlts1%2Fomnifocus-mcp-enhanced.svg)](https://mcptoplist.com/server/glama%2Fjqlts1%2Fomnifocus-mcp-enhanced)
+
 [![npm version](https://img.shields.io/npm/v/omnifocus-mcp-enhanced.svg)](https://www.npmjs.com/package/omnifocus-mcp-enhanced)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js CI](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
