@@ -6,6 +6,7 @@ const destination = 'dist/utils/omnifocusScripts';
 const scripts = [
   'applyTagsExclusive.js',
   'batchMoveTasks.js',
+  'batchRemoveItems.js',
   'duplicateTask.js',
   'filterTasks.js',
   'flaggedTasks.js',

@@ -1,6 +1,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { fetchTasks, fetchProjects, slimTask } from './omnifocusData.js';
+import {
+  countTasks,
+  CountTasksResult,
+} from '../tools/primitives/countTasks.js';
+import { FilterTasksOptions } from '../tools/primitives/filterTasks.js';
+import {
+  fetchTasks,
+  fetchProjects,
+  slimTask,
+  RawTask,
+} from './omnifocusData.js';
 
 function jsonResource(uri: string, payload: unknown) {
   return {
@@ -8,73 +18,122 @@ function jsonResource(uri: string, payload: unknown) {
       {
         uri,
         mimeType: 'application/json',
-        text: JSON.stringify(payload, null, 2)
-      }
-    ]
+        text: JSON.stringify(payload, null, 2),
+      },
+    ],
+  };
+}
+
+export interface BoundedTaskSnapshot {
+  totalCount: number;
+  returnedCount: number;
+  truncated: boolean;
+  tasks: Record<string, unknown>[];
+}
+
+type CountTasks = (options: FilterTasksOptions) => Promise<CountTasksResult>;
+type FetchTasks = (
+  options: FilterTasksOptions,
+  limit: number,
+) => Promise<RawTask[]>;
+
+export async function buildBoundedSnapshot(
+  options: FilterTasksOptions,
+  limit: number,
+  count: CountTasks = countTasks,
+  fetch: FetchTasks = fetchTasks,
+): Promise<BoundedTaskSnapshot> {
+  const [countResult, tasks] = await Promise.all([
+    count(options),
+    fetch(options, limit),
+  ]);
+
+  return {
+    totalCount: countResult.total,
+    returnedCount: tasks.length,
+    truncated: countResult.total > tasks.length,
+    tasks: tasks.map(slimTask),
   };
 }
 
 export function registerResources(server: McpServer): void {
-  // 1. Inbox snapshot
-  server.resource(
+  server.registerResource(
     'inbox',
     'omnifocus://inbox',
     {
-      description: 'Current OmniFocus inbox tasks (uncompleted, unprocessed items).',
-      mimeType: 'application/json'
+      description:
+        'Current OmniFocus inbox tasks (uncompleted, unprocessed items).',
+      mimeType: 'application/json',
     },
     async () => {
-      const tasks = await fetchTasks({ perspective: 'inbox' }, 200);
+      const snapshot = await buildBoundedSnapshot(
+        { perspective: 'inbox' },
+        200,
+      );
       return jsonResource('omnifocus://inbox', {
         snapshotAt: new Date().toISOString(),
-        count: tasks.length,
-        tasks: tasks.map(slimTask)
+        ...snapshot,
       });
-    }
+    },
   );
 
-  // 2. Today snapshot (overdue + due today + flagged)
-  server.resource(
+  server.registerResource(
     'today',
     'omnifocus://today',
     {
-      description: "Today's OmniFocus focus: overdue tasks, tasks due today, and flagged tasks.",
-      mimeType: 'application/json'
+      description:
+        "Today's OmniFocus focus: overdue tasks, tasks due today, and flagged tasks.",
+      mimeType: 'application/json',
     },
     async () => {
       const [overdue, dueToday, flagged] = await Promise.all([
-        fetchTasks({ overdue: true, taskStatus: ['Overdue'] }, 100),
-        fetchTasks({ dueToday: true, taskStatus: ['Available', 'Next', 'DueSoon', 'Overdue'] }, 100),
-        fetchTasks({ flagged: true, taskStatus: ['Available', 'Next', 'DueSoon', 'Overdue', 'Blocked'] }, 100)
+        buildBoundedSnapshot({ overdue: true, taskStatus: ['Overdue'] }, 100),
+        buildBoundedSnapshot(
+          {
+            dueToday: true,
+            taskStatus: ['Available', 'Next', 'DueSoon', 'Overdue'],
+          },
+          100,
+        ),
+        buildBoundedSnapshot(
+          {
+            flagged: true,
+            taskStatus: ['Available', 'Next', 'DueSoon', 'Overdue', 'Blocked'],
+          },
+          100,
+        ),
       ]);
 
       return jsonResource('omnifocus://today', {
         snapshotAt: new Date().toISOString(),
-        overdue: { count: overdue.length, tasks: overdue.map(slimTask) },
-        dueToday: { count: dueToday.length, tasks: dueToday.map(slimTask) },
-        flagged: { count: flagged.length, tasks: flagged.map(slimTask) }
+        overdue,
+        dueToday,
+        flagged,
       });
-    }
+    },
   );
 
-  // 3. Active projects snapshot
-  server.resource(
+  server.registerResource(
     'projects',
     'omnifocus://projects',
     {
-      description: 'All active OmniFocus projects with task counts and stalled-project detection.',
-      mimeType: 'application/json'
+      description:
+        'Active OmniFocus projects with task counts and stalled-project detection.',
+      mimeType: 'application/json',
     },
     async () => {
-      const projects = await fetchProjects('active', 500);
-      const stalled = projects.filter(project => project.isStalled);
+      const projects = await fetchProjects('active', 501);
+      const truncated = projects.length > 500;
+      const returnedProjects = projects.slice(0, 500);
+      const stalled = returnedProjects.filter((project) => project.isStalled);
 
       return jsonResource('omnifocus://projects', {
         snapshotAt: new Date().toISOString(),
-        count: projects.length,
+        returnedCount: returnedProjects.length,
+        truncated,
         stalledCount: stalled.length,
-        projects
+        projects: returnedProjects,
       });
-    }
+    },
   );
 }

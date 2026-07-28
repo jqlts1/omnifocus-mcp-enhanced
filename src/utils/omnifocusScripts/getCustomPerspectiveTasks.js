@@ -2,28 +2,38 @@
 // 基于用户提供的优秀代码改进
 
 (() => {
+  let perspectiveName = null;
+  let window = null;
+  let originalPerspective = null;
+  let targetPerspective = null;
+
   try {
     // 获取注入的参数
-    const perspectiveName = injectedArgs && injectedArgs.perspectiveName ? injectedArgs.perspectiveName : null;
+    perspectiveName = injectedArgs && injectedArgs.perspectiveName ? injectedArgs.perspectiveName : null;
 
     if (!perspectiveName) {
       throw new Error("透视名称不能为空");
     }
 
     // 通过名称获取自定义透视
-    let perspective = Perspective.Custom.byName(perspectiveName);
-    if (!perspective) {
+    targetPerspective = Perspective.Custom.byName(perspectiveName);
+    if (!targetPerspective) {
       throw new Error(`未找到名为 "${perspectiveName}" 的自定义透视`);
     }
 
-    // 切换到指定透视
-    document.windows[0].perspective = perspective;
+    window = document.windows[0];
+    if (!window) {
+      throw new Error("OmniFocus 没有可用窗口");
+    }
+
+    originalPerspective = window.perspective;
+    window.perspective = targetPerspective;
 
     // 用于存储所有任务，key为任务ID（支持层级关系）
     let taskMap = {};
 
     // 遍历内容树，收集任务信息（含层级关系）
-    let rootNode = document.windows[0].content.rootNode;
+    let rootNode = window.content.rootNode;
 
     function collectTasks(node, parentId) {
       if (node.object && node.object instanceof Task) {
@@ -78,7 +88,7 @@
     const result = {
       success: true,
       perspectiveName: perspectiveName,
-      perspectiveId: perspective.identifier,
+      perspectiveId: targetPerspective.identifier,
       count: taskCount,
       taskMap: taskMap
     };
@@ -97,5 +107,15 @@
     };
 
     return JSON.stringify(errorResult);
+  } finally {
+    // Restore only when the window is still showing the perspective selected
+    // by this script. If the user changed it during collection, preserve that.
+    if (window && originalPerspective && window.perspective === targetPerspective) {
+      try {
+        window.perspective = originalPerspective;
+      } catch (_restoreError) {
+        // The read result remains valid even if OmniFocus rejects UI restoration.
+      }
+    }
   }
 })();

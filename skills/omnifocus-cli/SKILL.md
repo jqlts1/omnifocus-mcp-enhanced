@@ -78,6 +78,15 @@ partial-success flags are needed. Proposal review happens before the call; the
 server always preflights the complete batch, executes atomically, and verifies
 the result.
 
+## Confirmed Batch Removal
+
+For destructive cleanup, resolve every task or project to a stable ID, show
+the complete deletion set and contained-item counts, and ask for explicit
+confirmation before calling `batch-remove-items`. Do not use names as a
+fallback. The server preflights the complete set, rolls back completed
+deletions through OmniFocus Undo if execution fails, and verifies every ID is
+absent afterward.
+
 ## Filtering and Counting
 
 `filter-tasks` is the most powerful read tool. `count-tasks` takes the same

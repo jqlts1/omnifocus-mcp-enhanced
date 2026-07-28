@@ -44,6 +44,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.18.0** - Reliability release: upgraded the MCP SDK to 1.30.0 and Zod to 3.25.76; migrated Resources to `registerResource` with bounded task snapshots that distinguish `totalCount`, `returnedCount`, and truncation; restored the user's original OmniFocus perspective after custom-perspective reads; removed the unused incomplete Perspective V2/debug implementation; and rebuilt `batch_remove_items` around stable IDs, complete preflight, undo-based rollback on execution failure, cascade reporting, and post-delete verification.
+
 - **v1.17.1** - Maintenance release: migrated all 39 tools and 4 prompts to the current MCP registration APIs with read/additive/destructive annotations, restored mandatory strict TypeScript checking, raised the runtime baseline to Node.js 22, and reduced the npm tarball from about 2.27 MB to about 117 KB by publishing only runtime artifacts. The repository logo is now 512×341 and about 175 KB instead of 1.97 MB.
 
 - **v1.17.0** - Filter pagination and query efficiency: `filter_tasks` now returns stateless opaque keyset cursors for real-time best-effort traversal, with stable ID tie-breaking and strict query/sort validation. Compact reads omit notes and tags inside OmniJS, normal list reads skip unused status aggregation, and later pages use cursor boundaries plus one-item lookahead. The privacy-safe benchmark now records first- and second-page metrics. The surface remains 39 tools, 4 prompts, and 3 resources.
@@ -69,15 +71,17 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 ## ✨ Key Features
 
 ### 🌟 **NEW: Native Custom Perspective Access**
+
 - **🎯 Direct Integration** - Native access to your OmniFocus custom perspectives via `Perspective.Custom` API
 - **🌳 Hierarchical Display** - Tree-style task visualization with parent-child relationships
 - **🧠 AI-Optimized** - Enhanced tool descriptions prevent AI confusion between perspectives and tags
 - **⚡ Zero Setup** - Works with your existing custom perspectives instantly
 
 ### 🏗️ **Complete Task Management**
+
 - **🏗️ Complete Subtask Support** - Create hierarchical tasks with parent-child relationships
 - **🔍 Built-in Perspectives** - Access Inbox, Flagged, Forecast, and Tag-based views
-- **🚀 Ultimate Task Filter** - Advanced filtering beyond OmniFocus native capabilities  
+- **🚀 Ultimate Task Filter** - Advanced filtering beyond OmniFocus native capabilities
 - **🎯 Batch Operations** - Add/remove multiple tasks efficiently
 - **📊 Smart Querying** - Find tasks by ID, name, or complex criteria
 - **🔄 Full CRUD Operations** - Create, read, update, delete tasks and projects
@@ -99,6 +103,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 ### Claude Code
 
 #### Quick Install (recommended)
+
 ```bash
 # One-line installation
 claude mcp add omnifocus-enhanced -- npx -y omnifocus-mcp-enhanced
@@ -393,6 +398,7 @@ get_custom_perspective_tasks {
 ```
 
 **Why This Is Powerful:**
+
 - ✅ **Native Integration** - Uses OmniFocus `Perspective.Custom` API directly
 - ✅ **Tree Structure** - Visual parent-child task relationships with ├─, └─ symbols
 - ✅ **Project-First Grouping** - Project header first, then nested subtasks
@@ -547,6 +553,7 @@ read_task_attachment {
 ## 🛠️ Complete Tool Reference
 
 ### 📊 Database & Task Management
+
 1. **dump_database** - Get OmniFocus database state
 2. **add_omnifocus_task** - Create tasks (enhanced with subtask support)
 3. **add_project** - Create projects
@@ -555,11 +562,12 @@ read_task_attachment {
 6. **move_task** - Move an existing task to project/parent task/inbox
 7. **batch_move_tasks** - Atomically execute and verify a confirmed task organization plan
 8. **batch_add_items** - Bulk add (enhanced with subtask support)
-9. **batch_remove_items** - Bulk remove
+9. **batch_remove_items** - Preflight, undo-roll back, and verify a confirmed stable-ID deletion batch
 10. **get_task_by_id** - Query task information, including attachment metadata
 11. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
 
 ### 🔍 Built-in Perspective Tools
+
 12. **get_inbox_tasks** - Inbox perspective
 13. **get_flagged_tasks** - Flagged perspective
 14. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
@@ -567,10 +575,12 @@ read_task_attachment {
 16. **filter_tasks** - Ultimate filtering with unlimited combinations
 
 ### 🌟 Custom Perspective Tools (NEW)
+
 16. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
 17. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
 
 ### 📁 Folder Management Tools (NEW)
+
 18. **add_folder** - 🆕 **NEW**: Create a folder, optionally nested under a parent folder
 19. **edit_folder** - 🆕 **NEW**: Rename a folder or move it under a different parent (empty string moves to root)
 20. **remove_folder** - 🆕 **NEW**: Delete a folder (⚠️ also deletes all contained projects and tasks)
@@ -578,16 +588,19 @@ read_task_attachment {
 22. **get_folder** - 🆕 **NEW**: Get a single folder with its child projects and subfolders
 
 ### ⚡ Productivity Tools (NEW)
+
 23. **append_to_note** - 🆕 **NEW**: Append text to a task/project note without overwriting
 24. **count_tasks** - 🆕 **NEW**: Fast "how many" queries with a status breakdown (same filters as filter_tasks)
 25. **duplicate_task** - 🆕 **NEW**: Clone a task with/without subtasks, optionally renamed
 
 ### 📋 Project Review Tools (NEW)
+
 26. **get_projects** - List/filter projects with native review dates and intervals
 27. **get_projects_due_for_review** - List projects whose next review date has arrived, most overdue first
 28. **mark_projects_reviewed** - Atomically mark a confirmed set of eligible projects reviewed and verify their next review dates
 
 ### 🏷️ Tag Management Tools (NEW)
+
 28. **list_tags** - List all tags with IDs, parents, and active status
 29. **add_tag** - 🆕 **NEW**: Create a tag, optionally nested under a parent tag
 30. **edit_tag** - 🆕 **NEW**: Rename, change status (active/onHold/dropped), or move a tag
@@ -595,11 +608,13 @@ read_task_attachment {
 32. **search_tags** - 🆕 **NEW**: Search tags by name (fuzzy or exact)
 
 ### 🔔 Notification Tools (NEW)
+
 33. **list_task_notifications** - 🆕 **NEW**: List reminders set on a task
 34. **add_task_notification** - 🆕 **NEW**: Add a reminder (absolute time or minutes relative to due date)
 35. **remove_task_notification** - 🆕 **NEW**: Remove a reminder by index, or remove all
 
 ### 📊 Analytics & Tracking
+
 36. **get_today_completed_tasks** - View today's completed tasks
 
 > Note: `get_tasks_by_tag` (#14) and `list_tags` (#26) were available in earlier versions; the tag CRUD tools are new in v1.10.0.
@@ -608,21 +623,21 @@ read_task_attachment {
 
 Guided review workflows that pull live OmniFocus data and hand the AI a structured plan of attack. In clients like Claude Desktop these appear as selectable prompts.
 
-| Prompt | Arguments | What it does |
-|---|---|---|
-| **daily_review** | – | Pulls overdue, due-soon, and flagged tasks; produces today's top 3 priorities |
-| **weekly_review** | – | GTD weekly review: classifies active projects as on track / at risk / stalled, proposes next actions |
-| **inbox_processing** | – | Walks inbox items one by one through GTD clarification (delete/defer/delegate/keep) |
-| **project_planning** | `project` | Breaks a project into sequenced, estimated next actions (fuzzy-matches the project name) |
+| Prompt               | Arguments | What it does                                                                                         |
+| -------------------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| **daily_review**     | –         | Pulls overdue, due-soon, and flagged tasks; produces today's top 3 priorities                        |
+| **weekly_review**    | –         | GTD weekly review: classifies active projects as on track / at risk / stalled, proposes next actions |
+| **inbox_processing** | –         | Walks inbox items one by one through GTD clarification (delete/defer/delegate/keep)                  |
+| **project_planning** | `project` | Breaks a project into sequenced, estimated next actions (fuzzy-matches the project name)             |
 
 ## 📡 MCP Resources (NEW in v1.10.0)
 
 Live JSON snapshots your AI client can read without calling a tool.
 
-| Resource URI | Contents |
-|---|---|
-| `omnifocus://inbox` | Current inbox tasks |
-| `omnifocus://today` | Overdue + due today + flagged, grouped |
+| Resource URI           | Contents                                               |
+| ---------------------- | ------------------------------------------------------ |
+| `omnifocus://inbox`    | Current inbox tasks                                    |
+| `omnifocus://today`    | Overdue + due today + flagged, grouped                 |
 | `omnifocus://projects` | Active projects with task counts and stalled detection |
 
 ## 🛠️ Agent Skill (NEW in v1.11.0)
@@ -656,6 +671,7 @@ The global skill is installed in `~/.claude/skills/omnifocus-cli/`, and its MCP
 server registration is written to the home mcporter configuration.
 
 That single command:
+
 1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter), pinned to the exact package version that shipped the installer
 2. Generates a standalone CLI from the server's live tool schemas (~20s)
 3. Installs `SKILL.md` + the CLI into the current project's `.claude/skills/omnifocus-cli/` (or `~/.claude/skills/omnifocus-cli/` with `--global`)
@@ -694,6 +710,7 @@ Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-p
 ## 🚀 Quick Start Examples
 
 ### Basic Task Creation
+
 ```bash
 # Simple task
 add_omnifocus_task {
@@ -705,6 +722,7 @@ add_omnifocus_task {
 ```
 
 ### Advanced Task Management
+
 ```bash
 # Create parent task
 add_omnifocus_task {
@@ -724,6 +742,7 @@ add_omnifocus_task {
 ```
 
 ### Task Move Operations
+
 ```bash
 # Move task to a project
 move_task {
@@ -753,6 +772,7 @@ batch_move_tasks {
 ```
 
 Task move safety rules:
+
 - Name lookups fail fast on duplicates and ask you to use IDs.
 - Destination must be exactly one type: project OR parent task OR inbox.
 - Moving a task into itself/its descendants is blocked to prevent cycles.
@@ -760,6 +780,7 @@ Task move safety rules:
 - If batch preflight fails, no task is moved. Call it only after the user confirms the displayed organization proposal.
 
 You can also move with `edit_item` and combine move + field updates:
+
 ```bash
 edit_item {
   "itemType": "task",
@@ -771,6 +792,7 @@ edit_item {
 ```
 
 ### Smart Task Discovery
+
 ```bash
 # Find high-priority work
 filter_tasks {
@@ -789,6 +811,7 @@ filter_tasks {
 ```
 
 ### 🌟 Custom Perspective Usage
+
 ```bash
 # List your custom perspectives
 list_custom_perspectives {"format": "detailed"}
@@ -924,6 +947,7 @@ list_custom_perspectives
 Open `~/Library/Application Support/Claude/claude_desktop_config.json` and confirm the `omnifocus-enhanced` entry is present under `mcpServers`. Restart the app after any changes. Once running, you can test by asking the assistant to list your inbox tasks or custom perspectives.
 
 ### Troubleshooting
+
 - Ensure OmniFocus 3+ is installed and running
 - Verify Node.js 18+ is installed
 - For Claude Code: run `claude mcp list` to confirm the server is registered

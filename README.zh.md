@@ -40,6 +40,8 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.18.0** - 可靠性版本：MCP SDK 升级到 1.30.0，Zod 升级到 3.25.76；Resources 迁移到 `registerResource`，有界任务快照现在明确区分 `totalCount`、`returnedCount` 和截断状态；读取自定义透视后会恢复用户原来的 OmniFocus 透视；删除未使用且不完整的 Perspective V2 / 调试实现；`batch_remove_items` 改为稳定 ID、完整预检、执行失败时通过 Undo 回滚、级联影响汇报和删除后验证。
+
 - **v1.17.1** - 维护版本：39 个工具和 4 个 Prompts 已迁移到当前 MCP 注册接口，并补齐只读、追加、破坏性操作注解；构建重新强制执行严格 TypeScript 检查，Node.js 最低版本提升到 22。npm 压缩包通过只发布运行时产物，从约 2.27 MB 降至约 117 KB；仓库 Logo 从 1.97 MB 缩小为 512×341、约 175 KB。
 
 - **v1.17.0** - 筛选分页与查询效率：`filter_tasks` 现在使用无状态、不透明的 Keyset Cursor 提供实时最佳努力分页，以稳定任务 ID 处理相同排序值，并严格校验筛选和排序是否变化。Compact 查询会在 OmniJS 内省略备注和标签，普通列表查询不再计算无用的状态聚合，后续页使用游标边界及一个任务的前瞻判断。隐私安全 benchmark 也新增第一页和第二页指标。工具面保持 39 个工具、4 个 Prompts 和 3 个 Resources。
@@ -64,12 +66,14 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 ## ✨ 核心特性
 
 ### 🌟 **新功能：原生自定义透视访问**
+
 - **🎯 直接集成** - 通过 `Perspective.Custom` API 原生访问您的 OmniFocus 自定义透视
 - **🌳 层级显示** - 树状任务可视化，显示父子关系
 - **🧠 AI 优化** - 增强的工具描述防止 AI 混淆透视和标签概念
 - **⚡ 零配置** - 与您现有的自定义透视无缝工作
 
 ### 🏗️ **完整任务管理**
+
 - **🏗️ 完整子任务支持** - 创建带有父子关系的层级任务
 - **🔍 内置透视** - 访问收件箱、已标记、预测和基于标签的视图
 - **🚀 终极任务过滤器** - 超越 OmniFocus 原生功能的高级过滤
@@ -371,6 +375,7 @@ get_custom_perspective_tasks {
 ```
 
 **功能强大的原因：**
+
 - ✅ **原生集成** - 直接使用 OmniFocus `Perspective.Custom` API
 - ✅ **树状结构** - 使用 ├─、└─ 符号显示父子任务关系
 - ✅ **项目优先分组** - 先按项目分组，再展示子任务层级
@@ -525,6 +530,7 @@ read_task_attachment {
 ## 🛠️ 完整工具参考
 
 ### 📊 数据库与任务管理
+
 1. **dump_database** - 获取 OmniFocus 数据库状态
 2. **add_omnifocus_task** - 创建任务（增强子任务支持）
 3. **add_project** - 创建项目
@@ -533,11 +539,12 @@ read_task_attachment {
 6. **move_task** - 将已有任务转移到项目/父任务/Inbox
 7. **batch_move_tasks** - 原子执行并验证用户已确认的任务整理方案
 8. **batch_add_items** - 批量添加（增强子任务支持）
-9. **batch_remove_items** - 批量删除
+9. **batch_remove_items** - 按稳定 ID 预检、Undo 回滚并验证用户已确认的删除批次
 10. **get_task_by_id** - 查询任务信息，并返回附件元信息
 11. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
 
 ### 🔍 内置透视工具
+
 11. **get_inbox_tasks** - 收件箱透视
 12. **get_flagged_tasks** - 已标记透视
 13. **get_forecast_tasks** - 预测透视（包含截止/推迟/计划日期任务数据）
@@ -545,15 +552,18 @@ read_task_attachment {
 15. **filter_tasks** - 无限组合的终极过滤
 
 ### 🌟 自定义透视工具（新功能）
+
 16. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
 17. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
 
 ### 📋 项目与回顾
+
 18. **get_projects** - 轻量列出/过滤项目，包含原生回顾日期和周期
 19. **get_projects_due_for_review** - 列出已到回顾日期的项目，最逾期的排在最前
 20. **mark_projects_reviewed** - 原子标记用户已确认的项目为已回顾，并验证下一回顾日期
 
 ### 📁 Folder 管理
+
 20. **add_folder** - 创建文件夹，可指定父文件夹
 21. **edit_folder** - 改名或移动文件夹
 22. **remove_folder** - 删除文件夹及其中项目/任务
@@ -561,11 +571,13 @@ read_task_attachment {
 24. **get_folder** - 查看文件夹的直属项目和子文件夹
 
 ### ⚡ 生产力工具
+
 25. **append_to_note** - 追加备注而不覆盖原内容
 26. **count_tasks** - 使用与 `filter_tasks` 相同的条件做低开销统计
 27. **duplicate_task** - 复制任务，可选择是否包含子任务
 
 ### 🏷️ 标签管理
+
 28. **list_tags** - 列出标签
 29. **add_tag** - 创建标签
 30. **edit_tag** - 改名、改状态或移动标签
@@ -573,11 +585,13 @@ read_task_attachment {
 32. **search_tags** - 模糊或精确搜索标签
 
 ### 🔔 任务提醒
+
 33. **list_task_notifications** - 列出任务提醒
 34. **add_task_notification** - 添加绝对时间或相对截止时间的提醒
 35. **remove_task_notification** - 删除单个或全部提醒
 
 ### 📊 分析与跟踪
+
 36. **get_today_completed_tasks** - 查看今日完成的任务
 
 接下来的 AI 任务助手计划：[docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md](docs/plans/2026-07-27-ai-task-assistant-roadmap-design.md)
@@ -585,6 +599,7 @@ read_task_attachment {
 ## 🚀 快速开始示例
 
 ### 基础任务创建
+
 ```bash
 # 简单任务
 add_omnifocus_task {
@@ -596,6 +611,7 @@ add_omnifocus_task {
 ```
 
 ### 高级任务管理
+
 ```bash
 # 创建父任务
 add_omnifocus_task {
@@ -615,6 +631,7 @@ add_omnifocus_task {
 ```
 
 ### 任务转移操作
+
 ```bash
 # 转移到项目
 move_task {
@@ -646,6 +663,7 @@ batch_move_tasks {
 `batch_move_tasks` 只接受稳定 ID，会在修改前验证完整方案、拒绝循环移动和无效目标，并在执行后验证每个任务的最终位置。预检失败时不会移动任何任务；只有用户确认已经展示的整理方案后才应调用。
 
 ### 智能任务发现
+
 ```bash
 # 找到高优先级工作
 filter_tasks {
@@ -664,6 +682,7 @@ filter_tasks {
 ```
 
 ### 🌟 自定义透视使用
+
 ```bash
 # 列出您的自定义透视
 list_custom_perspectives {"format": "detailed"}
@@ -685,6 +704,7 @@ get_custom_perspective_tasks {
 ## 🔧 配置
 
 ### 验证安装
+
 ```bash
 # 检查 MCP 状态
 claude mcp list
@@ -697,6 +717,7 @@ list_custom_perspectives
 ```
 
 ### 故障排除
+
 - 确保 OmniFocus 3+ 已安装并运行
 - 验证 Node.js 18+ 已安装
 - 检查 Claude Code MCP 配置

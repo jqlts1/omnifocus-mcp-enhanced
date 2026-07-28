@@ -132,7 +132,7 @@ const TOOLS = [
   {
     name: 'batch_remove_items',
     description:
-      'Remove multiple tasks or projects from OmniFocus in a single operation',
+      'Remove a user-confirmed set of tasks or projects by stable ID. The complete batch is validated before deletion and every ID is verified absent afterward.',
     tool: batchRemoveItemsTool,
     annotations: MUTATING_TOOL,
   },

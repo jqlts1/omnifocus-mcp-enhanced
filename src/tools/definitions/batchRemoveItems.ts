@@ -1,109 +1,86 @@
 import { z } from 'zod';
-import {
-  batchRemoveItems,
-  BatchRemoveItemsParams,
-} from '../primitives/batchRemoveItems.js';
+import { batchRemoveItems } from '../primitives/batchRemoveItems.js';
 import type { ToolHandlerExtra } from './toolHandler.js';
+
+const itemSchema = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .describe('Stable ID of the task or project to remove'),
+    itemType: z
+      .enum(['task', 'project'])
+      .describe("Type of item to remove ('task' or 'project')"),
+  })
+  .strict();
 
 export const schema = z.object({
   items: z
-    .array(
-      z.object({
-        id: z
-          .string()
-          .optional()
-          .describe('The ID of the task or project to remove'),
-        name: z
-          .string()
-          .optional()
-          .describe(
-            'The name of the task or project to remove (as fallback if ID not provided)',
-          ),
-        itemType: z
-          .enum(['task', 'project'])
-          .describe("Type of item to remove ('task' or 'project')"),
-      }),
-    )
-    .describe('Array of items (tasks or projects) to remove'),
+    .array(itemSchema)
+    .min(1)
+    .max(100)
+    .superRefine((items, context) => {
+      const seen = new Set<string>();
+      items.forEach((item, index) => {
+        const key = `${item.itemType}:${item.id}`;
+        if (seen.has(key)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [index, 'id'],
+            message: `Duplicate item: ${key}`,
+          });
+        }
+        seen.add(key);
+      });
+    })
+    .describe(
+      'Confirmed tasks or projects to remove. The complete batch is validated before deletion.',
+    ),
 });
 
 export async function handler(
   args: z.infer<typeof schema>,
-  extra: ToolHandlerExtra,
+  _extra: ToolHandlerExtra,
 ) {
   try {
-    // Validate that each item has at least an ID or name
-    for (const item of args.items) {
-      if (!item.id && !item.name) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: 'Each item must have either id or name provided to remove it.',
-            },
-          ],
-          isError: true,
-        };
-      }
-    }
-
-    // Call the batchRemoveItems function
-    const result = await batchRemoveItems(
-      args.items as BatchRemoveItemsParams[],
-    );
-
-    if (result.success) {
-      const successCount = result.results.filter((r) => r.success).length;
-      const failureCount = result.results.filter((r) => !r.success).length;
-
-      let message = `✅ Successfully removed ${successCount} items.`;
-
-      if (failureCount > 0) {
-        message += ` ⚠️ Failed to remove ${failureCount} items.`;
-      }
-
-      // Include details about removed items
-      const details = result.results
-        .map((item, index) => {
-          if (item.success) {
-            const itemType = args.items[index].itemType;
-            return `- ✅ ${itemType}: "${item.name}"`;
-          } else {
-            const itemType = args.items[index].itemType;
-            const identifier = args.items[index].id || args.items[index].name;
-            return `- ❌ ${itemType}: ${identifier} - Error: ${item.error}`;
-          }
-        })
-        .join('\n');
-
+    const result = await batchRemoveItems(args.items);
+    if (!result.success || !result.results) {
       return {
         content: [
           {
             type: 'text' as const,
-            text: `${message}\n\n${details}`,
-          },
-        ],
-      };
-    } else {
-      // Batch operation failed completely
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: `Failed to process batch removal: ${result.error}`,
+            text: `Failed to remove batch: ${result.error || 'Unknown error'}`,
           },
         ],
         isError: true,
       };
     }
-  } catch (err: unknown) {
-    const error = err as Error;
-    console.error(`Tool execution error: ${error.message}`);
+
+    const details = result.results
+      .map((item) => {
+        const cascade =
+          item.cascadeCount > 0
+            ? `; removed ${item.cascadeCount} contained ${item.cascadeCount === 1 ? 'item' : 'items'}`
+            : '';
+        return `- ✅ ${item.itemType}: "${item.name}" (id: ${item.id}${cascade})`;
+      })
+      .join('\n');
+
     return {
       content: [
         {
           type: 'text' as const,
-          text: `Error processing batch removal: ${error.message}`,
+          text: `✅ Removed and verified ${result.removedCount} items.\n\n${details}`,
+        },
+      ],
+    };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error processing batch removal: ${message}`,
         },
       ],
       isError: true,
