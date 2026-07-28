@@ -209,6 +209,13 @@ if ! grep -q -- "--project" <<<"$OUTLINE_HELP" ||
 fi
 ok "Nested project outline input present"
 
+REPETITION_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs add-omnifocus-task --help 2>&1 || true)"
+if ! grep -q -- "--repetition" <<<"$REPETITION_HELP" &&
+   ! grep -q -- "--raw" <<<"$REPETITION_HELP"; then
+  fail "The generated add-omnifocus-task command cannot accept the v1.20 repetition input. Refresh the package and retry."
+fi
+ok "Creation-time repetition input present"
+
 # Confirm the CLI can actually reach OmniFocus, but do not hard-fail: the user
 # may simply not have OmniFocus running right now.
 if "$TARGET_DIR/bin/omnifocus-enhanced.cjs" count-tasks --perspective inbox >/dev/null 2>&1; then

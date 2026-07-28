@@ -44,6 +44,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.20.0** - Repeating tasks completed: repetition is now readable and verified everywhere. `get_task_by_id` returns the rule string, schedule type, anchor date, catch-up behavior, and the next occurrence; list reads add only an `isRepeating` marker; `dump_database` reports real repetition instead of hard-coded nulls. `add_omnifocus_task` and every task node of `create_project_from_outline` accept a `repetition` object using ICS rule strings, and `set_repetition_rule` now snapshots the previous rule, verifies every written field, restores on failure, and reports an unconfirmed restore with the affected task ID. The surface remains 40 tools, 5 prompts, and 3 resources.
+
 - **v1.19.0** - Project Shaping: added `create_project_from_outline` for turning one user-confirmed structured outline into a complete OmniFocus project tree. The tool accepts stable Folder/Tag IDs and core planning fields, enforces a 200-task/eight-level bound, preflights every reference before writing, creates the tree in one OmniJS request, reads every node and field back, and performs one bounded Undo if execution or verification fails. The new `project_shaping` Prompt and bundled Skill guide extract, disclose inferences, resolve IDs, confirm, create, and report. The surface is now 40 tools, 5 prompts, and 3 resources.
 
 - **v1.18.0** - Reliability release: upgraded the MCP SDK to 1.30.0 and Zod to 3.25.76; migrated Resources to `registerResource` with bounded task snapshots that distinguish `totalCount`, `returnedCount`, and truncation; restored the user's original OmniFocus perspective after custom-perspective reads; removed the unused incomplete Perspective V2/debug implementation; and rebuilt `batch_remove_items` around stable IDs, complete preflight, undo-based rollback on execution failure, cascade reporting, and post-delete verification.
@@ -557,7 +559,28 @@ Use `project_shaping` to turn meeting notes, brainstorming, or a task list into 
 
 The action accepts structured, reviewed fields—not raw meeting notes. It supports at most 200 tasks and eight task levels. Missing references cause zero writes. Execution or read-back failure triggers one bounded OmniFocus Undo; if cleanup cannot be confirmed, the error includes the residual project ID.
 
-### 6. 🖼️ Attachment Inspection
+### 7. Repeating Tasks
+
+Repetition is a first-class field. Create it, read it, change it, and clear it—all verified.
+
+```json
+{
+  "name": "Weekly admin checklist",
+  "repetition": {
+    "ruleString": "FREQ=WEEKLY;BYDAY=FR",
+    "scheduleType": "Regularly",
+    "anchorDateKey": "DueDate",
+    "catchUpAutomatically": true
+  }
+}
+```
+
+- `add_omnifocus_task` and task nodes of `create_project_from_outline` accept the same object. `UNTIL` and `COUNT` belong inside `ruleString`; the deprecated `method` parameter is never exposed.
+- `get_task_by_id` reports the stored rule plus the next occurrence. List reads add only `isRepeating`, so broad queries stay small.
+- `set_repetition_rule` verifies the saved rule field by field. A failed write or mismatch restores the previous rule; if restoration cannot be confirmed, the error names the task that needs manual review.
+- A verification failure during creation removes the task, or rolls back the whole project tree, so no item keeps a recurrence the user did not confirm.
+
+### 8. 🖼️ Attachment Inspection
 
 Discover images and linked files on a task first, then read only the attachment you need:
 

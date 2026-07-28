@@ -29,8 +29,8 @@ test('normalizeOmnifocusDumpData preserves task and project added dates', () => 
         projectID: 'project-1',
         parentTaskID: null,
         children: [],
-        inInbox: false
-      }
+        inInbox: false,
+      },
     ],
     projects: {
       'project-1': {
@@ -49,8 +49,8 @@ test('normalizeOmnifocusDumpData preserves task and project added dates', () => 
         completedByChildren: false,
         containsSingletonActions: false,
         note: '',
-        tasks: ['task-1']
-      }
+        tasks: ['task-1'],
+      },
     },
     folders: {},
     tags: {
@@ -60,9 +60,9 @@ test('normalizeOmnifocusDumpData preserves task and project added dates', () => 
         parentTagID: null,
         active: true,
         allowsNextAction: true,
-        tasks: ['task-1']
-      }
-    }
+        tasks: ['task-1'],
+      },
+    },
   });
 
   assert.equal(database.tasks[0].addedDate, taskAddedDate);
@@ -96,8 +96,8 @@ test('normalizeOmnifocusDumpData does not validate added date format', () => {
         projectID: 'project-1',
         parentTaskID: null,
         children: [],
-        inInbox: false
-      }
+        inInbox: false,
+      },
     ],
     projects: {
       'project-1': {
@@ -116,13 +116,70 @@ test('normalizeOmnifocusDumpData does not validate added date format', () => {
         completedByChildren: false,
         containsSingletonActions: false,
         note: '',
-        tasks: ['task-1']
-      }
+        tasks: ['task-1'],
+      },
     },
     folders: {},
-    tags: {}
+    tags: {},
   });
 
   assert.equal(database.tasks[0].addedDate, taskAddedDate);
   assert.equal(database.projects['project-1'].addedDate, projectAddedDate);
+});
+
+test('normalizeOmnifocusDumpData reports real repetition data', () => {
+  const dumpTask = {
+    id: 'task-1',
+    name: 'Weekly admin checklist',
+    note: '',
+    taskStatus: 'Available',
+    flagged: false,
+    dueDate: null,
+    deferDate: null,
+    plannedDate: null,
+    effectiveDueDate: null,
+    effectiveDeferDate: null,
+    effectivePlannedDate: null,
+    estimatedMinutes: null,
+    completedByChildren: false,
+    sequential: false,
+    tags: [],
+    projectID: null,
+    parentTaskID: null,
+    children: [],
+    inInbox: true,
+  };
+
+  const repeating = normalizeOmnifocusDumpData({
+    exportDate: '2026-07-29T00:00:00.000Z',
+    tasks: [
+      {
+        ...dumpTask,
+        repetition: {
+          isRepeating: true,
+          ruleString: 'FREQ=WEEKLY;BYDAY=FR',
+          scheduleType: 'FromCompletion',
+        },
+      },
+    ],
+    projects: {},
+    folders: {},
+    tags: {},
+  });
+
+  assert.equal(repeating.tasks[0].isRepeating, true);
+  assert.equal(repeating.tasks[0].repetitionRule, 'FREQ=WEEKLY;BYDAY=FR');
+  assert.equal(repeating.tasks[0].repetitionMethod, 'FromCompletion');
+
+  const oneOff = normalizeOmnifocusDumpData({
+    exportDate: '2026-07-29T00:00:00.000Z',
+    tasks: [dumpTask],
+    projects: {},
+    folders: {},
+    tags: {},
+  });
+
+  assert.equal(oneOff.tasks[0].isRepeating, false);
+  assert.equal(oneOff.tasks[0].repetitionRule, null);
+  assert.equal(oneOff.tasks[0].repetitionMethod, null);
 });

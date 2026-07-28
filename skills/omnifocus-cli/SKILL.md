@@ -217,8 +217,10 @@ To turn meeting notes, brainstorming, or a task list into a new project:
    result is `ROLLBACK_UNCONFIRMED`, show the residual project ID and recovery
    instruction before retrying.
 
-The request supports at most 200 tasks and eight task levels. For nested input,
-use `--raw`:
+The request supports at most 200 tasks and eight task levels. Tasks may carry a
+`repetition` object using an ICS `ruleString` (encode `UNTIL`/`COUNT` there) plus
+optional `scheduleType`, `anchorDateKey`, and `catchUpAutomatically`. Projects
+themselves cannot repeat through this tool. For nested input, use `--raw`:
 
 ```bash
 bin/omnifocus-enhanced.cjs create-project-from-outline --raw '{
@@ -232,10 +234,40 @@ bin/omnifocus-enhanced.cjs create-project-from-outline --raw '{
         "name": "Confirm information architecture",
         "estimatedMinutes": 60,
         "children": [{"name": "Review navigation"}]
+      },
+      {
+        "name": "Weekly launch check-in",
+        "repetition": {
+          "ruleString": "FREQ=WEEKLY;BYDAY=FR",
+          "scheduleType": "Regularly",
+          "anchorDateKey": "DueDate"
+        }
       }
     ]
   }
 }'
+```
+
+## Repeating Tasks
+
+Repetition is readable and writable:
+
+- `get-task-by-id` reports the rule, schedule type, anchor date, catch-up
+  behavior, and the next occurrence. List reads only mark a task as repeating.
+- `add-omnifocus-task --raw` accepts the same `repetition` object at creation.
+  If verification fails, the created task is removed again.
+- `set-repetition-rule` updates or clears an existing rule. It verifies the
+  saved rule and restores the previous one on failure; a
+  `REPETITION_RESTORE_UNCONFIRMED` result names the task needing manual review.
+
+```bash
+bin/omnifocus-enhanced.cjs add-omnifocus-task --raw '{
+  "name": "Weekly admin checklist",
+  "repetition": {"ruleString": "FREQ=WEEKLY;BYDAY=FR", "anchorDateKey": "DueDate"}
+}'
+bin/omnifocus-enhanced.cjs set-repetition-rule --task-id "<id>" --rule-string "FREQ=MONTHLY" --schedule-type FromCompletion
+bin/omnifocus-enhanced.cjs set-repetition-rule --task-id "<id>" --clear true
+bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>"
 ```
 
 ## Projects

@@ -57,6 +57,34 @@ export const schema = z.object({
     .describe(
       'The name of the parent task to create this task as a subtask (alternative to parentTaskId)',
     ),
+  repetition: z
+    .object({
+      ruleString: z
+        .string()
+        .min(1)
+        .describe(
+          'ICS recurrence rule, e.g. FREQ=WEEKLY;BYDAY=FR. Encode UNTIL/COUNT here.',
+        ),
+      scheduleType: z
+        .enum(['Regularly', 'FromCompletion'])
+        .optional()
+        .describe(
+          'How the next occurrence is scheduled; omitted uses the OmniFocus default.',
+        ),
+      anchorDateKey: z
+        .enum(['DueDate', 'DeferDate', 'PlannedDate'])
+        .optional()
+        .describe('Which date advances when the task repeats.'),
+      catchUpAutomatically: z
+        .boolean()
+        .optional()
+        .describe('Skip missed occurrences when the task is resolved.'),
+    })
+    .strict()
+    .optional()
+    .describe(
+      'Recurrence applied and verified after creation. Verification failure removes the created task.',
+    ),
 });
 
 export async function handler(
@@ -96,12 +124,18 @@ export async function handler(
         result.removedSiblings && result.removedSiblings.length > 0
           ? `\nRemoved mutually exclusive tags: ${result.removedSiblings.join(', ')}`
           : '';
+      const repetitionText = result.repetition
+        ? `\nRepeats: ${result.repetition.ruleString} (${result.repetition.scheduleType}, anchor ${result.repetition.anchorDateKey})` +
+          (result.repetition.nextOccurrence
+            ? `\nNext occurrence: ${new Date(result.repetition.nextOccurrence).toLocaleString()}`
+            : '')
+        : '';
 
       return {
         content: [
           {
             type: 'text' as const,
-            text: `✅ Task "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}.\n\nid: ${result.taskId}${exclusivityText}`,
+            text: `✅ Task "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}.\n\nid: ${result.taskId}${exclusivityText}${repetitionText}`,
           },
         ],
       };
@@ -111,7 +145,7 @@ export async function handler(
         content: [
           {
             type: 'text' as const,
-            text: `Failed to create task: ${result.error}`,
+            text: `Failed to create task${result.code ? ` [${result.code}]` : ''}: ${result.error}`,
           },
         ],
         isError: true,

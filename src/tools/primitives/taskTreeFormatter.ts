@@ -12,6 +12,7 @@ export interface TaskTreeNode {
   projectName?: string | null;
   parentId?: string | null;
   inInbox?: boolean;
+  isRepeating?: boolean;
   tags?: Array<{ id?: string; name: string }>;
   childrenCount?: number;
   children?: TaskTreeNode[];
@@ -45,10 +46,14 @@ function statusIcon(status?: string): string {
 
 function metadata(task: TaskTreeNode, includeProject = false): string {
   const parts: string[] = [];
-  if (task.dueDate) parts.push(`DUE: ${new Date(task.dueDate).toLocaleDateString()}`);
-  if (task.deferDate) parts.push(`DEFER: ${new Date(task.deferDate).toLocaleDateString()}`);
-  if (task.plannedDate) parts.push(`PLAN: ${new Date(task.plannedDate).toLocaleDateString()}`);
-  if (task.taskStatus && task.taskStatus !== 'Available') parts.push(task.taskStatus);
+  if (task.dueDate)
+    parts.push(`DUE: ${new Date(task.dueDate).toLocaleDateString()}`);
+  if (task.deferDate)
+    parts.push(`DEFER: ${new Date(task.deferDate).toLocaleDateString()}`);
+  if (task.plannedDate)
+    parts.push(`PLAN: ${new Date(task.plannedDate).toLocaleDateString()}`);
+  if (task.taskStatus && task.taskStatus !== 'Available')
+    parts.push(task.taskStatus);
   if (task.estimatedMinutes) parts.push(`⏱${task.estimatedMinutes}m`);
   if (includeProject) parts.push(task.projectName || 'Inbox');
   return parts.length > 0 ? ` (${parts.join(', ')})` : '';
@@ -72,12 +77,17 @@ function formatChild(
   }
 
   if (task.tags && task.tags.length > 0) {
-    output += `${continuation}🏷 ${task.tags.map(tag => tag.name).join(', ')}\n`;
+    output += `${continuation}🏷 ${task.tags.map((tag) => tag.name).join(', ')}\n`;
   }
 
   if (options.showSubtasks && task.children && task.children.length > 0) {
     task.children.forEach((child, index) => {
-      output += formatChild(child, continuation, index === task.children!.length - 1, options);
+      output += formatChild(
+        child,
+        continuation,
+        index === task.children!.length - 1,
+        options,
+      );
     });
   }
 
@@ -104,14 +114,21 @@ export function formatTaskTreeNode(
 
   if (task.tags && task.tags.length > 0) {
     const matched = new Set(options.matchedTags || []);
-    const names = task.tags.map(tag => matched.has(tag.name) ? `**${tag.name}**` : tag.name);
+    const names = task.tags.map((tag) =>
+      matched.has(tag.name) ? `**${tag.name}**` : tag.name,
+    );
     output += `   🏷 ${names.join(', ')}\n`;
   }
 
   if (options.showSubtasks && task.children && task.children.length > 0) {
     output += `   │\n`;
     task.children.forEach((child, index) => {
-      output += formatChild(child, '   ', index === task.children!.length - 1, options);
+      output += formatChild(
+        child,
+        '   ',
+        index === task.children!.length - 1,
+        options,
+      );
     });
   }
 
@@ -129,10 +146,13 @@ function collectDescendantIds(task: TaskTreeNode, ids: Set<string>): void {
   }
 }
 
-export function dedupeExpandedTopLevelTasks(tasks: TaskTreeNode[], showSubtasks: boolean): TaskTreeNode[] {
+export function dedupeExpandedTopLevelTasks(
+  tasks: TaskTreeNode[],
+  showSubtasks: boolean,
+): TaskTreeNode[] {
   if (!showSubtasks) return tasks;
 
   const descendantIds = new Set<string>();
   for (const task of tasks) collectDescendantIds(task, descendantIds);
-  return tasks.filter(task => !descendantIds.has(task.id));
+  return tasks.filter((task) => !descendantIds.has(task.id));
 }

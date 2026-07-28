@@ -78,6 +78,9 @@ test('project shaping prompt separates proposal, confirmation, and action', () =
   assert.match(prompt, /never put raw meeting notes/);
   assert.match(prompt, /ROLLBACK_UNCONFIRMED/);
   assert.match(prompt, /200 tasks and eight task levels/);
+  assert.match(prompt, /repetition on tasks/);
+  assert.match(prompt, /FREQ=WEEKLY;BYDAY=FR/);
+  assert.match(prompt, /next occurrence/);
 });
 
 test('registerPrompts exposes project_shaping as the fifth prompt', () => {

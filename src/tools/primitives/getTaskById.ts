@@ -1,5 +1,10 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
-import { RawTaskAttachment, TaskAttachmentInfo, normalizeTaskAttachments } from './taskAttachments.js';
+import {
+  RawTaskAttachment,
+  TaskAttachmentInfo,
+  normalizeTaskAttachments,
+} from './taskAttachments.js';
+import type { RepetitionSnapshot } from './repetitionRule.js';
 import { TaskTreeNode } from './taskTreeFormatter.js';
 
 // Interface for task lookup parameters
@@ -30,6 +35,7 @@ export interface TaskInfo extends TaskTreeNode {
   flagged: boolean;
   completed: boolean;
   estimatedMinutes?: number;
+  repetition: RepetitionSnapshot | null;
   attachments: TaskAttachmentInfo[];
   linkedFileURLs: string[];
 }
@@ -53,6 +59,7 @@ interface RawTaskInfo {
   flagged: boolean;
   completed: boolean;
   estimatedMinutes?: number | null;
+  repetition?: RepetitionSnapshot | null;
   attachments?: RawTaskAttachment[];
   linkedFileURLs?: string[];
 }
@@ -66,22 +73,27 @@ interface GetTaskByIdScriptResult {
 /**
  * Get task information by ID or name from OmniFocus
  */
-export async function getTaskById(params: GetTaskByIdParams): Promise<{ success: boolean, task?: TaskInfo, error?: string }> {
+export async function getTaskById(
+  params: GetTaskByIdParams,
+): Promise<{ success: boolean; task?: TaskInfo; error?: string }> {
   try {
     // Validate parameters
     if (!params.taskId && !params.taskName) {
       return {
         success: false,
-        error: "Either taskId or taskName must be provided"
+        error: 'Either taskId or taskName must be provided',
       };
     }
 
-    const result = await executeOmniFocusScript('@getTaskById.js', params) as GetTaskByIdScriptResult;
+    const result = (await executeOmniFocusScript(
+      '@getTaskById.js',
+      params,
+    )) as GetTaskByIdScriptResult;
 
     if (!result.success || !result.task) {
       return {
         success: false,
-        error: result.error || 'Failed to retrieve task'
+        error: result.error || 'Failed to retrieve task',
       };
     }
 
@@ -105,19 +117,23 @@ export async function getTaskById(params: GetTaskByIdParams): Promise<{ success:
       flagged: Boolean(rawTask.flagged),
       completed: Boolean(rawTask.completed),
       estimatedMinutes: rawTask.estimatedMinutes ?? undefined,
-      attachments: normalizeTaskAttachments(rawTask.attachments, rawTask.linkedFileURLs),
-      linkedFileURLs: rawTask.linkedFileURLs || []
+      repetition: rawTask.repetition || null,
+      attachments: normalizeTaskAttachments(
+        rawTask.attachments,
+        rawTask.linkedFileURLs,
+      ),
+      linkedFileURLs: rawTask.linkedFileURLs || [],
     };
 
     return {
       success: true,
-      task: taskInfo
+      task: taskInfo,
     };
   } catch (error: any) {
-    console.error("Error in getTaskById:", error);
+    console.error('Error in getTaskById:', error);
     return {
       success: false,
-      error: error?.message || "Unknown error in getTaskById"
+      error: error?.message || 'Unknown error in getTaskById',
     };
   }
 }

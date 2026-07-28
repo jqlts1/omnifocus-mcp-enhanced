@@ -1,4 +1,9 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
+import {
+  normalizeRepetitionRuleString,
+  validateRepetitionInput,
+  type RepetitionInput,
+} from './repetitionRule.js';
 
 export interface OutlineCoreFields {
   name: string;
@@ -14,6 +19,7 @@ export interface OutlineCoreFields {
 
 export interface TaskOutline extends OutlineCoreFields {
   children?: TaskOutline[];
+  repetition?: RepetitionInput;
 }
 
 export interface ProjectOutline extends OutlineCoreFields {
@@ -26,6 +32,7 @@ export interface ProjectOutlinePlanNode extends OutlineCoreFields {
   parentPlanIndex: number | null;
   path: string;
   tagIds: string[];
+  repetition?: RepetitionInput;
 }
 
 export interface ProjectOutlinePlan {
@@ -124,12 +131,26 @@ export function buildProjectOutlinePlan(
           : '<unnamed>';
       const path = `${parentPath}/${tentativeName}`;
       const normalized = validatedCoreFields(node, path);
+      if (node.repetition) {
+        const repetition = validateRepetitionInput(node.repetition);
+        if (!repetition.valid) {
+          throw new Error(`${path}: ${repetition.error}`);
+        }
+      }
       const planIndex = tasks.length;
       tasks.push({
         ...normalized,
         planIndex,
         parentPlanIndex,
         path,
+        repetition: node.repetition
+          ? {
+              ...node.repetition,
+              ruleString: normalizeRepetitionRuleString(
+                node.repetition.ruleString,
+              ),
+            }
+          : undefined,
       });
       walk(node.children || [], planIndex, path, depth + 1);
     }

@@ -3,6 +3,9 @@ import { appleScriptDateCode } from '../../utils/dateFormatter.js';
 import { buildAppleScriptJsonHelpers } from '../../utils/appleScriptJson.js';
 import { escapeAppleScriptString } from '../../utils/appleScriptString.js';
 import { applyTagsExclusive } from './applyTagsExclusive.js';
+import { removeItem } from './removeItem.js';
+import { setRepetitionRule } from './setRepetitionRule.js';
+import type { RepetitionErrorCode, RepetitionInput } from './repetitionRule.js';
 
 // Interface for task creation parameters
 export interface AddOmniFocusTaskParams {
@@ -18,16 +21,21 @@ export interface AddOmniFocusTaskParams {
   projectName?: string; // Project name to add task to
   parentTaskId?: string; // Parent task ID for subtask creation
   parentTaskName?: string; // Parent task name for subtask creation (alternative to ID)
+  repetition?: RepetitionInput; // Optional recurrence applied and verified after creation
 }
 
-export function buildTagAssignmentScript(tags: string[], targetVar: string): string {
+export function buildTagAssignmentScript(
+  tags: string[],
+  targetVar: string,
+): string {
   if (!tags || tags.length === 0) {
     return '';
   }
 
-  return tags.map(tag => {
-    const sanitizedTag = escapeAppleScriptString(tag);
-    return `
+  return tags
+    .map((tag) => {
+      const sanitizedTag = escapeAppleScriptString(tag);
+      return `
           try
             set theTag to missing value
             try
@@ -40,7 +48,8 @@ export function buildTagAssignmentScript(tags: string[], targetVar: string): str
           on error
             -- Ignore errors finding/adding tags
           end try`;
-  }).join('\n');
+    })
+    .join('\n');
 }
 
 /**
@@ -51,16 +60,30 @@ export function generateAppleScript(params: AddOmniFocusTaskParams): string {
   const name = escapeAppleScriptString(params.name);
   const note = params.note ? escapeAppleScriptString(params.note) : '';
   // Build date variables outside OmniFocus tell block to avoid locale parsing issues.
-  const dueDateCode = params.dueDate ? appleScriptDateCode(params.dueDate, 'dueDateValue') : '';
-  const deferDateCode = params.deferDate ? appleScriptDateCode(params.deferDate, 'deferDateValue') : '';
-  const plannedDateCode = params.plannedDate ? appleScriptDateCode(params.plannedDate, 'plannedDateValue') : '';
-  const datePreamble = [dueDateCode, deferDateCode, plannedDateCode].filter(Boolean).join('\n');
+  const dueDateCode = params.dueDate
+    ? appleScriptDateCode(params.dueDate, 'dueDateValue')
+    : '';
+  const deferDateCode = params.deferDate
+    ? appleScriptDateCode(params.deferDate, 'deferDateValue')
+    : '';
+  const plannedDateCode = params.plannedDate
+    ? appleScriptDateCode(params.plannedDate, 'plannedDateValue')
+    : '';
+  const datePreamble = [dueDateCode, deferDateCode, plannedDateCode]
+    .filter(Boolean)
+    .join('\n');
   const flagged = params.flagged === true;
   const estimatedMinutes = params.estimatedMinutes?.toString() || '';
   const tags = params.tags || [];
-  const projectName = params.projectName ? escapeAppleScriptString(params.projectName) : '';
-  const parentTaskId = params.parentTaskId ? escapeAppleScriptString(params.parentTaskId) : '';
-  const parentTaskName = params.parentTaskName ? escapeAppleScriptString(params.parentTaskName) : '';
+  const projectName = params.projectName
+    ? escapeAppleScriptString(params.projectName)
+    : '';
+  const parentTaskId = params.parentTaskId
+    ? escapeAppleScriptString(params.parentTaskId)
+    : '';
+  const parentTaskName = params.parentTaskName
+    ? escapeAppleScriptString(params.parentTaskName)
+    : '';
   const jsonHelpers = buildAppleScriptJsonHelpers();
   const tagAssignmentScript = buildTagAssignmentScript(tags, 'newTask');
 
@@ -131,12 +154,15 @@ ${datePreamble}
 /**
  * Validate parent task parameters to prevent conflicts
  */
-async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise<{ valid: boolean, error?: string }> {
+async function validateParentTaskParams(
+  params: AddOmniFocusTaskParams,
+): Promise<{ valid: boolean; error?: string }> {
   // Check if both parentTaskId and parentTaskName are provided
   if (params.parentTaskId && params.parentTaskName) {
     return {
       valid: false,
-      error: "Cannot specify both parentTaskId and parentTaskName. Please use only one."
+      error:
+        'Cannot specify both parentTaskId and parentTaskName. Please use only one.',
     };
   }
 
@@ -144,7 +170,8 @@ async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise
   if ((params.parentTaskId || params.parentTaskName) && params.projectName) {
     return {
       valid: false,
-      error: "Cannot specify both parent task and project. Subtasks inherit project from their parent."
+      error:
+        'Cannot specify both parent task and project. Subtasks inherit project from their parent.',
     };
   }
 
@@ -154,28 +181,84 @@ async function validateParentTaskParams(params: AddOmniFocusTaskParams): Promise
 /**
  * Add a task to OmniFocus
  */
-export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<{ success: boolean, taskId?: string, error?: string, removedSiblings?: string[], missingTags?: string[] }> {
+export interface AddOmniFocusTaskResult {
+  success: boolean;
+  taskId?: string;
+  error?: string;
+  code?: RepetitionErrorCode;
+  removedSiblings?: string[];
+  missingTags?: string[];
+  repetition?: {
+    ruleString?: string;
+    scheduleType?: string;
+    anchorDateKey?: string;
+    catchUpAutomatically?: boolean;
+    nextOccurrence?: string | null;
+  };
+}
+
+/**
+ * Apply the confirmed recurrence to a freshly created task. A failure leaves a task whose
+ * recurrence the user never approved, so the task is removed again before reporting.
+ */
+async function applyCreationRepetition(
+  taskId: string,
+  repetition: RepetitionInput,
+): Promise<
+  | { failure: AddOmniFocusTaskResult }
+  | { applied: NonNullable<AddOmniFocusTaskResult['repetition']> }
+> {
+  const result = await setRepetitionRule({ taskId, ...repetition });
+  if (result.success) {
+    return {
+      applied: {
+        ruleString: result.ruleString,
+        scheduleType: result.scheduleType,
+        anchorDateKey: result.anchorDateKey,
+        catchUpAutomatically: result.catchUpAutomatically,
+        nextOccurrence: result.nextOccurrence,
+      },
+    };
+  }
+
+  const removal = await removeItem({ id: taskId, itemType: 'task' });
+  const cleanup = removal.success
+    ? 'The created task was removed.'
+    : `The created task ${taskId} could not be removed automatically.`;
+
+  return {
+    failure: {
+      success: false,
+      code: result.code,
+      error: `${result.error || 'Failed to set repetition rule'} ${cleanup}`,
+    },
+  };
+}
+
+export async function addOmniFocusTask(
+  params: AddOmniFocusTaskParams,
+): Promise<AddOmniFocusTaskResult> {
   try {
     // Validate parent task parameters
     const validation = await validateParentTaskParams(params);
     if (!validation.valid) {
       return {
         success: false,
-        error: validation.error
+        error: validation.error,
       };
     }
 
     // Generate AppleScript
     const script = generateAppleScript(params);
 
-    console.error("Generated AppleScript:");
+    console.error('Generated AppleScript:');
     console.error(script);
-    console.error("Executing AppleScript...");
+    console.error('Executing AppleScript...');
 
     // Execute AppleScript using temp file (avoids shell escaping issues)
     const stdout = await executeAppleScript(script);
 
-    console.error("AppleScript stdout:", stdout);
+    console.error('AppleScript stdout:', stdout);
 
     // Parse the result
     try {
@@ -184,7 +267,7 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
       if (!result.success) {
         return {
           success: false,
-          error: result.error
+          error: result.error,
         };
       }
 
@@ -193,32 +276,40 @@ export async function addOmniFocusTask(params: AddOmniFocusTaskParams): Promise<
       const exclusiveTags = params.exclusiveTags !== false;
 
       // If tags were applied and exclusivity is enabled, enforce mutually exclusive groups.
-      if (taskId && tags.length > 0 && exclusiveTags) {
-        const exclusivityResult = await applyTagsExclusive(taskId, tags, 'add');
-        return {
-          success: true,
+      const exclusivity =
+        taskId && tags.length > 0 && exclusiveTags
+          ? await applyTagsExclusive(taskId, tags, 'add')
+          : null;
+
+      let repetition: AddOmniFocusTaskResult['repetition'];
+      if (taskId && params.repetition) {
+        const outcome = await applyCreationRepetition(
           taskId,
-          removedSiblings: exclusivityResult.removedSiblings,
-          missingTags: exclusivityResult.missing,
-        };
+          params.repetition,
+        );
+        if ('failure' in outcome) return outcome.failure;
+        repetition = outcome.applied;
       }
 
       return {
         success: true,
         taskId,
+        removedSiblings: exclusivity?.removedSiblings,
+        missingTags: exclusivity?.missing,
+        repetition,
       };
     } catch (parseError) {
-      console.error("Error parsing AppleScript result:", parseError);
+      console.error('Error parsing AppleScript result:', parseError);
       return {
         success: false,
-        error: `Failed to parse result: ${stdout}`
+        error: `Failed to parse result: ${stdout}`,
       };
     }
   } catch (error: any) {
-    console.error("Error in addOmniFocusTask:", error);
+    console.error('Error in addOmniFocusTask:', error);
     return {
       success: false,
-      error: error?.message || "Unknown error in addOmniFocusTask"
+      error: error?.message || 'Unknown error in addOmniFocusTask',
     };
   }
 }

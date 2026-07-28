@@ -37,6 +37,12 @@ interface FakeItem {
   children: FakeItem[];
   flattenedTasks: FakeItem[];
   parentFolder: FakeFolder | null;
+  repetitionRule: {
+    ruleString: string;
+    scheduleType: string | null;
+    anchorDateKey: string | null;
+    catchUpAutomatically: boolean;
+  } | null;
   ending: { parent: FakeItem };
   addTag(tag: FakeTag): void;
 }
@@ -56,8 +62,9 @@ interface RunOptions {
     | 'flagged'
     | 'estimatedMinutes'
     | 'sequential'
+    | 'count'
     | 'folder'
-    | 'count';
+    | 'repetition';
   canUndo?: boolean;
   undoThrows?: boolean;
 }
@@ -113,6 +120,7 @@ function runOutline(outline: ProjectOutline, options: RunOptions = {}) {
       children: [],
       flattenedTasks: [],
       parentFolder: null,
+      repetitionRule: null,
       ending: { parent: undefined as unknown as FakeItem },
       addTag(assignedTag: FakeTag) {
         if (options.corrupt === 'tag') return;
@@ -166,7 +174,37 @@ function runOutline(outline: ProjectOutline, options: RunOptions = {}) {
     }
   }
 
+  const SCHEDULE_TYPES = {
+    Regularly: 'REGULARLY',
+    FromCompletion: 'FROM_COMPLETION',
+  };
+  const ANCHOR_DATE_KEYS = {
+    DueDate: 'DUE',
+    DeferDate: 'DEFER',
+    PlannedDate: 'PLANNED',
+  };
+
   class TaskConstructor {
+    static RepetitionScheduleType = SCHEDULE_TYPES;
+    static AnchorDateKey = ANCHOR_DATE_KEYS;
+    static RepetitionRule = class {
+      constructor(
+        ruleString: string,
+        _method: unknown,
+        scheduleType: string | null,
+        anchorDateKey: string | null,
+        catchUpAutomatically: boolean,
+      ) {
+        return {
+          ruleString:
+            options.corrupt === 'repetition' ? 'FREQ=DAILY' : ruleString,
+          scheduleType,
+          anchorDateKey,
+          catchUpAutomatically,
+        } as never;
+      }
+    };
+
     constructor(name: string, parent: FakeItem) {
       if (name === options.failTaskName)
         throw new Error('simulated create failure');
@@ -216,6 +254,8 @@ function runOutline(outline: ProjectOutline, options: RunOptions = {}) {
     Array,
     Set,
     Math,
+    Map,
+    Object,
     Error,
   });
   return {
@@ -457,4 +497,54 @@ test('project outline reports a residual project when Undo throws', () => {
   assert.equal(run.result.code, 'ROLLBACK_UNCONFIRMED');
   assert.equal(run.undoCalls, 1);
   assert.equal(run.flattenedProjects.length, 1);
+});
+
+test('project outline creates and verifies a repeating task', () => {
+  const run = runOutline({
+    name: 'Admin',
+    tasks: [
+      {
+        name: 'Weekly checklist',
+        repetition: {
+          ruleString: 'FREQ=WEEKLY;BYDAY=FR',
+          scheduleType: 'FromCompletion',
+          anchorDateKey: 'DueDate',
+          catchUpAutomatically: true,
+        },
+      },
+    ],
+  });
+
+  assert.equal(run.result.success, true);
+  assert.equal(
+    run.flattenedTasks[0].repetitionRule?.ruleString,
+    'FREQ=WEEKLY;BYDAY=FR',
+  );
+});
+
+test('project outline rolls back when the applied repetition disagrees', () => {
+  const run = runOutline(
+    {
+      name: 'Admin',
+      tasks: [
+        { name: 'Weekly checklist', repetition: { ruleString: 'FREQ=WEEKLY' } },
+      ],
+    },
+    { corrupt: 'repetition' },
+  );
+
+  assert.equal(run.result.code, 'VERIFICATION_FAILED_ROLLED_BACK');
+  assert.match(run.result.error, /repetition\.ruleString/);
+  assert.equal(run.flattenedProjects.length, 0);
+});
+
+test('project outline rejects an invalid repetition rule before writing', () => {
+  assert.throws(
+    () =>
+      buildProjectOutlinePlan({
+        name: 'Admin',
+        tasks: [{ name: 'Task', repetition: { ruleString: 'INTERVAL=2' } }],
+      }),
+    /FREQ=/,
+  );
 });

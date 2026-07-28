@@ -14,6 +14,58 @@ function omnifocusMcpTaskStatus(status) {
   return taskStatusMap[status] || "Unknown";
 }
 
+function omnifocusMcpScheduleTypeName(value) {
+  const types = typeof Task !== "undefined" ? Task.RepetitionScheduleType : null;
+  if (!types || value === null || value === undefined) return null;
+  if (value === types.Regularly) return "Regularly";
+  if (value === types.FromCompletion) return "FromCompletion";
+  if (value === types.None) return "None";
+  return null;
+}
+
+function omnifocusMcpAnchorDateKeyName(value) {
+  const keys = typeof Task !== "undefined" ? Task.AnchorDateKey : null;
+  if (!keys || value === null || value === undefined) return null;
+  if (value === keys.DueDate) return "DueDate";
+  if (value === keys.DeferDate) return "DeferDate";
+  if (value === keys.PlannedDate) return "PlannedDate";
+  return null;
+}
+
+function omnifocusMcpRepetition(task) {
+  let rule = null;
+  try {
+    rule = task.repetitionRule || null;
+  } catch (error) {
+    rule = null;
+  }
+  if (!rule) return null;
+
+  let nextOccurrence = null;
+  try {
+    const next = rule.firstDateAfterDate(new Date());
+    nextOccurrence = next ? next.toISOString() : null;
+  } catch (error) {
+    nextOccurrence = null;
+  }
+
+  return {
+    ruleString: rule.ruleString || "",
+    scheduleType: omnifocusMcpScheduleTypeName(rule.scheduleType),
+    anchorDateKey: omnifocusMcpAnchorDateKeyName(rule.anchorDateKey),
+    catchUpAutomatically: !!rule.catchUpAutomatically,
+    nextOccurrence,
+  };
+}
+
+function omnifocusMcpIsRepeating(task) {
+  try {
+    return !!task.repetitionRule;
+  } catch (error) {
+    return false;
+  }
+}
+
 function omnifocusMcpVisibleChildren(task, hideCompleted) {
   let children = [];
   try {
@@ -50,6 +102,7 @@ function omnifocusMcpSerializeTaskNode(task, options, depth, state) {
     projectName: task.containingProject ? task.containingProject.name : null,
     parentId: task.parent ? task.parent.id.primaryKey : null,
     inInbox: !!task.inInbox,
+    isRepeating: omnifocusMcpIsRepeating(task),
     childrenCount: visibleChildren.length,
     children: [],
     childrenTruncated: false,

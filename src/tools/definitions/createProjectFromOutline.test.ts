@@ -80,3 +80,40 @@ test('create_project_from_outline accepts eight task levels and rejects nine', (
     schema.parse({ project: { name: 'Project', tasks: [nestedTask(9)] } }),
   );
 });
+
+test('create_project_from_outline accepts repetition on tasks only', () => {
+  const parsed = schema.parse({
+    project: {
+      name: 'Admin',
+      tasks: [
+        {
+          name: 'Weekly checklist',
+          repetition: {
+            ruleString: 'FREQ=WEEKLY;BYDAY=FR',
+            scheduleType: 'FromCompletion',
+            anchorDateKey: 'DueDate',
+            catchUpAutomatically: true,
+          },
+        },
+      ],
+    },
+  });
+
+  assert.equal(
+    parsed.project.tasks?.[0].repetition?.ruleString,
+    'FREQ=WEEKLY;BYDAY=FR',
+  );
+  assert.throws(() =>
+    schema.parse({
+      project: { name: 'Admin', repetition: { ruleString: 'FREQ=WEEKLY' } },
+    }),
+  );
+  assert.throws(() =>
+    schema.parse({
+      project: {
+        name: 'Admin',
+        tasks: [{ name: 'Task', repetition: { ruleString: '' } }],
+      },
+    }),
+  );
+});

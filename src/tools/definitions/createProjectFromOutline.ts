@@ -32,6 +32,23 @@ const coreFields = {
   sequential: z.boolean().optional(),
 };
 
+const repetitionSchema = z
+  .object({
+    ruleString: z
+      .string()
+      .min(1)
+      .describe(
+        'ICS recurrence rule, e.g. FREQ=WEEKLY;BYDAY=FR. Encode UNTIL/COUNT here.',
+      ),
+    scheduleType: z.enum(['Regularly', 'FromCompletion']).optional(),
+    anchorDateKey: z.enum(['DueDate', 'DeferDate', 'PlannedDate']).optional(),
+    catchUpAutomatically: z.boolean().optional(),
+  })
+  .strict()
+  .describe(
+    'Recurrence applied and verified inside the same creation transaction',
+  );
+
 type TaskNodeInput = z.infer<typeof taskNodeSchema>;
 const taskNodeSchema: z.ZodType<{
   name: string;
@@ -43,11 +60,18 @@ const taskNodeSchema: z.ZodType<{
   flagged?: boolean;
   estimatedMinutes?: number;
   sequential?: boolean;
+  repetition?: {
+    ruleString: string;
+    scheduleType?: 'Regularly' | 'FromCompletion';
+    anchorDateKey?: 'DueDate' | 'DeferDate' | 'PlannedDate';
+    catchUpAutomatically?: boolean;
+  };
   children?: TaskNodeInput[];
 }> = z.lazy(() =>
   z
     .object({
       ...coreFields,
+      repetition: repetitionSchema.optional(),
       children: z.array(taskNodeSchema).optional(),
     })
     .strict(),

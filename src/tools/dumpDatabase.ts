@@ -1,6 +1,15 @@
-import { OmnifocusDatabase, OmnifocusTask, OmnifocusProject, OmnifocusFolder, OmnifocusTag } from '../types.js';
+import {
+  OmnifocusDatabase,
+  OmnifocusTask,
+  OmnifocusProject,
+  OmnifocusFolder,
+  OmnifocusTag,
+} from '../types.js';
 import { executeOmniFocusScript } from '../utils/scriptExecution.js';
-import { RawTaskAttachment, normalizeTaskAttachments } from './primitives/taskAttachments.js';
+import {
+  RawTaskAttachment,
+  normalizeTaskAttachments,
+} from './primitives/taskAttachments.js';
 
 import fs from 'fs';
 // Define interfaces for the data returned from the script
@@ -25,6 +34,11 @@ interface OmnifocusDumpTask {
   parentTaskID: string | null;
   children: string[];
   inInbox: boolean;
+  repetition?: {
+    isRepeating: boolean;
+    ruleString: string | null;
+    scheduleType: string | null;
+  };
   attachments?: RawTaskAttachment[];
   linkedFileURLs?: string[];
 }
@@ -74,7 +88,9 @@ interface OmnifocusDumpData {
   tags: Record<string, OmnifocusDumpTag>;
 }
 
-export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | undefined): OmnifocusDatabase {
+export function normalizeOmnifocusDumpData(
+  data: OmnifocusDumpData | null | undefined,
+): OmnifocusDatabase {
   // Create an empty database if no data returned
   if (!data) {
     return {
@@ -82,7 +98,7 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
       tasks: [],
       projects: {},
       folders: {},
-      tags: {}
+      tags: {},
     };
   }
 
@@ -92,7 +108,7 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
     tasks: [],
     projects: {},
     folders: {},
-    tags: {}
+    tags: {},
   };
 
   // Process tasks
@@ -107,18 +123,21 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
       return {
         id: String(task.id),
         name: String(task.name),
-        note: String(task.note || ""),
+        note: String(task.note || ''),
         flagged: Boolean(task.flagged),
-        completed: task.taskStatus === "Completed",
+        completed: task.taskStatus === 'Completed',
         completionDate: null, // Not available in the new format
         dropDate: null, // Not available in the new format
         taskStatus: String(task.taskStatus),
-        active: task.taskStatus !== "Completed" && task.taskStatus !== "Dropped",
+        active:
+          task.taskStatus !== 'Completed' && task.taskStatus !== 'Dropped',
         addedDate: task.addedDate || null,
         dueDate: task.dueDate,
         deferDate: task.deferDate,
         plannedDate: task.plannedDate,
-        estimatedMinutes: task.estimatedMinutes ? Number(task.estimatedMinutes) : null,
+        estimatedMinutes: task.estimatedMinutes
+          ? Number(task.estimatedMinutes)
+          : null,
         tags: task.tags || [],
         tagNames: tagNames,
         parentId: task.parentTaskID || null,
@@ -128,13 +147,16 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
         hasChildren: (task.children && task.children.length > 0) || false,
         sequential: Boolean(task.sequential),
         completedByChildren: Boolean(task.completedByChildren),
-        isRepeating: false, // Not available in the new format
-        repetitionMethod: null, // Not available in the new format
-        repetitionRule: null, // Not available in the new format
-        attachments: normalizeTaskAttachments(task.attachments, task.linkedFileURLs),
+        isRepeating: Boolean(task.repetition?.isRepeating),
+        repetitionMethod: task.repetition?.scheduleType ?? null,
+        repetitionRule: task.repetition?.ruleString ?? null,
+        attachments: normalizeTaskAttachments(
+          task.attachments,
+          task.linkedFileURLs,
+        ),
         linkedFileURLs: task.linkedFileURLs || [],
         notifications: [], // Default empty array
-        shouldUseFloatingTimeZone: false // Default value
+        shouldUseFloatingTimeZone: false, // Default value
       };
     });
   }
@@ -157,13 +179,13 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
         plannedDate: project.plannedDate,
         completedByChildren: Boolean(project.completedByChildren),
         containsSingletonActions: Boolean(project.containsSingletonActions),
-        note: String(project.note || ""),
+        note: String(project.note || ''),
         tasks: project.tasks || [],
         flagged: false, // Default value
         estimatedMinutes: null, // Default value
         nextReviewDate: null,
         lastReviewDate: null,
-        reviewInterval: null
+        reviewInterval: null,
       };
     }
   }
@@ -177,7 +199,7 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
         parentFolderID: folder.parentFolderID || null,
         status: String(folder.status),
         projects: folder.projects || [],
-        subfolders: folder.subfolders || []
+        subfolders: folder.subfolders || [],
       };
     }
   }
@@ -191,7 +213,7 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
         parentTagID: tag.parentTagID || null,
         active: Boolean(tag.active),
         allowsNextAction: Boolean(tag.allowsNextAction),
-        tasks: tag.tasks || []
+        tasks: tag.tasks || [],
       };
     }
   }
@@ -201,15 +223,16 @@ export function normalizeOmnifocusDumpData(data: OmnifocusDumpData | null | unde
 
 // Main function to dump the database
 export async function dumpDatabase(): Promise<OmnifocusDatabase> {
-
   try {
     // Execute the OmniFocus script
-    const data = await executeOmniFocusScript('@omnifocusDump.js') as OmnifocusDumpData;
+    const data = (await executeOmniFocusScript(
+      '@omnifocusDump.js',
+    )) as OmnifocusDumpData;
     // wait 1 second
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     return normalizeOmnifocusDumpData(data);
   } catch (error) {
-    console.error("Error in dumpDatabase:", error);
+    console.error('Error in dumpDatabase:', error);
     throw error;
   }
 }

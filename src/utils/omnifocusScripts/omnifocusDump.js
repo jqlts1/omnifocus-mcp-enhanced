@@ -57,6 +57,27 @@
           return mapObj[enumObj] || "Unknown";
         }
 
+        const repetitionScheduleTypeMap = {
+          [Task.RepetitionScheduleType.Regularly]: "Regularly",
+          [Task.RepetitionScheduleType.FromCompletion]: "FromCompletion"
+        };
+
+        function serializeRepetition(item) {
+          let rule = null;
+          try {
+            rule = item.repetitionRule || null;
+          } catch (error) {
+            rule = null;
+          }
+          if (!rule) return { isRepeating: false, ruleString: null, scheduleType: null };
+
+          return {
+            isRepeating: true,
+            ruleString: rule.ruleString || null,
+            scheduleType: getEnumValue(rule.scheduleType, repetitionScheduleTypeMap)
+          };
+        }
+
         function serializeAttachment(wrapper, index) {
           let preferredFilename = null;
 
@@ -231,7 +252,8 @@
                 attachments: (task.attachments || []).map((wrapper, index) => serializeAttachment(wrapper, index)),
                 linkedFileURLs: (task.linkedFileURLs || [])
                   .map(fileUrl => serializeLinkedFileURL(fileUrl))
-                  .filter(Boolean)
+                  .filter(Boolean),
+                repetition: serializeRepetition(task)
               };
     
               // Add task to export

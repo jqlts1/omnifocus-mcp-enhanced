@@ -1,5 +1,13 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
-import type { RepetitionAnchorDateKey, RepetitionScheduleType } from '../../types.js';
+import type {
+  RepetitionAnchorDateKey,
+  RepetitionScheduleType,
+} from '../../types.js';
+import {
+  normalizeRepetitionRuleString,
+  validateRepetitionInput,
+  type RepetitionErrorCode,
+} from './repetitionRule.js';
 
 export interface SetRepetitionRuleParams {
   taskId: string;
@@ -8,17 +16,22 @@ export interface SetRepetitionRuleParams {
   anchorDateKey?: RepetitionAnchorDateKey;
   catchUpAutomatically?: boolean;
   endDate?: string; // ISO date string, merged into ruleString as UNTIL=
-  count?: number;   // merged into ruleString as COUNT=
-  clear?: boolean;  // when true, removes the repetition rule
+  count?: number; // merged into ruleString as COUNT=
+  clear?: boolean; // when true, removes the repetition rule
 }
 
 export interface SetRepetitionRuleResult {
   success: boolean;
+  code?: RepetitionErrorCode;
   ruleString?: string;
   scheduleType?: RepetitionScheduleType;
   anchorDateKey?: RepetitionAnchorDateKey;
   catchUpAutomatically?: boolean;
+  nextOccurrence?: string | null;
   cleared?: boolean;
+  restored?: boolean;
+  residualTaskId?: string;
+  recovery?: string;
   error?: string;
 }
 
@@ -45,7 +58,7 @@ export function buildRepetitionRuleString(params: {
     }
   }
 
-  return ruleString;
+  return normalizeRepetitionRuleString(ruleString);
 }
 
 function toICSDateTime(isoDate: string): string | null {
@@ -66,7 +79,7 @@ function toICSDateTime(isoDate: string): string | null {
 }
 
 export function validateSetRepetitionRuleParams(
-  params: SetRepetitionRuleParams
+  params: SetRepetitionRuleParams,
 ): { valid: boolean; error?: string } {
   if (!params.taskId) {
     return { valid: false, error: 'taskId is required' };
@@ -76,15 +89,20 @@ export function validateSetRepetitionRuleParams(
     return { valid: true };
   }
 
-  if (params.scheduleType && !['Regularly', 'FromCompletion'].includes(params.scheduleType)) {
-    return { valid: false, error: 'scheduleType must be Regularly or FromCompletion' };
+  const repetition = validateRepetitionInput({
+    ruleString: params.ruleString || 'FREQ=WEEKLY',
+    scheduleType: params.scheduleType,
+    anchorDateKey: params.anchorDateKey,
+    catchUpAutomatically: params.catchUpAutomatically,
+  });
+  if (!repetition.valid) {
+    return repetition;
   }
 
-  if (params.anchorDateKey && !['DueDate', 'DeferDate', 'PlannedDate'].includes(params.anchorDateKey)) {
-    return { valid: false, error: 'anchorDateKey must be DueDate, DeferDate, or PlannedDate' };
-  }
-
-  if (params.count !== undefined && (typeof params.count !== 'number' || params.count <= 0)) {
+  if (
+    params.count !== undefined &&
+    (typeof params.count !== 'number' || params.count <= 0)
+  ) {
     return { valid: false, error: 'count must be a positive number' };
   }
 
@@ -102,21 +120,23 @@ export function validateSetRepetitionRuleParams(
  * Set, update, or clear the repetition rule on an OmniFocus task.
  */
 export async function setRepetitionRule(
-  params: SetRepetitionRuleParams
+  params: SetRepetitionRuleParams,
 ): Promise<SetRepetitionRuleResult> {
   const validation = validateSetRepetitionRuleParams(params);
   if (!validation.valid) {
-    return { success: false, error: validation.error };
+    return {
+      success: false,
+      code: 'INVALID_REPETITION',
+      error: validation.error,
+    };
   }
 
   const result = await executeOmniFocusScript('@setRepetitionRule.js', {
     taskId: params.taskId,
-    ruleString: params.ruleString,
+    ruleString: params.clear ? undefined : buildRepetitionRuleString(params),
     scheduleType: params.scheduleType,
     anchorDateKey: params.anchorDateKey,
     catchUpAutomatically: params.catchUpAutomatically,
-    endDate: params.endDate,
-    count: params.count,
     clear: params.clear,
   });
 

@@ -1,117 +1,200 @@
-// OmniJS script to set, update, or clear the repetition rule on an OmniFocus task.
-// End date and repetition count are encoded into the ICS rule string as UNTIL= and COUNT=.
+// Preflight, write, verify, and restore the repetition rule on one OmniFocus task.
+// The caller supplies a fully built ICS rule string; UNTIL and COUNT are encoded there.
 (() => {
-  try {
-    const args = (typeof injectedArgs !== 'undefined') ? injectedArgs : {};
-    const taskId = args.taskId;
-    const clear = args.clear === true;
+  const args = typeof injectedArgs !== "undefined" ? injectedArgs : {};
+  const taskId = args.taskId;
+  const clear = args.clear === true;
 
-    if (!taskId) {
-      return JSON.stringify({ success: false, error: 'taskId is required' });
+  function fail(code, error, extra) {
+    return JSON.stringify({ success: false, code, error, ...(extra || {}) });
+  }
+
+  function scheduleTypeName(value) {
+    const types = typeof Task !== "undefined" ? Task.RepetitionScheduleType : null;
+    if (!types || value === null || value === undefined) return null;
+    if (value === types.Regularly) return "Regularly";
+    if (value === types.FromCompletion) return "FromCompletion";
+    if (value === types.None) return "None";
+    return null;
+  }
+
+  function anchorDateKeyName(value) {
+    const keys = typeof Task !== "undefined" ? Task.AnchorDateKey : null;
+    if (!keys || value === null || value === undefined) return null;
+    if (value === keys.DueDate) return "DueDate";
+    if (value === keys.DeferDate) return "DeferDate";
+    if (value === keys.PlannedDate) return "PlannedDate";
+    return null;
+  }
+
+  function ruleParts(value) {
+    const parts = new Map();
+    String(value || "")
+      .trim()
+      .replace(/^RRULE:/i, "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0)
+      .forEach((part) => {
+        const separator = part.indexOf("=");
+        parts.set(part.slice(0, separator).toUpperCase(), part.slice(separator + 1));
+      });
+    return parts;
+  }
+
+  function sameRuleString(actual, expected) {
+    const actualParts = ruleParts(actual);
+    const expectedParts = ruleParts(expected);
+    if (actualParts.size !== expectedParts.size) return false;
+    for (const [key, value] of expectedParts) {
+      if (actualParts.get(key) !== value) return false;
+    }
+    return true;
+  }
+
+  function snapshotRule(target) {
+    let rule = null;
+    try {
+      rule = target.repetitionRule || null;
+    } catch (error) {
+      rule = null;
+    }
+    if (!rule) return null;
+
+    return {
+      ruleString: rule.ruleString || "",
+      scheduleType: scheduleTypeName(rule.scheduleType),
+      anchorDateKey: anchorDateKeyName(rule.anchorDateKey),
+      catchUpAutomatically: !!rule.catchUpAutomatically,
+    };
+  }
+
+  function nextOccurrence(target) {
+    try {
+      const rule = target.repetitionRule;
+      if (!rule) return null;
+      const next = rule.firstDateAfterDate(new Date());
+      return next ? next.toISOString() : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function applyRule(target, rule) {
+    if (!rule) {
+      target.repetitionRule = null;
+      return;
+    }
+    target.repetitionRule = new Task.RepetitionRule(
+      rule.ruleString,
+      null,
+      rule.scheduleType ? Task.RepetitionScheduleType[rule.scheduleType] : null,
+      rule.anchorDateKey ? Task.AnchorDateKey[rule.anchorDateKey] : null,
+      rule.catchUpAutomatically,
+    );
+  }
+
+  function ruleMismatches(expected, actual) {
+    if (!expected) return actual ? ["repetitionRule"] : [];
+    if (!actual) return ["repetitionRule"];
+
+    const mismatches = [];
+    if (!sameRuleString(actual.ruleString, expected.ruleString)) mismatches.push("ruleString");
+    if (actual.scheduleType !== expected.scheduleType) mismatches.push("scheduleType");
+    if (actual.anchorDateKey !== expected.anchorDateKey) mismatches.push("anchorDateKey");
+    if (actual.catchUpAutomatically !== expected.catchUpAutomatically) {
+      mismatches.push("catchUpAutomatically");
+    }
+    return mismatches;
+  }
+
+  function restore(target, snapshot, code, error) {
+    let restoreError = null;
+    try {
+      applyRule(target, snapshot);
+    } catch (failure) {
+      restoreError = String(failure);
     }
 
-    // Resolve the task by identifier.
+    if (ruleMismatches(snapshot, snapshotRule(target)).length === 0) {
+      return fail(code, error, { restored: true });
+    }
+
+    return fail("REPETITION_RESTORE_UNCONFIRMED", error, {
+      residualTaskId: taskId,
+      recovery: restoreError
+        ? `Restoring the previous repetition rule failed (${restoreError}). Inspect task ${taskId} in OmniFocus.`
+        : `The previous repetition rule could not be confirmed. Inspect task ${taskId} in OmniFocus.`,
+    });
+  }
+
+  try {
+    if (!taskId) return fail("INVALID_REPETITION", "taskId is required");
+
     let task = null;
-    if (typeof Task !== 'undefined' && Task.byIdentifier) {
+    if (typeof Task !== "undefined" && Task.byIdentifier) {
       task = Task.byIdentifier(taskId);
     }
-    if (!task && typeof flattenedTasks !== 'undefined') {
-      task = flattenedTasks.find(t => t.id && t.id.primaryKey === taskId) || null;
+    if (!task && typeof flattenedTasks !== "undefined") {
+      task = flattenedTasks.find((candidate) => candidate.id && candidate.id.primaryKey === taskId) || null;
     }
-    if (!task) {
-      return JSON.stringify({ success: false, error: 'Task not found: ' + taskId });
-    }
+    if (!task) return fail("INVALID_REPETITION", `Task not found: ${taskId}`);
+
+    const previous = snapshotRule(task);
 
     if (clear) {
-      task.repetitionRule = null;
+      try {
+        applyRule(task, null);
+      } catch (error) {
+        return restore(task, previous, "REPETITION_WRITE_FAILED_RESTORED", `Failed to clear repetition rule: ${String(error)}`);
+      }
+      if (snapshotRule(task)) {
+        return restore(
+          task,
+          previous,
+          "REPETITION_VERIFICATION_FAILED_RESTORED",
+          "Repetition rule still present after clearing",
+        );
+      }
       return JSON.stringify({ success: true, cleared: true });
     }
 
-    // Build the ICS rule string.
-    let ruleString = args.ruleString || 'FREQ=WEEKLY';
-    ruleString = String(ruleString).trim().replace(/^RRULE:/i, '');
-    // Strip existing COUNT/UNTIL so we can re-append user-provided values.
-    ruleString = ruleString.replace(/;?(COUNT|UNTIL)=[^;]*/gi, '');
+    const expected = {
+      ruleString: String(args.ruleString || "FREQ=WEEKLY"),
+      scheduleType: args.scheduleType === "FromCompletion" ? "FromCompletion" : "Regularly",
+      anchorDateKey:
+        args.anchorDateKey === "DeferDate" || args.anchorDateKey === "PlannedDate"
+          ? args.anchorDateKey
+          : "DueDate",
+      catchUpAutomatically: args.catchUpAutomatically === true,
+    };
 
-    if (args.count) {
-      const count = parseInt(args.count, 10);
-      if (!isNaN(count) && count > 0) {
-        ruleString += ';COUNT=' + count;
-      }
+    try {
+      applyRule(task, expected);
+    } catch (error) {
+      return restore(task, previous, "REPETITION_WRITE_FAILED_RESTORED", `Failed to set repetition rule: ${String(error)}`);
     }
 
-    if (args.endDate) {
-      const until = toICSDateTime(args.endDate);
-      if (until) {
-        ruleString += ';UNTIL=' + until;
-      }
+    const applied = snapshotRule(task);
+    const mismatches = ruleMismatches(expected, applied);
+    if (mismatches.length > 0) {
+      return restore(
+        task,
+        previous,
+        "REPETITION_VERIFICATION_FAILED_RESTORED",
+        `Repetition verification failed for: ${mismatches.join(", ")}`,
+      );
     }
 
-    // Map schedule type.
-    let scheduleType = null;
-    if (typeof Task !== 'undefined' && Task.RepetitionScheduleType) {
-      if (args.scheduleType === 'FromCompletion') {
-        scheduleType = Task.RepetitionScheduleType.FromCompletion;
-      } else {
-        scheduleType = Task.RepetitionScheduleType.Regularly;
-      }
-    }
-
-    // Map anchor date key.
-    let anchorDateKey = null;
-    if (typeof Task !== 'undefined' && Task.AnchorDateKey) {
-      if (args.anchorDateKey === 'DeferDate') {
-        anchorDateKey = Task.AnchorDateKey.DeferDate;
-      } else if (args.anchorDateKey === 'PlannedDate') {
-        anchorDateKey = Task.AnchorDateKey.PlannedDate;
-      } else {
-        anchorDateKey = Task.AnchorDateKey.DueDate;
-      }
-    }
-
-    const catchUpAutomatically = args.catchUpAutomatically === true;
-
-    // Construct and assign the repetition rule.
-    // Signature: new Task.RepetitionRule(ruleString, method, scheduleType, anchorDateKey, catchUpAutomatically)
-    // method is deprecated and must be null when scheduleType/anchorDateKey are provided.
-    task.repetitionRule = new Task.RepetitionRule(
-      ruleString,
-      null,
-      scheduleType,
-      anchorDateKey,
-      catchUpAutomatically
-    );
-
-    const appliedRule = task.repetitionRule;
     return JSON.stringify({
       success: true,
-      ruleString: appliedRule ? appliedRule.ruleString : ruleString,
-      scheduleType: args.scheduleType || 'Regularly',
-      anchorDateKey: args.anchorDateKey || 'DueDate',
-      catchUpAutomatically
+      ruleString: applied.ruleString,
+      scheduleType: applied.scheduleType,
+      anchorDateKey: applied.anchorDateKey,
+      catchUpAutomatically: applied.catchUpAutomatically,
+      nextOccurrence: nextOccurrence(task),
     });
   } catch (error) {
-    return JSON.stringify({ success: false, error: String(error) });
-  }
-
-  // Convert an ISO date string to ICS UNTIL format: YYYYMMDDTHHMMSSZ (UTC).
-  function toICSDateTime(isoDate) {
-    try {
-      const date = new Date(isoDate);
-      if (isNaN(date.getTime())) return null;
-      const pad = n => String(n).padStart(2, '0');
-      return (
-        date.getUTCFullYear() +
-        pad(date.getUTCMonth() + 1) +
-        pad(date.getUTCDate()) +
-        'T' +
-        pad(date.getUTCHours()) +
-        pad(date.getUTCMinutes()) +
-        pad(date.getUTCSeconds()) +
-        'Z'
-      );
-    } catch {
-      return null;
-    }
+    return fail("INVALID_REPETITION", error && error.message ? error.message : String(error));
   }
 })();

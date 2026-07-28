@@ -40,6 +40,8 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.20.0** - 重复任务闭环：重复规则现在处处可读、可验证。`get_task_by_id` 返回规则字符串、重复方式、锚定日期、自动追平和下次发生时间；列表读取只增加 `isRepeating` 标记；`dump_database` 不再返回硬编码空值。`add_omnifocus_task` 和 `create_project_from_outline` 的任务节点都支持基于 ICS 规则字符串的 `repetition` 对象；`set_repetition_rule` 现在会先快照原规则，逐字段验证写入结果，失败时恢复原规则，无法确认恢复时返回受影响的任务 ID。当前仍为 40 个工具、5 个 Prompts 和 3 个 Resources。
+
 - **v1.19.0** - 项目塑形：新增 `create_project_from_outline`，可把用户确认过的结构化方案一次创建为完整 OmniFocus 项目树。工具支持稳定 Folder/Tag ID 和核心规划字段，限制最多 200 个任务、8 层任务层级；写入前完整预检引用，在一次 OmniJS 请求中创建，并读回验证每个节点和字段；执行或验证失败时只进行一次受限 Undo。新的 `project_shaping` Prompt 与内置 Skill 会引导提取、披露推断、解析 ID、确认、创建和汇报。当前共 40 个工具、5 个 Prompts 和 3 个 Resources。
 
 - **v1.18.0** - 可靠性版本：MCP SDK 升级到 1.30.0，Zod 升级到 3.25.76；Resources 迁移到 `registerResource`，有界任务快照现在明确区分 `totalCount`、`returnedCount` 和截断状态；读取自定义透视后会恢复用户原来的 OmniFocus 透视；删除未使用且不完整的 Perspective V2 / 调试实现；`batch_remove_items` 改为稳定 ID、完整预检、执行失败时通过 Undo 回滚、级联影响汇报和删除后验证。
@@ -537,7 +539,28 @@ mcporter call omnifocus.batch_add_items --args '{
 
 操作工具只接受经过审阅的结构化字段，不接收原始会议纪要。最多支持 200 个任务、8 层任务层级。引用缺失时零写入；执行或读回验证失败时仅执行一次受限 OmniFocus Undo；如果无法确认清理完整，错误会返回残留项目 ID。
 
-### 6. 🖼️ 附件查看
+### 7. 重复任务
+
+重复规则现在是一等字段：创建、读取、修改、清除都会经过验证。
+
+```json
+{
+  "name": "每周行政检查清单",
+  "repetition": {
+    "ruleString": "FREQ=WEEKLY;BYDAY=FR",
+    "scheduleType": "Regularly",
+    "anchorDateKey": "DueDate",
+    "catchUpAutomatically": true
+  }
+}
+```
+
+- `add_omnifocus_task` 和 `create_project_from_outline` 的任务节点使用同一个对象。`UNTIL` 和 `COUNT` 请编码进 `ruleString`；已废弃的 `method` 参数不对外暴露。
+- `get_task_by_id` 返回已保存的规则和下次发生时间；列表读取只增加 `isRepeating`，保持响应精简。
+- `set_repetition_rule` 会逐字段验证保存结果。写入失败或不匹配时恢复原规则；无法确认恢复时，错误会指出需要人工检查的任务。
+- 创建过程中验证失败会删除该任务，或回滚整棵项目树，确保不会留下用户没有确认过的重复规则。
+
+### 8. 🖼️ 附件查看
 
 先读取任务和附件元信息，再按需打开具体附件：
 

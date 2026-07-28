@@ -61,11 +61,18 @@ export async function handler(
     });
 
     if (!result.success) {
+      const residual = result.residualTaskId
+        ? `\nResidual task ID: ${result.residualTaskId}`
+        : '';
+      const recovery = result.recovery ? `\nRecovery: ${result.recovery}` : '';
+      const restored = result.restored
+        ? '\nThe previous repetition rule was restored.'
+        : '';
       return {
         content: [
           {
             type: 'text' as const,
-            text: `Failed to set repetition rule: ${result.error || 'Unknown error'}`,
+            text: `Failed to set repetition rule [${result.code || 'REPETITION_FAILED'}]: ${result.error || 'Unknown error'}${restored}${residual}${recovery}`,
           },
         ],
         isError: true,
@@ -77,17 +84,21 @@ export async function handler(
         content: [
           {
             type: 'text' as const,
-            text: 'Repetition rule cleared successfully.',
+            text: 'Repetition rule cleared and verified.',
           },
         ],
       };
     }
 
+    const nextOccurrence = result.nextOccurrence
+      ? `\nNext occurrence: ${new Date(result.nextOccurrence).toLocaleString()}`
+      : '';
+
     return {
       content: [
         {
           type: 'text' as const,
-          text: `Repetition rule set successfully.\nRule: ${result.ruleString}\nSchedule: ${result.scheduleType}\nAnchor: ${result.anchorDateKey}\nCatch up automatically: ${result.catchUpAutomatically}`,
+          text: `Repetition rule set and verified.\nRule: ${result.ruleString}\nSchedule: ${result.scheduleType}\nAnchor: ${result.anchorDateKey}\nCatch up automatically: ${result.catchUpAutomatically}${nextOccurrence}`,
         },
       ],
     };

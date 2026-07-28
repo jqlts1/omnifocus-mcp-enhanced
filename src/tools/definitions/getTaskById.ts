@@ -54,6 +54,18 @@ export function formatTaskInfo(
     infoText += `• **Planned**: ${new Date(task.plannedDate).toLocaleString()}\n`;
   }
 
+  if (task.repetition) {
+    const parts = [task.repetition.ruleString];
+    if (task.repetition.scheduleType) parts.push(task.repetition.scheduleType);
+    if (task.repetition.anchorDateKey)
+      parts.push(`anchor ${task.repetition.anchorDateKey}`);
+    if (task.repetition.catchUpAutomatically) parts.push('catch up');
+    infoText += `• **Repeats**: ${parts.join(', ')}\n`;
+    if (task.repetition.nextOccurrence) {
+      infoText += `• **Next Occurrence**: ${new Date(task.repetition.nextOccurrence).toLocaleString()}\n`;
+    }
+  }
+
   infoText += `• **Has Children**: ${task.hasChildren ? `Yes (${task.childrenCount} subtasks)` : 'No'}\n`;
 
   if (showSubtasks && task.children.length > 0) {

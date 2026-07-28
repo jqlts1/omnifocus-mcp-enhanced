@@ -72,6 +72,7 @@
         parentName: parentTask ? parentTask.name : null,
         hasChildren: serializedTask.childrenCount > 0,
         completed: !!task.completed,
+        repetition: omnifocusMcpRepetition(task),
         attachments,
         linkedFileURLs
       }

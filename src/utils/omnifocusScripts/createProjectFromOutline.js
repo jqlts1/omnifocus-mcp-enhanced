@@ -31,6 +31,95 @@
     return asArray(object.tags);
   }
 
+  function scheduleTypeName(value) {
+    const types = typeof Task !== "undefined" ? Task.RepetitionScheduleType : null;
+    if (!types || value === null || value === undefined) return null;
+    if (value === types.Regularly) return "Regularly";
+    if (value === types.FromCompletion) return "FromCompletion";
+    if (value === types.None) return "None";
+    return null;
+  }
+
+  function anchorDateKeyName(value) {
+    const keys = typeof Task !== "undefined" ? Task.AnchorDateKey : null;
+    if (!keys || value === null || value === undefined) return null;
+    if (value === keys.DueDate) return "DueDate";
+    if (value === keys.DeferDate) return "DeferDate";
+    if (value === keys.PlannedDate) return "PlannedDate";
+    return null;
+  }
+
+  function ruleParts(value) {
+    const parts = new Map();
+    String(value || "")
+      .trim()
+      .replace(/^RRULE:/i, "")
+      .split(";")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0)
+      .forEach((part) => {
+        const separator = part.indexOf("=");
+        parts.set(part.slice(0, separator).toUpperCase(), part.slice(separator + 1));
+      });
+    return parts;
+  }
+
+  function sameRuleString(actual, expected) {
+    const actualParts = ruleParts(actual);
+    const expectedParts = ruleParts(expected);
+    if (actualParts.size !== expectedParts.size) return false;
+    for (const [key, value] of expectedParts) {
+      if (actualParts.get(key) !== value) return false;
+    }
+    return true;
+  }
+
+  function applyRepetition(object, repetition) {
+    if (!repetition) return;
+    object.repetitionRule = new Task.RepetitionRule(
+      repetition.ruleString,
+      null,
+      repetition.scheduleType ? Task.RepetitionScheduleType[repetition.scheduleType] : null,
+      repetition.anchorDateKey ? Task.AnchorDateKey[repetition.anchorDateKey] : null,
+      repetition.catchUpAutomatically === true,
+    );
+  }
+
+  function repetitionMismatches(object, expected, path) {
+    if (!expected) return [];
+
+    let rule = null;
+    try {
+      rule = object.repetitionRule || null;
+    } catch (_error) {
+      rule = null;
+    }
+    if (!rule) return [`${path}: repetition`];
+
+    const mismatches = [];
+    if (!sameRuleString(rule.ruleString, expected.ruleString)) {
+      mismatches.push(`${path}: repetition.ruleString`);
+    }
+    if (
+      expected.scheduleType !== undefined &&
+      scheduleTypeName(rule.scheduleType) !== expected.scheduleType
+    ) {
+      mismatches.push(`${path}: repetition.scheduleType`);
+    }
+    if (
+      expected.anchorDateKey !== undefined &&
+      anchorDateKeyName(rule.anchorDateKey) !== expected.anchorDateKey
+    ) {
+      mismatches.push(`${path}: repetition.anchorDateKey`);
+    }
+    if (
+      expected.catchUpAutomatically !== undefined &&
+      !!rule.catchUpAutomatically !== expected.catchUpAutomatically
+    ) {
+      mismatches.push(`${path}: repetition.catchUpAutomatically`);
+    }
+    return mismatches;
+  }
 
   function dateValue(value, path, field) {
     if (value === undefined || value === null) return null;
@@ -224,6 +313,7 @@
           : createdTasks[node.parentPlanIndex];
         const task = new Task(node.name, parent);
         applyFields(task, node, references.tags, node.path);
+        applyRepetition(task, node.repetition);
         createdTasks.push(task);
       }
     } catch (error) {
@@ -260,6 +350,9 @@
         ...ancestorTagIds,
       ];
       verifyCore(actual, node, references.tags, inheritedTagIds, node.path, mismatches);
+      if (actual) {
+        mismatches.push(...repetitionMismatches(actual, node.repetition, node.path));
+      }
       const expectedParentId = node.parentPlanIndex === null
         ? projectId
         : primaryKey(createdTasks[node.parentPlanIndex]);
