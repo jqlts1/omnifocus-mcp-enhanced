@@ -44,6 +44,8 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v1.17.1** - Maintenance release: migrated all 39 tools and 4 prompts to the current MCP registration APIs with read/additive/destructive annotations, restored mandatory strict TypeScript checking, raised the runtime baseline to Node.js 22, and reduced the npm tarball from about 2.27 MB to about 117 KB by publishing only runtime artifacts. The repository logo is now 512×341 and about 175 KB instead of 1.97 MB.
+
 - **v1.17.0** - Filter pagination and query efficiency: `filter_tasks` now returns stateless opaque keyset cursors for real-time best-effort traversal, with stable ID tie-breaking and strict query/sort validation. Compact reads omit notes and tags inside OmniJS, normal list reads skip unused status aggregation, and later pages use cursor boundaries plus one-item lookahead. The privacy-safe benchmark now records first- and second-page metrics. The surface remains 39 tools, 4 prompts, and 3 resources.
 
 - **v1.16.0** - Daily Planning Assistant: `daily_review` now uses exact count-first discovery and bounded, deduplicated candidates to produce three priorities plus next actions, blockers, and capacity/deadline risks. Its optional `availableMinutes` input compares only known estimates and preserves missing estimates as uncertainty. `filter_tasks` adds opt-in `compact` output for broad planning reads without notes or full tags, and a privacy-safe local benchmark provides numeric regression evidence. The surface remains 39 tools, 4 prompts, and 3 resources.
