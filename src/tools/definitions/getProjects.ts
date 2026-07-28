@@ -1,29 +1,29 @@
-import { z } from "zod";
-import { getProjects } from "../primitives/getProjects.js";
-import { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import { z } from 'zod';
+import { getProjects } from '../primitives/getProjects.js';
+import type { ToolHandlerExtra } from './toolHandler.js';
 
 export const schema = z.object({
   status: z
-    .array(z.enum(["Active", "OnHold", "Done", "Dropped"]))
+    .array(z.enum(['Active', 'OnHold', 'Done', 'Dropped']))
     .optional()
     .describe(
-      "Filter by project status. OR logic — matches any. Default: all statuses.",
+      'Filter by project status. OR logic — matches any. Default: all statuses.',
     ),
   folderName: z
     .string()
     .optional()
-    .describe("Filter by folder name (case-insensitive partial match)."),
+    .describe('Filter by folder name (case-insensitive partial match).'),
   includeReviewData: z
     .boolean()
     .optional()
     .describe(
-      "Include review fields (nextReviewDate, lastReviewDate, reviewInterval). Default: true.",
+      'Include review fields (nextReviewDate, lastReviewDate, reviewInterval). Default: true.',
     ),
 });
 
 export async function handler(
   args: z.infer<typeof schema>,
-  extra: RequestHandlerExtra,
+  extra: ToolHandlerExtra,
 ) {
   try {
     const result = await getProjects({
@@ -35,18 +35,18 @@ export async function handler(
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: result,
         },
       ],
     };
   } catch (err: unknown) {
     const errorMessage =
-      err instanceof Error ? err.message : "Unknown error occurred";
+      err instanceof Error ? err.message : 'Unknown error occurred';
     return {
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: `Error getting projects: ${errorMessage}`,
         },
       ],

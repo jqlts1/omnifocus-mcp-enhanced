@@ -38,6 +38,6 @@ if (subcommand === '--version' || subcommand === '-v') {
 
 // Default: start the MCP server.
 const serverPath = path.join(__dirname, 'dist', 'server.js');
-childProcess.spawn('node', ['--experimental-modules', serverPath], {
+childProcess.spawn('node', [serverPath], {
     stdio: 'inherit'
 });

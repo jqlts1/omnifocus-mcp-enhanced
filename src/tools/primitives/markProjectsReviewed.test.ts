@@ -21,7 +21,7 @@ interface FakeProject {
 }
 
 function project(id: string, options: Partial<FakeProject> & { failReviewOnce?: boolean } = {}): FakeProject {
-  let lastReviewDate = options.lastReviewDate || new Date('2026-07-01T12:00:00.000Z');
+  let lastReviewDate: Date | null = options.lastReviewDate ?? new Date('2026-07-01T12:00:00.000Z');
   let reviewFailurePending = options.failReviewOnce === true;
   const interval = options.reviewInterval === undefined
     ? { steps: 1, unit: 'weeks', fixed: false }

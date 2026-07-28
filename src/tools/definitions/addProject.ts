@@ -1,22 +1,64 @@
 import { z } from 'zod';
 import { addProject, AddProjectParams } from '../primitives/addProject.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ToolHandlerExtra } from './toolHandler.js';
 
 export const schema = z.object({
-  name: z.string().describe("The name of the project"),
-  note: z.string().optional().describe("Additional notes for the project"),
-  dueDate: z.string().optional().describe("The due date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
-  deferDate: z.string().optional().describe("The defer date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
-  plannedDate: z.string().optional().describe("The planned date of the project in ISO format (YYYY-MM-DD or full ISO date)"),
-  flagged: z.boolean().optional().describe("Whether the project is flagged or not"),
-  estimatedMinutes: z.number().optional().describe("Estimated time to complete the project, in minutes"),
-  tags: z.array(z.string()).optional().describe("Tags to assign to the project"),
-  exclusiveTags: z.boolean().optional().describe("Respect mutually exclusive tag groups when applying tags (default: true). When a tag belongs to an exclusive group, sibling tags from that group are removed."),
-  folderName: z.string().optional().describe("The name of the folder to add the project to (will add to root if not specified)"),
-  sequential: z.boolean().optional().describe("Whether tasks in the project should be sequential (default: false)")
+  name: z.string().describe('The name of the project'),
+  note: z.string().optional().describe('Additional notes for the project'),
+  dueDate: z
+    .string()
+    .optional()
+    .describe(
+      'The due date of the project in ISO format (YYYY-MM-DD or full ISO date)',
+    ),
+  deferDate: z
+    .string()
+    .optional()
+    .describe(
+      'The defer date of the project in ISO format (YYYY-MM-DD or full ISO date)',
+    ),
+  plannedDate: z
+    .string()
+    .optional()
+    .describe(
+      'The planned date of the project in ISO format (YYYY-MM-DD or full ISO date)',
+    ),
+  flagged: z
+    .boolean()
+    .optional()
+    .describe('Whether the project is flagged or not'),
+  estimatedMinutes: z
+    .number()
+    .optional()
+    .describe('Estimated time to complete the project, in minutes'),
+  tags: z
+    .array(z.string())
+    .optional()
+    .describe('Tags to assign to the project'),
+  exclusiveTags: z
+    .boolean()
+    .optional()
+    .describe(
+      'Respect mutually exclusive tag groups when applying tags (default: true). When a tag belongs to an exclusive group, sibling tags from that group are removed.',
+    ),
+  folderName: z
+    .string()
+    .optional()
+    .describe(
+      'The name of the folder to add the project to (will add to root if not specified)',
+    ),
+  sequential: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether tasks in the project should be sequential (default: false)',
+    ),
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(
+  args: z.infer<typeof schema>,
+  extra: ToolHandlerExtra,
+) {
   try {
     // Call the addProject function
     const result = await addProject(args as AddProjectParams);
@@ -25,53 +67,59 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       // Project was added successfully
       let locationText = args.folderName
         ? `in folder "${args.folderName}"`
-        : "at the root level";
+        : 'at the root level';
 
-      let tagText = args.tags && args.tags.length > 0
-        ? ` with tags: ${args.tags.join(', ')}`
-        : "";
+      let tagText =
+        args.tags && args.tags.length > 0
+          ? ` with tags: ${args.tags.join(', ')}`
+          : '';
 
       let dueDateText = args.dueDate
         ? ` due on ${new Date(args.dueDate).toLocaleDateString()}`
-        : "";
+        : '';
 
       let plannedDateText = args.plannedDate
         ? ` planned for ${new Date(args.plannedDate).toLocaleDateString()}`
-        : "";
+        : '';
 
-      let sequentialText = args.sequential
-        ? " (sequential)"
-        : " (parallel)";
+      let sequentialText = args.sequential ? ' (sequential)' : ' (parallel)';
 
-      let exclusivityText = result.removedSiblings && result.removedSiblings.length > 0
-        ? `\nRemoved mutually exclusive tags: ${result.removedSiblings.join(', ')}`
-        : "";
+      let exclusivityText =
+        result.removedSiblings && result.removedSiblings.length > 0
+          ? `\nRemoved mutually exclusive tags: ${result.removedSiblings.join(', ')}`
+          : '';
 
       return {
-        content: [{
-          type: "text" as const,
-          text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.\n\nid: ${result.projectId}${exclusivityText}`
-        }]
+        content: [
+          {
+            type: 'text' as const,
+            text: `✅ Project "${args.name}" created successfully ${locationText}${dueDateText}${plannedDateText}${tagText}${sequentialText}.\n\nid: ${result.projectId}${exclusivityText}`,
+          },
+        ],
       };
     } else {
       // Project creation failed
       return {
-        content: [{
-          type: "text" as const,
-          text: `Failed to create project: ${result.error}`
-        }],
-        isError: true
+        content: [
+          {
+            type: 'text' as const,
+            text: `Failed to create project: ${result.error}`,
+          },
+        ],
+        isError: true,
       };
     }
   } catch (err: unknown) {
     const error = err as Error;
     console.error(`Tool execution error: ${error.message}`);
     return {
-      content: [{
-        type: "text" as const,
-        text: `Error creating project: ${error.message}`
-      }],
-      isError: true
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error creating project: ${error.message}`,
+        },
+      ],
+      isError: true,
     };
   }
 }

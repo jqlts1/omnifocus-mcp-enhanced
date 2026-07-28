@@ -7,13 +7,25 @@
   "bin": {
     "omnifocus-mcp-enhanced": "cli.cjs"
   },
+  "files": [
+    "dist/",
+    "cli.cjs",
+    "skills/omnifocus-cli/",
+    "README.md",
+    "README.zh.md",
+    "LICENSE.md"
+  ],
   "scripts": {
-    "build": "tsc --noCheck && npm run copy-files && chmod 755 dist/server.js",
-    "copy-files": "mkdir -p dist/utils/omnifocusScripts && cp src/utils/omnifocusScripts/*.js dist/utils/omnifocusScripts/",
+    "build": "npm run clean && npm run typecheck && tsc --noCheck && npm run copy-files && npm run prune-dist && chmod 755 dist/server.js",
+    "build:test": "npm run clean && npm run typecheck && tsc --noCheck && npm run copy-files && chmod 755 dist/server.js",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "typecheck": "tsc --noEmit",
+    "copy-files": "node scripts/copy-files.mjs",
+    "prune-dist": "node scripts/prune-dist.mjs",
     "start": "node dist/server.js",
     "dev": "tsc -w",
     "prepublishOnly": "npm run build",
-    "test": "npm run build && node --test dist/*.test.js dist/context/*.test.js dist/tools/definitions/*.test.js dist/tools/*.test.js dist/tools/primitives/*.test.js dist/utils/*.test.js scripts/*.test.mjs",
+    "test": "npm run build:test && node --test dist/*.test.js dist/context/*.test.js dist/tools/definitions/*.test.js dist/tools/*.test.js dist/tools/primitives/*.test.js dist/utils/*.test.js scripts/*.test.mjs",
     "benchmark:smoke": "npm run build && node scripts/benchmark-smoke.mjs"
   },
   "dependencies": {
@@ -25,7 +37,7 @@
     "@hono/node-server": "^2.0.12"
   },
   "devDependencies": {
-    "@types/node": "^20.19.43",
+    "@types/node": "^22.20.0",
     "typescript": "^5.9.3"
   },
   "repository": {
@@ -55,7 +67,7 @@
     "email": "jqlts1@github.com"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "os": [
     "darwin"

@@ -2,17 +2,25 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { buildDailyReviewPrompt, registerPrompts } from './prompts.js';
+import type { ZodType } from 'zod';
+
+type CapturedPrompt = [
+  string,
+  { argsSchema?: { availableMinutes?: ZodType<number | undefined> } },
+  unknown,
+];
 
 test('daily_review exposes optional positive availableMinutes', () => {
-  const captured: any[] = [];
+  const captured: CapturedPrompt[] = [];
   const server = {
-    prompt: (...args: any[]) => captured.push(args),
+    registerPrompt: (...args: CapturedPrompt) => captured.push(args),
   } as unknown as McpServer;
 
   registerPrompts(server);
-  const daily = captured.find(args => args[0] === 'daily_review');
+  const daily = captured.find((args) => args[0] === 'daily_review');
   assert.ok(daily);
-  const schema = daily[2].availableMinutes;
+  const schema = daily[1].argsSchema?.availableMinutes;
+  assert.ok(schema);
   assert.equal(schema.parse(240), 240);
   assert.throws(() => schema.parse(0));
   assert.throws(() => schema.parse(30.5));
@@ -27,13 +35,15 @@ test('daily review prompt encodes the four sections and capacity contract', asyn
       plannedToday: { total: 1, byStatus: {} },
       flagged: { total: 3, byStatus: {} },
     },
-    candidates: [{
-      id: 'task-1',
-      name: 'Important task',
-      taskStatus: 'Available',
-      estimatedMinutes: null,
-      sources: ['dueToday'],
-    }],
+    candidates: [
+      {
+        id: 'task-1',
+        name: 'Important task',
+        taskStatus: 'Available',
+        estimatedMinutes: null,
+        sources: ['dueToday'],
+      },
+    ],
     missingDetailSources: ['plannedToday'],
     truncatedDetailSources: ['flagged'],
     detailLimitPerSource: 30,

@@ -1,17 +1,24 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  McpServer,
+  PromptCallback,
+} from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import { z } from 'zod';
 
 import { fetchTasks, fetchProjects, slimTask } from './omnifocusData.js';
-import { collectDailyPlanningData, compactDailyCandidate } from './dailyPlanning.js';
+import {
+  collectDailyPlanningData,
+  compactDailyCandidate,
+} from './dailyPlanning.js';
 
 function userMessage(text: string) {
   return {
     messages: [
       {
         role: 'user' as const,
-        content: { type: 'text' as const, text }
-      }
-    ]
+        content: { type: 'text' as const, text },
+      },
+    ],
   };
 }
 
@@ -23,27 +30,151 @@ const ENGAGEMENT_PROTOCOL = `engagement protocol:
 - always ask for explicit confirmation before destructive operations
   (remove_item, batch_remove_items, remove_folder, remove_tag).`;
 
+interface PromptConfig {
+  description: string;
+  argsSchema?: ZodRawShapeCompat;
+}
+
+function registerPrompt(
+  server: McpServer,
+  name: string,
+  config: PromptConfig,
+  callback: PromptCallback<ZodRawShapeCompat>,
+): void {
+  const promptServer = server as unknown as {
+    registerPrompt(
+      name: string,
+      config: PromptConfig,
+      callback: PromptCallback<ZodRawShapeCompat>,
+    ): unknown;
+  };
+  promptServer.registerPrompt(name, config, callback);
+}
+
+const dailyReviewAvailableMinutes = z
+  .number()
+  .int()
+  .positive()
+  .max(1440)
+  .optional()
+  .describe(
+    'Minutes available for focused work today (maximum 1440); omit when unknown',
+  );
+const dailyReviewArgs = {
+  availableMinutes: dailyReviewAvailableMinutes,
+} as unknown as ZodRawShapeCompat;
+
+const projectPlanningProject = z
+  .string()
+  .describe('the name of the project to plan');
+const projectPlanningArgs = {
+  project: projectPlanningProject,
+} as unknown as ZodRawShapeCompat;
+
+const dailyReviewPrompt: PromptCallback<ZodRawShapeCompat> = async (args) => {
+  const availableMinutes =
+    typeof args.availableMinutes === 'number'
+      ? args.availableMinutes
+      : undefined;
+  return userMessage(await buildDailyReviewPrompt(availableMinutes));
+};
+
+const projectPlanningPrompt = (async ({ project }: { project: string }) => {
+  const projectName = (project || '').trim();
+  if (projectName === '') {
+    throw new Error('project must not be empty.');
+  }
+
+  const allProjects = await fetchProjects('all', 1000);
+  const needle = projectName.toLowerCase();
+  const match =
+    allProjects.find((candidate) => candidate.name.toLowerCase() === needle) ||
+    allProjects.find((candidate) =>
+      candidate.name.toLowerCase().includes(needle),
+    ) ||
+    null;
+
+  const projectTasks = match
+    ? await fetchTasks(
+        {
+          projectFilter: match.name,
+          taskStatus: ['Available', 'Next', 'Blocked', 'DueSoon', 'Overdue'],
+        },
+        500,
+      )
+    : [];
+
+  const projectDetails = match
+    ? match
+    : {
+        name: projectName,
+        status: 'not_found',
+        lookupNote: 'no matching project in omnifocus',
+      };
+
+  const text = `plan this project into clear executable work.
+
+project name:
+${projectName}
+
+planning goals:
+1) summarize the project outcome in one concise sentence.
+2) evaluate current task coverage and identify missing steps.
+3) convert vague items into concrete next actions (verb-first, observable).
+4) sequence the work logically (dependencies first, then parallelizable actions).
+5) estimate effort in minutes for each next action and flag high-risk items.
+6) recommend what to do now, next, and later, plus what to defer or drop.
+
+output format:
+- project summary
+- work breakdown table: action | estimate | priority | dependency | suggested tags | due/defer | rationale
+- the first three actions to execute immediately
+- risk and blocker list with mitigation ideas
+
+notes:
+- if the project status is "not_found", plan from user intent and then ask
+  whether to create the project in omnifocus.
+
+${ENGAGEMENT_PROTOCOL}
+
+project_details_json:
+${JSON.stringify(projectDetails)}
+
+project_tasks_json:
+${JSON.stringify(projectTasks.map(slimTask))}
+`;
+
+  return userMessage(text);
+}) as unknown as PromptCallback<ZodRawShapeCompat>;
+
 export function registerPrompts(server: McpServer): void {
   // 1. Daily review
-  server.prompt(
+  registerPrompt(
+    server,
     'daily_review',
-    'count-first daily planning with priorities, next actions, blockers, and capacity risks.',
-    { availableMinutes: z.number().int().positive().max(1440).optional().describe('Minutes available for focused work today (maximum 1440); omit when unknown') },
-    async ({ availableMinutes }: { availableMinutes?: number }) =>
-      userMessage(await buildDailyReviewPrompt(availableMinutes))
+    {
+      description:
+        'count-first daily planning with priorities, next actions, blockers, and capacity risks.',
+      argsSchema: dailyReviewArgs,
+    },
+    dailyReviewPrompt,
   );
 
   // 2. Weekly review
-  server.prompt(
+  registerPrompt(
+    server,
     'weekly_review',
-    'gtd-style weekly review with active projects and next-action coverage.',
+    {
+      description:
+        'gtd-style weekly review with active projects and next-action coverage.',
+    },
     async () => {
       const [projects, availableTasks] = await Promise.all([
         fetchProjects('active', 500),
-        fetchTasks({ taskStatus: ['Available', 'Next'] }, 1000)
+        fetchTasks({ taskStatus: ['Available', 'Next'] }, 1000),
       ]);
 
-      const stalled = projects.filter(project => project.isStalled);
+      const stalled = projects.filter((project) => project.isStalled);
 
       const text = `run a gtd-style weekly review using the omnifocus data below.
 
@@ -79,13 +210,17 @@ ${JSON.stringify(availableTasks.map(slimTask))}
 `;
 
       return userMessage(text);
-    }
+    },
   );
 
   // 3. Inbox processing
-  server.prompt(
+  registerPrompt(
+    server,
     'inbox_processing',
-    'gtd inbox processing session with one-by-one clarification decisions.',
+    {
+      description:
+        'gtd inbox processing session with one-by-one clarification decisions.',
+    },
     async () => {
       const inboxTasks = await fetchTasks({ perspective: 'inbox' }, 200);
 
@@ -120,69 +255,19 @@ ${JSON.stringify(inboxTasks.map(slimTask))}
 `;
 
       return userMessage(text);
-    }
+    },
   );
 
   // 4. Project planning
-  server.prompt(
+  registerPrompt(
+    server,
     'project_planning',
-    'turn a project into clear, sequenced, executable next actions.',
-    { project: z.string().describe('the name of the project to plan') },
-    async ({ project }: { project: string }) => {
-      const projectName = (project || '').trim();
-      if (projectName === '') {
-        throw new Error('project must not be empty.');
-      }
-
-      const allProjects = await fetchProjects('all', 1000);
-      const needle = projectName.toLowerCase();
-      const match =
-        allProjects.find(candidate => candidate.name.toLowerCase() === needle) ||
-        allProjects.find(candidate => candidate.name.toLowerCase().includes(needle)) ||
-        null;
-
-      const projectTasks = match
-        ? await fetchTasks({ projectFilter: match.name, taskStatus: ['Available', 'Next', 'Blocked', 'DueSoon', 'Overdue'] }, 500)
-        : [];
-
-      const projectDetails = match
-        ? match
-        : { name: projectName, status: 'not_found', lookupNote: 'no matching project in omnifocus' };
-
-      const text = `plan this project into clear executable work.
-
-project name:
-${projectName}
-
-planning goals:
-1) summarize the project outcome in one concise sentence.
-2) evaluate current task coverage and identify missing steps.
-3) convert vague items into concrete next actions (verb-first, observable).
-4) sequence the work logically (dependencies first, then parallelizable actions).
-5) estimate effort in minutes for each next action and flag high-risk items.
-6) recommend what to do now, next, and later, plus what to defer or drop.
-
-output format:
-- project summary
-- work breakdown table: action | estimate | priority | dependency | suggested tags | due/defer | rationale
-- the first three actions to execute immediately
-- risk and blocker list with mitigation ideas
-
-notes:
-- if the project status is "not_found", plan from user intent and then ask
-  whether to create the project in omnifocus.
-
-${ENGAGEMENT_PROTOCOL}
-
-project_details_json:
-${JSON.stringify(projectDetails)}
-
-project_tasks_json:
-${JSON.stringify(projectTasks.map(slimTask))}
-`;
-
-      return userMessage(text);
-    }
+    {
+      description:
+        'turn a project into clear, sequenced, executable next actions.',
+      argsSchema: projectPlanningArgs,
+    },
+    projectPlanningPrompt,
   );
 }
 
@@ -193,9 +278,10 @@ export async function buildDailyReviewPrompt(
   collectPlanning: DailyPlanningCollector = collectDailyPlanningData,
 ): Promise<string> {
   const planning = await collectPlanning(30);
-  const capacity = availableMinutes === undefined
-    ? 'unknown; do not assume an eight-hour day or any other fixed capacity'
-    : `${availableMinutes} minutes`;
+  const capacity =
+    availableMinutes === undefined
+      ? 'unknown; do not assume an eight-hour day or any other fixed capacity'
+      : `${availableMinutes} minutes`;
 
   return `run a focused daily planning session using the bounded omnifocus data below.
 

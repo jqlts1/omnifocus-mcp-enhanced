@@ -1,14 +1,30 @@
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ToolHandlerExtra } from './toolHandler.js';
 import { z } from 'zod';
 
-import { readTaskAttachment, ReadTaskAttachmentResult, validateReadTaskAttachmentParams } from '../primitives/readTaskAttachment.js';
+import {
+  readTaskAttachment,
+  ReadTaskAttachmentResult,
+  validateReadTaskAttachmentParams,
+} from '../primitives/readTaskAttachment.js';
 import { formatAttachmentSize } from '../primitives/taskAttachments.js';
 
 export const schema = z.object({
-  taskId: z.string().optional().describe('The ID of the task that owns the attachment'),
-  taskName: z.string().optional().describe('The name of the task that owns the attachment'),
-  attachmentId: z.string().optional().describe('The attachment ID reported by get_task_by_id'),
-  attachmentName: z.string().optional().describe('The attachment name reported by get_task_by_id')
+  taskId: z
+    .string()
+    .optional()
+    .describe('The ID of the task that owns the attachment'),
+  taskName: z
+    .string()
+    .optional()
+    .describe('The name of the task that owns the attachment'),
+  attachmentId: z
+    .string()
+    .optional()
+    .describe('The attachment ID reported by get_task_by_id'),
+  attachmentName: z
+    .string()
+    .optional()
+    .describe('The attachment name reported by get_task_by_id'),
 });
 
 export function buildAttachmentContentResponse(result: {
@@ -28,15 +44,15 @@ export function buildAttachmentContentResponse(result: {
   const content: Array<any> = [
     {
       type: 'text' as const,
-      text: summary
-    }
+      text: summary,
+    },
   ];
 
   if (attachment.isImage && attachment.mimeType && result.content.base64) {
     content.push({
       type: 'image' as const,
       data: result.content.base64,
-      mimeType: attachment.mimeType
+      mimeType: attachment.mimeType,
     });
     return { content };
   }
@@ -44,7 +60,7 @@ export function buildAttachmentContentResponse(result: {
   if (result.content.text) {
     content.push({
       type: 'text' as const,
-      text: result.content.text
+      text: result.content.text,
     });
     return { content };
   }
@@ -52,38 +68,45 @@ export function buildAttachmentContentResponse(result: {
   if (result.content.base64) {
     content.push({
       type: 'text' as const,
-      text: `Base64 content:\n${result.content.base64}`
+      text: `Base64 content:\n${result.content.base64}`,
     });
   }
 
   return { content };
 }
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(
+  args: z.infer<typeof schema>,
+  extra: ToolHandlerExtra,
+) {
   const validation = validateReadTaskAttachmentParams(args);
   if (!validation.valid) {
     return {
-      content: [{
-        type: 'text' as const,
-        text: `Error: ${validation.error}`
-      }],
-      isError: true
+      content: [
+        {
+          type: 'text' as const,
+          text: `Error: ${validation.error}`,
+        },
+      ],
+      isError: true,
     };
   }
 
   const result = await readTaskAttachment(args);
   if (!result.success || !result.attachment || !result.content) {
     return {
-      content: [{
-        type: 'text' as const,
-        text: `Failed to read attachment: ${result.error}`
-      }],
-      isError: true
+      content: [
+        {
+          type: 'text' as const,
+          text: `Failed to read attachment: ${result.error}`,
+        },
+      ],
+      isError: true,
     };
   }
 
   return buildAttachmentContentResponse({
     attachment: result.attachment,
-    content: result.content
+    content: result.content,
   });
 }

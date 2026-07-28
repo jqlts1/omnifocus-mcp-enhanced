@@ -1,17 +1,21 @@
 import { z } from 'zod';
 import { setRepetitionRule } from '../primitives/setRepetitionRule.js';
-import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ToolHandlerExtra } from './toolHandler.js';
 
 export const schema = z.object({
   taskId: z.string().describe('The ID of the task to modify'),
   ruleString: z
     .string()
     .optional()
-    .describe('ICS recurrence rule string, e.g. FREQ=WEEKLY;INTERVAL=2. Defaults to FREQ=WEEKLY.'),
+    .describe(
+      'ICS recurrence rule string, e.g. FREQ=WEEKLY;INTERVAL=2. Defaults to FREQ=WEEKLY.',
+    ),
   scheduleType: z
     .enum(['Regularly', 'FromCompletion'])
     .optional()
-    .describe('How the next occurrence is scheduled. Regularly repeats from assigned dates; FromCompletion repeats after completion.'),
+    .describe(
+      'How the next occurrence is scheduled. Regularly repeats from assigned dates; FromCompletion repeats after completion.',
+    ),
   anchorDateKey: z
     .enum(['DueDate', 'DeferDate', 'PlannedDate'])
     .optional()
@@ -19,22 +23,31 @@ export const schema = z.object({
   catchUpAutomatically: z
     .boolean()
     .optional()
-    .describe('When true, missed occurrences are skipped and the next future occurrence is created.'),
+    .describe(
+      'When true, missed occurrences are skipped and the next future occurrence is created.',
+    ),
   endDate: z
     .string()
     .optional()
-    .describe('ISO date string for when the repetition ends. Encoded into the rule as UNTIL=.'),
+    .describe(
+      'ISO date string for when the repetition ends. Encoded into the rule as UNTIL=.',
+    ),
   count: z
     .number()
     .optional()
-    .describe('Number of repetitions after which the rule ends. Encoded into the rule as COUNT=.'),
+    .describe(
+      'Number of repetitions after which the rule ends. Encoded into the rule as COUNT=.',
+    ),
   clear: z
     .boolean()
     .optional()
     .describe('Set to true to remove the repetition rule from the task.'),
 });
 
-export async function handler(args: z.infer<typeof schema>, extra: RequestHandlerExtra) {
+export async function handler(
+  args: z.infer<typeof schema>,
+  extra: ToolHandlerExtra,
+) {
   try {
     const result = await setRepetitionRule({
       taskId: args.taskId,
@@ -79,7 +92,8 @@ export async function handler(args: z.infer<typeof schema>, extra: RequestHandle
       ],
     };
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+    const errorMessage =
+      err instanceof Error ? err.message : 'Unknown error occurred';
     return {
       content: [
         {
