@@ -201,6 +201,26 @@ bin/omnifocus-enhanced.cjs batch-add-items --raw '{
 **Subtask rule:** when passing `parentTaskName`/`parentTaskId`, do NOT also pass
 `projectName` — subtasks inherit the project from their parent. Doing both fails by design.
 
+### Batch completion
+
+Mark up to 100 tasks complete or incomplete by stable ID in one verified transaction:
+
+```bash
+bin/omnifocus-enhanced.cjs batch-complete-tasks --raw '{
+  "items": [
+    {"taskId": "<id-1>", "action": "complete"},
+    {"taskId": "<id-2>", "action": "complete", "completionDate": "2026-07-28T18:00:00+08:00"},
+    {"taskId": "<id-3>", "action": "incomplete"}
+  ]
+}'
+```
+
+- `action` ∈ `complete | incomplete`
+- `completionDate` only valid with `action=complete`; omitted uses now
+- Preflights every ID, verifies every result, restores on failure
+- Repeating tasks generate new instances when completed; the tool reports `generatedTaskId` and `nextOccurrence`
+- Idempotent items are reported as `unchanged` rather than failing
+
 ## Project Shaping
 
 To turn meeting notes, brainstorming, or a task list into a new project:

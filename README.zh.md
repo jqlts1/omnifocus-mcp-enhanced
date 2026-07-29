@@ -40,6 +40,8 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v1.21.0** - 批量完成任务：新增 `batch_complete_tasks` 工具，可在一个验证事务中按稳定 ID 批量完成或取消完成最多 100 个任务。工具会预检每个 ID、快照原始完成状态、应用每个动作、读回验证状态与完成时间，失败时恢复原状态。重复任务完成后会生成新实例，工具返回 `generatedTaskId` 与 `nextOccurrence`。幂等项报告为 `unchanged` 而非失败。当前共 41 个工具、5 个 Prompts 和 3 个 Resources。
+
 - **v1.20.0** - 重复任务闭环：重复规则现在处处可读、可验证。`get_task_by_id` 返回规则字符串、重复方式、锚定日期、自动追平和下次发生时间；列表读取只增加 `isRepeating` 标记；`dump_database` 不再返回硬编码空值。`add_omnifocus_task` 和 `create_project_from_outline` 的任务节点都支持基于 ICS 规则字符串的 `repetition` 对象；`set_repetition_rule` 现在会先快照原规则，逐字段验证写入结果，失败时恢复原规则，无法确认恢复时返回受影响的任务 ID。当前仍为 40 个工具、5 个 Prompts 和 3 个 Resources。
 
 - **v1.19.0** - 项目塑形：新增 `create_project_from_outline`，可把用户确认过的结构化方案一次创建为完整 OmniFocus 项目树。工具支持稳定 Folder/Tag ID 和核心规划字段，限制最多 200 个任务、8 层任务层级；写入前完整预检引用，在一次 OmniJS 请求中创建，并读回验证每个节点和字段；执行或验证失败时只进行一次受限 Undo。新的 `project_shaping` Prompt 与内置 Skill 会引导提取、披露推断、解析 ID、确认、创建和汇报。当前共 40 个工具、5 个 Prompts 和 3 个 Resources。

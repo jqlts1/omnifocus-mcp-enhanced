@@ -231,6 +231,7 @@ review completion rules:
 - after confirmation, call mark_projects_reviewed once. it validates the complete
   batch and verifies lastReviewDate, nextReviewDate, and the unchanged interval.
 - report projects still due for review after the action.
+- use batch_complete_tasks to mark multiple tasks complete or incomplete by stable ID in one verified transaction.
 
 ${ENGAGEMENT_PROTOCOL}
 
@@ -359,6 +360,7 @@ change rules:
 - if no changes are proposed, do not ask for confirmation.
 - do not change flags, dates, estimates, or task placement until the user explicitly confirms.
 - after confirmation, use existing narrow tools and report affected stable ids.
+- use batch_complete_tasks to mark multiple tasks complete or incomplete by stable ID in one verified transaction.
 
 engagement protocol:
 - ground every recommendation in the omnifocus data provided below.

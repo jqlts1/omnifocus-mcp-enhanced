@@ -24,10 +24,10 @@ function captureTools(): RegisteredToolCall[] {
   return calls;
 }
 
-test('registerTools exposes 40 unique tools through the modern MCP API', () => {
+test('registerTools exposes 41 unique tools through the modern MCP API', () => {
   const calls = captureTools();
 
-  assert.equal(calls.length, 40);
+  assert.equal(calls.length, 41);
   assert.equal(new Set(calls.map((call) => call.name)).size, calls.length);
 });
 

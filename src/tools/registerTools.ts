@@ -2,6 +2,7 @@ import {
   McpServer,
   ToolCallback,
 } from '@modelcontextprotocol/sdk/server/mcp.js';
+import * as batchCompleteTasksTool from './definitions/batchCompleteTasks.js';
 import type { ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 
@@ -121,6 +122,13 @@ const TOOLS = [
     description:
       'Move a confirmed set of tasks to projects, parent tasks, or Inbox. The complete batch is validated before any change and every destination is verified afterward.',
     tool: batchMoveTasksTool,
+    annotations: MUTATING_TOOL,
+  },
+  {
+    name: 'batch_complete_tasks',
+    description:
+      'Mark tasks complete or incomplete by stable ID. Accepts up to 100 items with optional completion dates. Preflights every ID, verifies every result, and restores previous states on failure. Repeating tasks generate new instances when completed.',
+    tool: batchCompleteTasksTool,
     annotations: MUTATING_TOOL,
   },
   {

@@ -5,6 +5,7 @@ const source = 'src/utils/omnifocusScripts';
 const destination = 'dist/utils/omnifocusScripts';
 const scripts = [
   'applyTagsExclusive.js',
+  'batchCompleteTasks.js',
   'batchMoveTasks.js',
   'batchRemoveItems.js',
   'createProjectFromOutline.js',
