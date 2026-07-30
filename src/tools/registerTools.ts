@@ -6,10 +6,8 @@ import * as batchCompleteTasksTool from './definitions/batchCompleteTasks.js';
 import type { ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 
-import * as addFolderTool from './definitions/addFolder.js';
 import * as addOmniFocusTaskTool from './definitions/addOmniFocusTask.js';
 import * as addProjectTool from './definitions/addProject.js';
-import * as addTagTool from './definitions/addTag.js';
 import * as addTaskNotificationTool from './definitions/addTaskNotification.js';
 import * as appendToNoteTool from './definitions/appendToNote.js';
 import * as batchAddItemsTool from './definitions/batchAddItems.js';
@@ -19,32 +17,22 @@ import * as countTasksTool from './definitions/countTasks.js';
 import * as createProjectFromOutlineTool from './definitions/createProjectFromOutline.js';
 import * as dumpDatabaseTool from './definitions/dumpDatabase.js';
 import * as duplicateTaskTool from './definitions/duplicateTask.js';
-import * as editFolderTool from './definitions/editFolder.js';
 import * as editItemTool from './definitions/editItem.js';
-import * as editTagTool from './definitions/editTag.js';
 import * as filterTasksTool from './definitions/filterTasks.js';
-import * as getCustomPerspectiveTasksTool from './definitions/getCustomPerspectiveTasks.js';
-import * as getFlaggedTasksTool from './definitions/getFlaggedTasks.js';
-import * as getFolderTool from './definitions/getFolder.js';
-import * as getForecastTasksTool from './definitions/getForecastTasks.js';
-import * as getInboxTasksTool from './definitions/getInboxTasks.js';
 import * as getProjectsDueForReviewTool from './definitions/getProjectsDueForReview.js';
 import * as getProjectsTool from './definitions/getProjects.js';
 import * as getTaskByIdTool from './definitions/getTaskById.js';
-import * as getTasksByTagTool from './definitions/getTasksByTag.js';
 import * as getTodayCompletedTasksTool from './definitions/getTodayCompletedTasks.js';
+import * as getTasksTool from './definitions/getTasks.js';
 import * as listCustomPerspectivesTool from './definitions/listCustomPerspectives.js';
-import * as listFoldersTool from './definitions/listFolders.js';
-import * as listTagsTool from './definitions/listTags.js';
+import * as manageFoldersTool from './definitions/manageFolders.js';
+import * as manageTagsTool from './definitions/manageTags.js';
 import * as listTaskNotificationsTool from './definitions/listTaskNotifications.js';
 import * as markProjectsReviewedTool from './definitions/markProjectsReviewed.js';
 import * as moveTaskTool from './definitions/moveTask.js';
 import * as readTaskAttachmentTool from './definitions/readTaskAttachment.js';
-import * as removeFolderTool from './definitions/removeFolder.js';
 import * as removeItemTool from './definitions/removeItem.js';
-import * as removeTagTool from './definitions/removeTag.js';
 import * as removeTaskNotificationTool from './definitions/removeTaskNotification.js';
-import * as searchTagsTool from './definitions/searchTags.js';
 import * as setRepetitionRuleTool from './definitions/setRepetitionRule.js';
 
 export const READ_ONLY_TOOL: ToolAnnotations = {
@@ -179,39 +167,18 @@ const TOOLS = [
     annotations: MUTATING_TOOL,
   },
   {
-    name: 'get_inbox_tasks',
+    name: 'get_tasks',
     description:
-      'Get inbox tasks with direct subtask counts and optional subtask-tree expansion',
-    tool: getInboxTasksTool,
+      'Read tasks from inbox, flagged, forecast, tag, or custom perspective. Use source parameter to select the view. Supports subtask-tree expansion.',
+    tool: getTasksTool,
     annotations: READ_ONLY_TOOL,
   },
   {
-    name: 'get_flagged_tasks',
+    name: 'manage_tags',
     description:
-      'Get flagged tasks with direct subtask counts, optional project filtering, and optional tree expansion',
-    tool: getFlaggedTasksTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'get_forecast_tasks',
-    description:
-      'Get forecast tasks with direct subtask counts and optional subtask-tree expansion',
-    tool: getForecastTasksTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'get_tasks_by_tag',
-    description:
-      'Get tasks filtered by OmniFocus tags, with direct subtask counts and optional tree expansion. Use this for tags, not custom perspective names.',
-    tool: getTasksByTagTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'list_tags',
-    description:
-      'List OmniFocus tags with IDs, parent relationships, and active status without loading tasks',
-    tool: listTagsTool,
-    annotations: READ_ONLY_TOOL,
+      'Manage OmniFocus tags: list, search by name, add (with optional parent), edit (rename/status/parent), or remove. Removing a tag does not delete tasks; child tags are deleted with the parent.',
+    tool: manageTagsTool,
+    annotations: MUTATING_TOOL,
   },
   {
     name: 'filter_tasks',
@@ -247,47 +214,13 @@ const TOOLS = [
     tool: listCustomPerspectivesTool,
     annotations: READ_ONLY_TOOL,
   },
+
   {
-    name: 'get_custom_perspective_tasks',
+    name: 'manage_folders',
     description:
-      "Get tasks from a specific OmniFocus custom perspective by name. Use this when user refers to perspective names like '今日工作安排', '今日复盘', '本周项目' etc. - these are custom views created in OmniFocus, NOT tags. Supports hierarchical tree display of task relationships.",
-    tool: getCustomPerspectiveTasksTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'add_folder',
-    description:
-      'Create a new folder in OmniFocus, optionally nested under a parent folder. Folders organize projects into a hierarchy.',
-    tool: addFolderTool,
-    annotations: ADDITIVE_TOOL,
-  },
-  {
-    name: 'edit_folder',
-    description:
-      'Rename a folder or move it under a different parent folder (use an empty string for newParentFolderName to move it to the root level).',
-    tool: editFolderTool,
+      'Manage OmniFocus folders: list, get details, add, edit (rename/move), or remove. WARNING: remove also permanently deletes all projects and tasks inside the folder.',
+    tool: manageFoldersTool,
     annotations: MUTATING_TOOL,
-  },
-  {
-    name: 'remove_folder',
-    description:
-      'Remove a folder from OmniFocus. WARNING: this also permanently deletes all projects and tasks contained in the folder.',
-    tool: removeFolderTool,
-    annotations: MUTATING_TOOL,
-  },
-  {
-    name: 'list_folders',
-    description:
-      'List all OmniFocus folders with IDs, parent relationships, status, and project counts without loading tasks.',
-    tool: listFoldersTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'get_folder',
-    description:
-      'Get a single OmniFocus folder by ID or name, including its child projects and subfolders.',
-    tool: getFolderTool,
-    annotations: READ_ONLY_TOOL,
   },
   {
     name: 'append_to_note',
@@ -309,33 +242,6 @@ const TOOLS = [
       'Duplicate an existing task, optionally with its subtasks, and optionally with a new name. Useful for template-based workflows.',
     tool: duplicateTaskTool,
     annotations: ADDITIVE_TOOL,
-  },
-  {
-    name: 'add_tag',
-    description:
-      'Create a new tag in OmniFocus, optionally nested under a parent tag.',
-    tool: addTagTool,
-    annotations: ADDITIVE_TOOL,
-  },
-  {
-    name: 'edit_tag',
-    description:
-      'Rename a tag, change its status (active/onHold/dropped), or move it under a different parent tag (empty string moves to root).',
-    tool: editTagTool,
-    annotations: MUTATING_TOOL,
-  },
-  {
-    name: 'remove_tag',
-    description:
-      'Delete a tag from OmniFocus. Tasks are not deleted; they simply lose the tag. Child tags are deleted with the parent.',
-    tool: removeTagTool,
-    annotations: MUTATING_TOOL,
-  },
-  {
-    name: 'search_tags',
-    description: 'Search OmniFocus tags by name with fuzzy or exact matching.',
-    tool: searchTagsTool,
-    annotations: READ_ONLY_TOOL,
   },
   {
     name: 'list_task_notifications',
