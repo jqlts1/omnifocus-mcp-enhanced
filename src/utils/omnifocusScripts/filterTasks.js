@@ -215,6 +215,14 @@
         if (args.completedThisWeek && !inRange(completionDate, weekStart, nextWeekStart)) return false;
         if (args.completedThisMonth && !inRange(completionDate, monthStart, nextMonthStart)) return false;
 
+        const addedDate = task.added;
+        if (args.createdBefore && !before(addedDate, args.createdBefore)) return false;
+        if (args.createdAfter && !after(addedDate, args.createdAfter)) return false;
+
+        const modifiedDate = task.modified;
+        if (args.modifiedBefore && !before(modifiedDate, args.modifiedBefore)) return false;
+        if (args.modifiedAfter && !after(modifiedDate, args.modifiedAfter)) return false;
+
         const estimatedMinutes = task.estimatedMinutes;
         const hasEstimate = estimatedMinutes !== null && estimatedMinutes !== undefined && estimatedMinutes > 0;
         if (args.hasEstimate !== undefined && hasEstimate !== args.hasEstimate) return false;
@@ -255,6 +263,8 @@
       if (sortBy === "deferDate") return formatDate(task.deferDate);
       if (sortBy === "plannedDate") return formatDate(task.plannedDate);
       if (sortBy === "completedDate") return formatDate(task.completionDate);
+      if (sortBy === "createdDate") return formatDate(task.added);
+      if (sortBy === "modifiedDate") return formatDate(task.modified);
       if (sortBy === "flagged") return task.flagged ? 1 : 0;
       if (sortBy === "project") {
         return task.containingProject ? String(task.containingProject.name || "").toLowerCase() : null;
@@ -346,6 +356,8 @@
     const tasks = limitedTasks.map((task) => {
       const serialized = omnifocusMcpSerializeTask(task, args, true);
       serialized.completedDate = formatDate(task.completionDate);
+      serialized.createdDate = formatDate(task.added);
+      serialized.modifiedDate = formatDate(task.modified);
       return serialized;
     });
     const lastTask = limitedTasks.length > 0 ? limitedTasks[limitedTasks.length - 1] : null;

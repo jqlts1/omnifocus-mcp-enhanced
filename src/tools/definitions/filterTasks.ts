@@ -131,6 +131,34 @@ export const schema = z.object({
     .optional()
     .describe('Show tasks completed this month'),
 
+  // 🆕 创建日期过滤
+  createdBefore: z
+    .string()
+    .optional()
+    .describe(
+      'Show tasks created strictly before this date/time (ISO format: YYYY-MM-DD or full ISO)',
+    ),
+  createdAfter: z
+    .string()
+    .optional()
+    .describe(
+      'Show tasks created strictly after this date/time (ISO format: YYYY-MM-DD or full ISO)',
+    ),
+
+  // 🔄 修改日期过滤
+  modifiedBefore: z
+    .string()
+    .optional()
+    .describe(
+      'Show tasks last modified strictly before this date/time (ISO format: YYYY-MM-DD or full ISO)',
+    ),
+  modifiedAfter: z
+    .string()
+    .optional()
+    .describe(
+      'Show tasks last modified strictly after this date/time (ISO format: YYYY-MM-DD or full ISO)',
+    ),
+
   // 🚩 其他维度
   flagged: z.boolean().optional().describe('Filter by flagged status'),
   searchText: z.string().optional().describe('Search in task names and notes'),
@@ -156,6 +184,8 @@ export const schema = z.object({
       'deferDate',
       'plannedDate',
       'completedDate',
+      'createdDate',
+      'modifiedDate',
       'flagged',
       'project',
     ])

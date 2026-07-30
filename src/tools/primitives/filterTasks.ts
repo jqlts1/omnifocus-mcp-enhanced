@@ -49,6 +49,14 @@ export interface FilterTasksOptions {
   completedThisWeek?: boolean;
   completedThisMonth?: boolean;
 
+  // 🆕 创建日期过滤
+  createdBefore?: string;
+  createdAfter?: string;
+
+  // 🔄 修改日期过滤
+  modifiedBefore?: string;
+  modifiedAfter?: string;
+
   // 🚩 其他维度
   flagged?: boolean;
   searchText?: string;
@@ -131,7 +139,7 @@ export async function filterTasks(options: FilterTasksOptions = {}): Promise<str
           output += '\n**Tips**:\n';
           output += '- Try broadening your search criteria\n';
           output += '- Check if tasks exist in the specified project/tags\n';
-          output += '- Use `get_inbox_tasks` or `get_flagged_tasks` for basic views\n';
+          output += '- Use `get_tasks --source inbox` or `get_tasks --source flagged` for basic views\n';
         } else {
           output += `Found ${taskCount} task${taskCount === 1 ? '' : 's'}`;
           if (taskCount < totalCount) {
@@ -266,6 +274,11 @@ function buildFilterSummary(options: FilterTasksOptions): string {
   else if (options.completedYesterday) conditions.push('Completed: Yesterday');
   else if (options.completedThisWeek) conditions.push('Completed: This Week');
   else if (options.completedThisMonth) conditions.push('Completed: This Month');
+
+  if (options.createdBefore) conditions.push(`Created Before: ${options.createdBefore}`);
+  if (options.createdAfter) conditions.push(`Created After: ${options.createdAfter}`);
+  if (options.modifiedBefore) conditions.push(`Modified Before: ${options.modifiedBefore}`);
+  if (options.modifiedAfter) conditions.push(`Modified After: ${options.modifiedAfter}`);
 
   if (options.deferAvailable) conditions.push('Defer: Available');
   else if (options.deferToday) conditions.push('Defer: Today');

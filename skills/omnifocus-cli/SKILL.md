@@ -1,6 +1,6 @@
 ---
 name: omnifocus-cli
-description: Use a generated local CLI for OmniFocus MCP operations (tasks, project outlines, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 40 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
+description: Use a generated local CLI for OmniFocus MCP operations (tasks, project outlines, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 29 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
 ---
 
 # OmniFocus CLI
@@ -8,7 +8,7 @@ description: Use a generated local CLI for OmniFocus MCP operations (tasks, proj
 ## Overview
 
 Use the local bundled CLI instead of direct MCP tool-calling for OmniFocus requests.
-The MCP server exposes 40 tools; loading all their schemas into chat is expensive.
+The MCP server exposes 29 tools; loading all their schemas into chat is expensive.
 This CLI gives you the same capabilities as deterministic shell commands.
 
 CLI location: `bin/omnifocus-enhanced.cjs` (relative to this skill directory).
@@ -25,34 +25,26 @@ These matter — getting them wrong causes confusing errors:
 
 ## Reading Tasks
 
-Inbox, flagged, forecast, tag, filtered, and single-task reads are task-tree
-aware. Their default output includes `[N subtasks]`, where `N` is the number
-of visible direct children. Do not expand trees unless the user needs task
-structure or could mistake a parent task for an actionable leaf task.
-
-- `--show-subtasks true` recursively expands descendants.
-- `--max-subtask-depth N` limits expansion to `N` levels; omitted is unlimited.
-- `--max-subtask-depth 0` keeps counts but expands no descendants.
-- Existing completion filtering also applies to descendants in list commands.
-- Expanded descendants do not need to match the top-level query filter.
-- The server prevents duplicate top-level display when a match is already shown inside an expanded tree.
+Use `get-tasks` with `--source` to select the view. All views support task-tree
+aware output with `[N subtasks]` counts.
 
 ```bash
-# Perspectives
-bin/omnifocus-enhanced.cjs get-inbox-tasks
-bin/omnifocus-enhanced.cjs get-flagged-tasks
-bin/omnifocus-enhanced.cjs get-forecast-tasks --days 7
-bin/omnifocus-enhanced.cjs get-tasks-by-tag --tag-name "work"
+# Inbox, flagged, forecast
+bin/omnifocus-enhanced.cjs get-tasks --source inbox
+bin/omnifocus-enhanced.cjs get-tasks --source flagged
+bin/omnifocus-enhanced.cjs get-tasks --source forecast --days 7
 
-# Task lists always show direct subtask counts. Expand trees only when needed.
-bin/omnifocus-enhanced.cjs get-inbox-tasks --show-subtasks true
-bin/omnifocus-enhanced.cjs get-flagged-tasks --show-subtasks true --max-subtask-depth 1
-bin/omnifocus-enhanced.cjs get-forecast-tasks --days 7 --show-subtasks true --max-subtask-depth 2
-bin/omnifocus-enhanced.cjs get-tasks-by-tag --tag-name "work" --show-subtasks true
+# By tag
+bin/omnifocus-enhanced.cjs get-tasks --source tag --tag-name "work"
 
-# Custom perspectives (OmniFocus Pro) — these are user-defined views, NOT tags
-bin/omnifocus-enhanced.cjs list-custom-perspectives
-bin/omnifocus-enhanced.cjs get-custom-perspective-tasks --perspective-name "今日计划"
+# Custom perspectives (OmniFocus Pro)
+bin/omnifocus-enhanced.cjs get-tasks --source custom --perspective-name "今日计划"
+
+# Subtask expansion
+bin/omnifocus-enhanced.cjs get-tasks --source inbox --show-subtasks true
+bin/omnifocus-enhanced.cjs get-tasks --source flagged --show-subtasks true --max-subtask-depth 1
+bin/omnifocus-enhanced.cjs get-tasks --source forecast --days 7 --show-subtasks true --max-subtask-depth 2
+bin/omnifocus-enhanced.cjs get-tasks --source tag --tag-name "work" --show-subtasks true
 
 # Single task with attachment metadata
 bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>"
@@ -100,6 +92,11 @@ bin/omnifocus-enhanced.cjs filter-tasks --estimate-max 30 --flagged true
 bin/omnifocus-enhanced.cjs filter-tasks --planned-today true --sort-by plannedDate
 bin/omnifocus-enhanced.cjs filter-tasks --project-filter "Website" --task-status Overdue
 bin/omnifocus-enhanced.cjs filter-tasks --flagged true --show-subtasks true --max-subtask-depth 2
+
+# Stale task detection — find tasks not updated recently
+bin/omnifocus-enhanced.cjs filter-tasks --modified-before 2026-06-29
+bin/omnifocus-enhanced.cjs filter-tasks --created-before 2026-01-01 --modified-before 2026-06-01
+bin/omnifocus-enhanced.cjs count-tasks --modified-before 2026-06-29
 
 # Fast counts (low token cost)
 bin/omnifocus-enhanced.cjs count-tasks --flagged true
@@ -227,7 +224,7 @@ To turn meeting notes, brainstorming, or a task list into a new project:
 
 1. Extract a readable project tree and clearly label every inferred date, tag,
    estimate, note, folder, flag, or sequential setting.
-2. Resolve folders and tags with `list-folders` and `list-tags`. Use their
+2. Resolve folders and tags with `manage-folders --action list` and `manage-tags --action list`. Use their
    stable IDs only; never guess by name or ask the action tool to create them.
 3. Show the complete final tree and ask for explicit confirmation immediately
    before creation. An earlier draft approval is not confirmation.
@@ -311,29 +308,33 @@ bin/omnifocus-enhanced.cjs append-to-note --item-type project --name "New Projec
 
 ## Folders
 
+Use `manage-folders` with `--action` to select the operation.
+
 ```bash
-bin/omnifocus-enhanced.cjs list-folders
-bin/omnifocus-enhanced.cjs get-folder --name "Work"
-bin/omnifocus-enhanced.cjs add-folder --name "Clients" --parent-folder-name "Work"
-bin/omnifocus-enhanced.cjs edit-folder --name "Clients" --new-name "Key Clients"
-bin/omnifocus-enhanced.cjs edit-folder --name "Key Clients" --new-parent-folder-name ""   # move to root
-bin/omnifocus-enhanced.cjs remove-folder --name "Old Archive"
+bin/omnifocus-enhanced.cjs manage-folders --action list
+bin/omnifocus-enhanced.cjs manage-folders --action get --name "Work"
+bin/omnifocus-enhanced.cjs manage-folders --action add --name "Clients" --parent-folder-name "Work"
+bin/omnifocus-enhanced.cjs manage-folders --action edit --name "Clients" --new-name "Key Clients"
+bin/omnifocus-enhanced.cjs manage-folders --action edit --name "Key Clients" --parent-folder-name ""   # move to root
+bin/omnifocus-enhanced.cjs manage-folders --action remove --name "Old Archive"
 ```
 
-⚠️ **`remove-folder` also permanently deletes every project and task inside it.**
+⚠️ **`manage-folders --action remove` also permanently deletes every project and task inside it.**
 Always confirm with the user first, and mention the cascade counts it reports.
 
 ## Tags
 
+Use `manage-tags` with `--action` to select the operation.
+
 ```bash
-bin/omnifocus-enhanced.cjs list-tags
-bin/omnifocus-enhanced.cjs search-tags --query "work"
-bin/omnifocus-enhanced.cjs add-tag --name "Deep Work"
-bin/omnifocus-enhanced.cjs add-tag --name "Client A" --parent-tag-name "Clients"
-bin/omnifocus-enhanced.cjs edit-tag --name "Deep Work" --new-name "Focus"
-bin/omnifocus-enhanced.cjs edit-tag --name "Focus" --new-status onHold
-bin/omnifocus-enhanced.cjs edit-tag --name "Client A" --new-parent-tag-name ""   # move to root
-bin/omnifocus-enhanced.cjs remove-tag --name "Obsolete"
+bin/omnifocus-enhanced.cjs manage-tags --action list
+bin/omnifocus-enhanced.cjs manage-tags --action search --query "work"
+bin/omnifocus-enhanced.cjs manage-tags --action add --name "Deep Work"
+bin/omnifocus-enhanced.cjs manage-tags --action add --name "Client A" --parent-tag-name "Clients"
+bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Deep Work" --new-name "Focus"
+bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Focus" --new-status onHold
+bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Client A" --parent-tag-name ""   # move to root
+bin/omnifocus-enhanced.cjs manage-tags --action remove --name "Obsolete"
 ```
 
 Removing a tag does not delete tasks — they just lose the tag. Child tags ARE deleted with the parent.
@@ -353,17 +354,49 @@ bin/omnifocus-enhanced.cjs remove-task-notification --task-name "Submit report" 
 bin/omnifocus-enhanced.cjs remove-task-notification --task-name "Submit report" --remove-all true
 ```
 
+## Task Health Scan
+
+Use a count-first workflow to surface unhealthy tasks without loading full lists:
+
+1. Count overdue, stale (not modified recently), and no-estimate tasks.
+2. Fetch bounded candidates with `filter-tasks --output-mode compact`.
+3. Categorize into: overdue, stale, missing estimate, missing project, flagged-but-no-date.
+4. Report counts per category, then show the top offenders.
+5. Suggest cleanup actions and ask before applying.
+
+```bash
+# Step 1: quick counts
+bin/omnifocus-enhanced.cjs count-tasks --overdue true
+bin/omnifocus-enhanced.cjs count-tasks --modified-before 2026-06-29
+bin/omnifocus-enhanced.cjs count-tasks --has-estimate false --task-status Available,Next
+
+# Step 2: fetch stale tasks (not modified in 30+ days)
+bin/omnifocus-enhanced.cjs filter-tasks --modified-before 2026-06-29 --limit 30 --output-mode compact
+
+# Step 3: fetch tasks without estimates
+bin/omnifocus-enhanced.cjs filter-tasks --has-estimate false --task-status Available,Next --limit 30 --output-mode compact
+
+# Step 4: fetch overdue tasks
+bin/omnifocus-enhanced.cjs filter-tasks --overdue true --limit 30 --output-mode compact
+```
+
+Report format:
+- 🔴 **Overdue**: count + top 5 with due dates
+- 🟡 **Stale** (no update in 30+ days): count + top 5 with last modified dates
+- ⚪ **No estimate**: count + top 5 actionable tasks
+- 🚩 **Flagged but undated**: count + suggestions
+- 📊 **Summary**: total health score and recommended cleanup batch size
+
 ## Working Guidelines
 
 - **Look before you change.** Read the relevant tasks first, then act.
 - **Use IDs for mutations** when names could be ambiguous. Name lookups fail
   fast on duplicates and will tell you to use an ID — that is expected behavior.
 - **Confirm before destructive calls**: `remove-item`, `batch-remove-items`,
-  `remove-folder`, `remove-tag`.
+  `manage-folders --action remove`, `manage-tags --action remove`.
 - **Summarize long output.** Report counts, deadlines, and flagged items rather
   than dumping every row.
-- **Tags vs custom perspectives are different things.** `@work` is a tag;
-  "今日计划" is likely a custom perspective. Use the matching command.
+- **Tags vs custom perspectives are different things.** `@work` is a tag — use `manage-tags`; "今日计划" is a custom perspective — use `get-tasks --source custom`.
 
 ## Maintenance
 
@@ -383,9 +416,9 @@ npx -y omnifocus-mcp-enhanced@latest install-skill --global
 
 The installer pins the MCP server to the exact package version that shipped the
 skill (and mcporter to `@latest`), regenerates the
-CLI, verifies all 40 commands, and checks the live OmniFocus connection. To
+CLI, verifies all 29 commands, and checks the live OmniFocus connection. To
 inspect the generated command count manually:
 
 ```bash
-bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 43 (40 tools + built-ins)
+bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 32 (29 tools + built-ins)
 ```

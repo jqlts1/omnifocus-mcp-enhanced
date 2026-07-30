@@ -55,6 +55,30 @@ export const schema = z.object({
     .boolean()
     .optional()
     .describe('Only count tasks planned for this week'),
+  createdBefore: z
+    .string()
+    .optional()
+    .describe(
+      'Only count tasks created strictly before this date/time (ISO format)',
+    ),
+  createdAfter: z
+    .string()
+    .optional()
+    .describe(
+      'Only count tasks created strictly after this date/time (ISO format)',
+    ),
+  modifiedBefore: z
+    .string()
+    .optional()
+    .describe(
+      'Only count tasks last modified strictly before this date/time (ISO format)',
+    ),
+  modifiedAfter: z
+    .string()
+    .optional()
+    .describe(
+      'Only count tasks last modified strictly after this date/time (ISO format)',
+    ),
 });
 
 export async function handler(

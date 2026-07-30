@@ -6,6 +6,7 @@ import type { ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-com
 import { z } from 'zod';
 
 import { fetchTasks, fetchProjects, slimTask } from './omnifocusData.js';
+import { countTasks } from '../tools/primitives/countTasks.js';
 import {
   collectDailyPlanningData,
   compactDailyCandidate,
@@ -28,7 +29,7 @@ const ENGAGEMENT_PROTOCOL = `engagement protocol:
 - after presenting the plan, ask whether to apply the changes in omnifocus now.
 - if the user approves, execute the tool calls and report the created/updated ids.
 - always ask for explicit confirmation before destructive operations
-  (remove_item, batch_remove_items, remove_folder, remove_tag).`;
+  (remove_item, batch_remove_items, manage_folders --action remove, manage_tags --action remove).`;
 
 interface PromptConfig {
   description: string;
@@ -155,7 +156,7 @@ workflow:
 2) clarify only when a missing fact blocks a usable outline; do not invent deadlines.
 3) present one readable project tree. clearly label every inferred note, date, tag, estimate,
    sequential setting, or folder placement so the user can correct it.
-4) if a folder or tag is proposed, call list_folders or list_tags and resolve it to a stable id.
+4) if a folder or tag is proposed, call manage_folders --action list or manage_tags --action list and resolve it to a stable id.
    never guess by name, create a missing reference implicitly, or pass names as ids.
 5) present the complete final tree and ask for explicit confirmation immediately before creation.
 6) only after confirmation, call create_project_from_outline once with the structured confirmed
@@ -315,6 +316,95 @@ ${JSON.stringify(inboxTasks.map(slimTask))}
     },
     projectShapingPrompt,
   );
+
+  // 6. Task health scan
+  registerPrompt(
+    server,
+    'task_health_scan',
+    {
+      description:
+        'scan task database health: overdue, stale, missing estimates, missing project, and flagged-but-undated tasks.',
+    },
+    async () => {
+      const staleThreshold = new Date();
+      staleThreshold.setDate(staleThreshold.getDate() - 30);
+      const staleDate = staleThreshold.toISOString().slice(0, 10);
+
+      const [
+        overdueCount,
+        staleCount,
+        noEstimateCount,
+        noProjectCount,
+        flaggedUndatedCount,
+        overdueTasks,
+        staleTasks,
+        noEstimateTasks,
+      ] = await Promise.all([
+        countTasks({ overdue: true }),
+        countTasks({ modifiedBefore: staleDate }),
+        countTasks({ hasEstimate: false, taskStatus: ['Available', 'Next'] }),
+        countTasks({ taskStatus: ['Available', 'Next', 'Blocked', 'DueSoon', 'Overdue'] }),
+        countTasks({ flagged: true }),
+        fetchTasks({ overdue: true, sortBy: 'dueDate', sortOrder: 'asc' }, 10),
+        fetchTasks({ modifiedBefore: staleDate, sortBy: 'modifiedDate', sortOrder: 'asc' }, 10),
+        fetchTasks({ hasEstimate: false, taskStatus: ['Available', 'Next'], sortBy: 'name', sortOrder: 'asc' }, 10),
+      ]);
+
+      // Count tasks without a project by checking projectName and inInbox
+      const allTasks = await fetchTasks(
+        { taskStatus: ['Available', 'Next', 'Blocked', 'DueSoon', 'Overdue'] },
+        500,
+      );
+      const noProjectTasks = allTasks.filter(
+        (t) => !t.projectName && !t.inInbox,
+      );
+      noProjectCount.total = noProjectTasks.length;
+
+      // Count flagged tasks without due date
+      const flaggedAll = await fetchTasks({ flagged: true }, 200);
+      const flaggedUndated = flaggedAll.filter((t) => !t.dueDate);
+      flaggedUndatedCount.total = flaggedUndated.length;
+
+      const text = `run a task health scan using the omnifocus data below.
+
+report these categories in order:
+1. 🔴 **Overdue**: ${overdueCount.total} tasks. show top 10 with due dates and project names.
+2. 🟡 **Stale** (not modified in 30+ days): ${staleCount.total} tasks. show top 10 with last-modified dates.
+3. ⚪ **No estimate**: ${noEstimateCount.total} actionable tasks without time estimates. show top 10.
+4. 📂 **No project**: ${noProjectCount.total} non-inbox tasks without a containing project.
+5. 🚩 **Flagged but undated**: ${flaggedUndatedCount.total} flagged tasks with no due date.
+
+for each category:
+- state the count and percentage of total active tasks.
+- show the top items with stable task ids, names, and relevant dates.
+- suggest one concrete cleanup action (defer, drop, estimate, assign project, add date).
+
+finish with:
+- a health score (0-100) based on the ratio of healthy to unhealthy tasks.
+- a prioritized cleanup plan: which category to tackle first and why.
+- a suggested batch size for the first cleanup action.
+
+${ENGAGEMENT_PROTOCOL}
+
+overdue_tasks_json:
+${JSON.stringify(overdueTasks.map(slimTask))}
+
+stale_tasks_json:
+${JSON.stringify(staleTasks.map(slimTask))}
+
+no_estimate_tasks_json:
+${JSON.stringify(noEstimateTasks.map(slimTask))}
+
+no_project_tasks_json:
+${JSON.stringify(noProjectTasks.slice(0, 10).map(slimTask))}
+
+flagged_undated_tasks_json:
+${JSON.stringify(flaggedUndated.slice(0, 10).map(slimTask))}
+`;
+
+      return userMessage(text);
+    },
+  );
 }
 
 type DailyPlanningCollector = typeof collectDailyPlanningData;
@@ -366,7 +456,7 @@ engagement protocol:
 - ground every recommendation in the omnifocus data provided below.
 - keep clarification questions minimal; only ask when genuinely blocked.
 - always ask for explicit confirmation before destructive operations
-  (remove_item, batch_remove_items, remove_folder, remove_tag).
+  (remove_item, batch_remove_items, manage_folders --action remove, manage_tags --action remove).
 
 available_minutes:
 ${availableMinutes ?? 'null'}

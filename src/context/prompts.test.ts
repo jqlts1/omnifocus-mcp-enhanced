@@ -71,7 +71,7 @@ test('project shaping prompt separates proposal, confirmation, and action', () =
 
   assert.match(prompt, /meeting notes, brainstorm, or task list/);
   assert.match(prompt, /clearly label every inferred/);
-  assert.match(prompt, /list_folders or list_tags/);
+  assert.match(prompt, /manage_folders --action list or manage_tags --action list/);
   assert.match(prompt, /stable id/);
   assert.match(prompt, /explicit confirmation immediately before creation/);
   assert.match(prompt, /create_project_from_outline once/);
@@ -90,6 +90,7 @@ test('registerPrompts exposes project_shaping as the fifth prompt', () => {
   } as unknown as McpServer;
 
   registerPrompts(server);
-  assert.equal(captured.length, 5);
+  assert.equal(captured.length, 6);
   assert.ok(captured.some((args) => args[0] === 'project_shaping'));
+  assert.ok(captured.some((args) => args[0] === 'task_health_scan'));
 });

@@ -20,6 +20,8 @@ interface TaskOverrides {
   deferDate?: Date | null;
   plannedDate?: Date | null;
   completionDate?: Date | null;
+  added?: Date | null;
+  modified?: Date | null;
   estimatedMinutes?: number | null;
   note?: string;
   flagged?: boolean;
@@ -41,6 +43,8 @@ function task(id: string, overrides: TaskOverrides = {}) {
     deferDate: overrides.deferDate || null,
     plannedDate: overrides.plannedDate || null,
     completionDate: overrides.completionDate || null,
+    added: overrides.added || null,
+    modified: overrides.modified || null,
     estimatedMinutes: overrides.estimatedMinutes ?? null,
     inInbox: overrides.inInbox || false,
     containingProject: projectName
@@ -369,4 +373,66 @@ test('filterTasks local date-only parsing remains stable across DST boundaries',
     runFilter(tasks, { dueToday: true }, dstNow).tasks.map((item: any) => item.id),
     ['today'],
   );
+});
+
+test('filterTasks OmniJS applies created date filters (stale detection)', () => {
+  const tasks = [
+    task('fresh', { added: local(2026, 7, 28), modified: local(2026, 7, 29) }),
+    task('stale', { added: local(2026, 6, 1), modified: local(2026, 6, 15) }),
+    task('old', { added: local(2026, 5, 10), modified: local(2026, 5, 20) }),
+    task('no-date', {}),
+  ];
+
+  // createdBefore: tasks created before July
+  const beforeJuly = runFilter(tasks, { createdBefore: '2026-07-01' }, NOW);
+  assert.deepEqual(beforeJuly.tasks.map((item: any) => item.id), ['old', 'stale']);
+
+  // createdAfter: tasks created after June 15
+  const afterJune15 = runFilter(tasks, { createdAfter: '2026-06-15' }, NOW);
+  assert.deepEqual(afterJune15.tasks.map((item: any) => item.id), ['fresh']);
+
+  // Both createdBefore and createdAfter (range)
+  const range = runFilter(tasks, { createdAfter: '2026-06-01', createdBefore: '2026-07-15' }, NOW);
+  assert.deepEqual(range.tasks.map((item: any) => item.id), ['stale']);
+
+  // Tasks with no added date are excluded
+  assert.equal(beforeJuly.tasks.some((item: any) => item.id === 'no-date'), false);
+});
+
+test('filterTasks OmniJS applies modified date filters (stale detection)', () => {
+  const tasks = [
+    task('recent', { modified: local(2026, 7, 29) }),
+    task('stale', { modified: local(2026, 6, 1) }),
+    task('very-stale', { modified: local(2026, 5, 1) }),
+    task('no-date', {}),
+  ];
+
+  // modifiedBefore: tasks not modified since July
+  const beforeJuly = runFilter(tasks, { modifiedBefore: '2026-07-01' }, NOW);
+  assert.deepEqual(beforeJuly.tasks.map((item: any) => item.id), ['stale', 'very-stale']);
+
+  // modifiedAfter: tasks modified after June 15
+  const afterJune15 = runFilter(tasks, { modifiedAfter: '2026-06-15' }, NOW);
+  assert.deepEqual(afterJune15.tasks.map((item: any) => item.id), ['recent']);
+
+  // Stale detection: tasks not modified in 30+ days
+  const staleThreshold = new Date(2026, 5, 29); // June 29 = 30 days before NOW
+  const staleDateStr = staleThreshold.toISOString();
+  const stale = runFilter(tasks, { modifiedBefore: staleDateStr }, NOW);
+  assert.deepEqual(stale.tasks.map((item: any) => item.id), ['stale', 'very-stale']);
+});
+
+test('filterTasks OmniJS created/modified filters exclude tasks with no dates', () => {
+  const tasks = [
+    task('with-date', { added: local(2026, 7, 1), modified: local(2026, 7, 15) }),
+    task('no-added', { modified: local(2026, 7, 15) }),
+    task('no-modified', { added: local(2026, 7, 1) }),
+    task('neither', {}),
+  ];
+
+  const createdResult = runFilter(tasks, { createdAfter: '2026-06-01' }, NOW);
+  assert.deepEqual(createdResult.tasks.map((item: any) => item.id), ['no-modified', 'with-date']);
+
+  const modifiedResult = runFilter(tasks, { modifiedAfter: '2026-07-01' }, NOW);
+  assert.deepEqual(modifiedResult.tasks.map((item: any) => item.id), ['no-added', 'with-date']);
 });
