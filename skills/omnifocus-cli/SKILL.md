@@ -440,7 +440,10 @@ bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 28 (2
 recommends it: the replay metadata omits the server's `lifecycle`, so
 regenerating that way silently turns off keep-alive and roughly doubles the
 latency of every command. The installer bakes keep-alive into the bundle and
-verifies it is present.
+verifies it is present. There is no runtime escape hatch: the generated CLI
+gates the daemon on the `lifecycle` value compiled into it, so setting
+`MCPORTER_KEEPALIVE` when invoking a bundle built without keep-alive does
+nothing. Re-run `install-skill` instead.
 
 Keep-alive means one warm server process is reused across calls instead of
 re-resolving `npx -y` and cold starting a server each time. The daemon runs
