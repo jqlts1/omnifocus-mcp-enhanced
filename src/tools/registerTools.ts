@@ -3,12 +3,14 @@ import {
   ToolCallback,
 } from '@modelcontextprotocol/sdk/server/mcp.js';
 import * as batchCompleteTasksTool from './definitions/batchCompleteTasks.js';
-import type { ZodRawShapeCompat } from '@modelcontextprotocol/sdk/server/zod-compat.js';
+import type {
+  AnySchema,
+  ZodRawShapeCompat,
+} from '@modelcontextprotocol/sdk/server/zod-compat.js';
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 
 import * as addOmniFocusTaskTool from './definitions/addOmniFocusTask.js';
 import * as addProjectTool from './definitions/addProject.js';
-import * as addTaskNotificationTool from './definitions/addTaskNotification.js';
 import * as appendToNoteTool from './definitions/appendToNote.js';
 import * as batchAddItemsTool from './definitions/batchAddItems.js';
 import * as batchMoveTasksTool from './definitions/batchMoveTasks.js';
@@ -19,20 +21,17 @@ import * as dumpDatabaseTool from './definitions/dumpDatabase.js';
 import * as duplicateTaskTool from './definitions/duplicateTask.js';
 import * as editItemTool from './definitions/editItem.js';
 import * as filterTasksTool from './definitions/filterTasks.js';
-import * as getProjectsDueForReviewTool from './definitions/getProjectsDueForReview.js';
 import * as getProjectsTool from './definitions/getProjects.js';
 import * as getTaskByIdTool from './definitions/getTaskById.js';
-import * as getTodayCompletedTasksTool from './definitions/getTodayCompletedTasks.js';
 import * as getTasksTool from './definitions/getTasks.js';
-import * as listCustomPerspectivesTool from './definitions/listCustomPerspectives.js';
 import * as manageFoldersTool from './definitions/manageFolders.js';
+import * as managePerspectivesTool from './definitions/managePerspectives.js';
 import * as manageTagsTool from './definitions/manageTags.js';
-import * as listTaskNotificationsTool from './definitions/listTaskNotifications.js';
+import * as manageTaskNotificationsTool from './definitions/manageTaskNotifications.js';
 import * as markProjectsReviewedTool from './definitions/markProjectsReviewed.js';
 import * as moveTaskTool from './definitions/moveTask.js';
 import * as readTaskAttachmentTool from './definitions/readTaskAttachment.js';
 import * as removeItemTool from './definitions/removeItem.js';
-import * as removeTaskNotificationTool from './definitions/removeTaskNotification.js';
 import * as setRepetitionRuleTool from './definitions/setRepetitionRule.js';
 
 export const READ_ONLY_TOOL: ToolAnnotations = {
@@ -57,8 +56,9 @@ export const MUTATING_TOOL: ToolAnnotations = {
 };
 
 interface ToolModule {
-  schema: { shape: ZodRawShapeCompat };
-  handler: ToolCallback<ZodRawShapeCompat>;
+  schema: AnySchema;
+  inputShape?: ZodRawShapeCompat;
+  handler: ToolCallback<AnySchema>;
 }
 
 interface ToolRegistration {
@@ -154,9 +154,10 @@ const TOOLS = [
     annotations: READ_ONLY_TOOL,
   },
   {
-    name: 'get_today_completed_tasks',
-    description: "Get tasks completed today - view today's accomplishments",
-    tool: getTodayCompletedTasksTool,
+    name: 'get_tasks',
+    description:
+      'Read tasks from inbox, flagged, forecast, tag, or custom perspective. Use source to select the view; source-specific parameters are strictly validated.',
+    tool: getTasksTool,
     annotations: READ_ONLY_TOOL,
   },
   {
@@ -167,16 +168,9 @@ const TOOLS = [
     annotations: MUTATING_TOOL,
   },
   {
-    name: 'get_tasks',
-    description:
-      'Read tasks from inbox, flagged, forecast, tag, or custom perspective. Use source parameter to select the view. Supports subtask-tree expansion.',
-    tool: getTasksTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
     name: 'manage_tags',
     description:
-      'Manage OmniFocus tags: list, search by name, add (with optional parent), edit (rename/status/parent), or remove. Removing a tag does not delete tasks; child tags are deleted with the parent.',
+      'List, search, add, edit, or remove OmniFocus tags. This mixed-operation tool is conservatively marked destructive: list/search are read-only, add/edit mutate, and remove deletes the selected tag plus child tags but keeps tasks.',
     tool: manageTagsTool,
     annotations: MUTATING_TOOL,
   },
@@ -190,15 +184,8 @@ const TOOLS = [
   {
     name: 'get_projects',
     description:
-      'List OmniFocus projects with optional status/folder filtering. Returns project metadata including review dates (nextReviewDate, lastReviewDate, reviewInterval). Lighter than dump_database — returns only projects, no tasks/folders/tags.',
+      'List OmniFocus projects or projects due for review. Use view=all (default) for status/folder filters, or view=due_for_review for overdue review work.',
     tool: getProjectsTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'get_projects_due_for_review',
-    description:
-      'Get OmniFocus projects that are due for review (nextReviewDate <= now). Returns projects sorted by most overdue first. Use for weekly review project health checks.',
-    tool: getProjectsDueForReviewTool,
     annotations: READ_ONLY_TOOL,
   },
   {
@@ -209,16 +196,17 @@ const TOOLS = [
     annotations: MUTATING_TOOL,
   },
   {
-    name: 'list_custom_perspectives',
-    description: 'List all custom perspectives defined in OmniFocus',
-    tool: listCustomPerspectivesTool,
-    annotations: READ_ONLY_TOOL,
+    name: 'manage_perspectives',
+    description:
+      'List, inspect, and edit OmniFocus custom perspectives and their filter rules. Use this to explain why a perspective shows what it shows, or to change its rules. Perspectives are saved views, not tags. list/get are read-only; update rewrites rules in place and never creates or deletes a perspective.',
+    tool: managePerspectivesTool,
+    annotations: MUTATING_TOOL,
   },
 
   {
     name: 'manage_folders',
     description:
-      'Manage OmniFocus folders: list, get details, add, edit (rename/move), or remove. WARNING: remove also permanently deletes all projects and tasks inside the folder.',
+      'List, get, add, edit, or remove OmniFocus folders. This mixed-operation tool is conservatively marked destructive: list/get are read-only, add/edit mutate, and remove permanently deletes contained projects and tasks.',
     tool: manageFoldersTool,
     annotations: MUTATING_TOOL,
   },
@@ -244,24 +232,10 @@ const TOOLS = [
     annotations: ADDITIVE_TOOL,
   },
   {
-    name: 'list_task_notifications',
+    name: 'manage_task_notifications',
     description:
-      'List all notifications (reminders) set on a task, with their kind and fire time.',
-    tool: listTaskNotificationsTool,
-    annotations: READ_ONLY_TOOL,
-  },
-  {
-    name: 'add_task_notification',
-    description:
-      "Add a notification (reminder) to a task. Use absoluteDate for a fixed time, or relativeMinutes for an offset from the task's due date (negative = before due).",
-    tool: addTaskNotificationTool,
-    annotations: ADDITIVE_TOOL,
-  },
-  {
-    name: 'remove_task_notification',
-    description:
-      'Remove a notification from a task by 0-based index, or remove all notifications with removeAll.',
-    tool: removeTaskNotificationTool,
+      'List, add, or remove task notifications. This mixed-operation tool is conservatively marked destructive: list is read-only, add mutates, and remove deletes one or all notifications.',
+    tool: manageTaskNotificationsTool,
     annotations: MUTATING_TOOL,
   },
 ] as unknown as ToolRegistration[];
@@ -272,7 +246,7 @@ export function registerTools(server: McpServer): void {
       name,
       {
         description,
-        inputSchema: tool.schema.shape,
+        inputSchema: tool.inputShape ?? tool.schema,
         annotations,
       },
       tool.handler,

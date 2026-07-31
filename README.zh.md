@@ -40,6 +40,12 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v2.1.0** - 自定义透视规则管理：新增 `manage_perspectives`，可读取、解释并编辑自定义透视背后的筛选规则，取代 `list_custom_perspectives`。规则以基于名称的可读文档呈现，而不是裸的 primary key；所有编辑都是原地写入，透视的 identifier 永不改变。规则词汇表不是照抄 Omni 文档，而是逐条在运行中的 App 上实测得出——文档既不完整也有错误：`actionHasPlannedDate` 未被文档记载，文档中的 `changed` 日期字段实际被筛选引擎忽略，二进制里存在的整个 `actionHasDate*` 家族是死代码。OmniFocus 写入规则时不做任何校验——非法规则会被原样存储，然后让透视静默匹配全部条目——因此服务端在写入前校验每条规则，原样保留自己不认识的规则，拒绝未知或有歧义的标签与项目名，失败时回滚，并强制执行 OmniFocus 自身不会触发的界面刷新。创建和删除透视仍不在范围内：OmniFocus 没有提供对应的自动化接口。当前仍为 25 个工具、5 个 Prompts 和 3 个 Resources。
+
+  Skill 安装器同时修掉了一直在漏的延迟。mcporter 只有在配置条目明确要求时才会让 MCP server 进程保持存活，而它内置的默认名单只覆盖少数几个浏览器自动化 server，因此此前每次 CLI 调用都要重新解析 `npx -y` 并冷启一个 server。安装器现在以 `lifecycle: "keep-alive"` 注册 server，并断言该设置确实进入了生成的 bundle——交错 A/B 实测每条命令快 2.1 倍（中位数 12.9s → 6.1s）。注意 `mcporter generate-cli --from <bundle>` 的回放元数据会丢掉 `lifecycle`，用这条路径刷新 CLI 会静默还原成慢速状态；`install-skill` 是唯一受支持的刷新方式。生成的 CLI 还固定使用 `--runtime node`，否则 mcporter 会根据生成时 `PATH` 上恰好存在什么来选运行时，产出 `#!/usr/bin/env bun` 的 shebang——而在 `PATH` 更窄的 shell 里它根本无法 exec。新增测试断言安装器的校验清单与 server 实际注册的工具完全一致，因此重命名工具再也不会发布出一个在正确安装的包上直接失败的安装器。
+
+- **v2.0.0** - MCP 工具面从 41 个专用工具收敛为 25 个严格聚合工具：任务视图统一使用 `get_tasks`，项目读取统一使用 `get_projects`，Folder、Tag 和通知 CRUD 统一使用 `manage_*` action。旧工具名直接移除，不保留兼容别名。详细任务读取会保留实际分配的叶标签，并通过 `path` 和 `ancestorIds` 暴露完整 OmniFocus 标签层级（例如 `团队 / 守一`）；Compact 仍省略标签。内置 Skill 与安装器同步生成并验证 25 个命令。
+
 - **v1.21.0** - 批量完成任务：新增 `batch_complete_tasks` 工具，可在一个验证事务中按稳定 ID 批量完成或取消完成最多 100 个任务。工具会预检每个 ID、快照原始完成状态、应用每个动作、读回验证状态与完成时间，失败时恢复原状态。重复任务完成后会生成新实例，工具返回 `generatedTaskId` 与 `nextOccurrence`。幂等项报告为 `unchanged` 而非失败。当前共 41 个工具、5 个 Prompts 和 3 个 Resources。
 
 - **v1.20.0** - 重复任务闭环：重复规则现在处处可读、可验证。`get_task_by_id` 返回规则字符串、重复方式、锚定日期、自动追平和下次发生时间；列表读取只增加 `isRepeating` 标记；`dump_database` 不再返回硬编码空值。`add_omnifocus_task` 和 `create_project_from_outline` 的任务节点都支持基于 ICS 规则字符串的 `repetition` 对象；`set_repetition_rule` 现在会先快照原规则，逐字段验证写入结果，失败时恢复原规则，无法确认恢复时返回受影响的任务 ID。当前仍为 40 个工具、5 个 Prompts 和 3 个 Resources。
@@ -88,7 +94,7 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 - **🔄 完整 CRUD 操作** - 创建、读取、更新、删除任务和项目
 - **🌳 项目塑形** - 把确认过的文本方案安全创建为经过读回验证的完整项目树
 - **💬 MCP Prompts** - 5 个引导式工作流（每日、每周、Inbox、项目规划、项目塑形）
-- **🛠️ Agent Skill** - 本地 CLI 覆盖全部 40 个工具，减少 AI 上下文占用
+- **🛠️ Agent Skill** - 本地 CLI 覆盖全部 25 个聚合工具，减少 AI 上下文占用
 - **📅 时间管理** - 截止日期、推迟日期、计划日期、估时和计划
 - **🏷️ 高级标签** - 基于标签的精确/模糊匹配过滤
 - **🚫 互斥标签** - 应用标签时自动遵守互斥标签组规则
@@ -144,6 +150,16 @@ npx -y omnifocus-mcp-enhanced@latest install-skill
 
 ```bash
 npx -y omnifocus-mcp-enhanced@latest install-skill --global
+```
+
+安装器会以 `lifecycle: "keep-alive"` 注册 server，让多次调用复用同一个热进程，而不是每次重新解析 `npx -y` 并冷启；生成的 CLI 固定使用 Node 运行时，因此在 `PATH` 更窄的 shell 里同样可执行。
+
+升级 server 后请重新运行 `install-skill` 来刷新 CLI。不要用 `mcporter generate-cli --from <bundle>`（即使 `mcporter inspect-cli` 这样建议）：它的回放元数据会丢掉 `lifecycle`，从而静默关闭 keep-alive，让每条命令的耗时翻倍。
+
+keep-alive daemon 运行在生成 CLI 自己的配置上，所以直接执行 `mcporter daemon status` 读的是另一个文件，永远显示 “not running”。查看真正的 daemon：
+
+```bash
+npx -y mcporter@latest --config $(ls -t ~/.mcporter/generated/*.json | head -1) daemon status
 ```
 
 ## 📋 系统要求
@@ -276,22 +292,24 @@ npx -y omnifocus-mcp-enhanced@latest install-skill --global
 
 ```bash
 # 收件箱透视
-get_inbox_tasks {"hideCompleted": true}
+get_tasks {"source": "inbox", "hideCompleted": true}
 
 # 已标记任务
-get_flagged_tasks {"projectFilter": "SEO 项目"}
+get_tasks {"source": "flagged", "projectFilter": "SEO 项目"}
 
 # 预测（未来 7 天）
-get_forecast_tasks {"days": 7, "hideCompleted": true}
+get_tasks {"source": "forecast", "days": 7, "hideCompleted": true}
 
 # 按标签查找任务
-get_tasks_by_tag {"tagName": "AI", "exactMatch": false}
+get_tasks {"source": "tag", "tagName": "AI", "exactMatch": false}
 
 # 每条结果都会显示直属子任务数量；需要时再展开任务树
-get_inbox_tasks {"showSubtasks": true, "maxSubtaskDepth": 2}
+get_tasks {"source": "inbox", "showSubtasks": true, "maxSubtaskDepth": 2}
 ```
 
 `showSubtasks` 默认为 `false`。`maxSubtaskDepth` 必须是非负整数：`0` 不展开，`1` 只显示直属子任务，不传则允许完整递归。列表命令对子任务沿用完成状态可见性规则；展开的子任务用于说明结构，本身不需要命中顶层过滤条件。
+
+详细任务读取会保留实际分配的叶标签，并显示完整层级路径。例如任务分配的是“团队”下的“守一”，输出显示为 `团队 / 守一`；结构化结果保留叶标签的 `id`/`name`，并新增 `path` 与 `ancestorIds`。Compact 输出仍省略标签。
 
 ### 3. 🚀 终极任务过滤器
 
@@ -360,24 +378,30 @@ filter_tasks {
 通过层级任务显示访问您的 OmniFocus 自定义透视：
 
 ```bash
-# 🌟 新功能：列出所有自定义透视
-list_custom_perspectives {"format": "detailed"}
+# 列出所有自定义透视
+manage_perspectives {"action": "list"}
+
+# 读取透视的筛选规则，并以自然语言解释
+manage_perspectives {"action": "get", "name": "今日工作安排"}
 
 # 🌳 新功能：项目树视图（默认）
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "今日工作安排",  # 您的自定义透视名称
   "displayMode": "project_tree",    # project_tree | task_tree | flat
   "hideCompleted": true
 }
 
 # 全局任务树（等价于旧参数 showHierarchy=true）
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "今日复盘",
   "displayMode": "task_tree"
 }
 
 # 平铺视图（等价于旧参数 groupByProject=false）
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "本周项目",
   "displayMode": "flat"
 }
@@ -388,7 +412,7 @@ get_custom_perspective_tasks {
 - ✅ **原生集成** - 直接使用 OmniFocus `Perspective.Custom` API
 - ✅ **树状结构** - 使用 ├─、└─ 符号显示父子任务关系
 - ✅ **项目优先分组** - 先按项目分组，再展示子任务层级
-- ✅ **信息表达清晰** - 任务树中默认展示完整备注与 `#标签`
+- ✅ **信息表达清晰** - 详细任务读取展示完整备注和 `#团队 / 守一` 形式的标签路径；Compact 仍省略标签
 - ✅ **AI 友好** - 增强的描述防止工具选择混淆
 - ✅ **专业输出** - 清晰、可读的任务层级
 
@@ -581,73 +605,40 @@ read_task_attachment {
 
 `get_task_by_id` 现在会返回附件 ID、名称、推断出的 MIME 类型、来源（`embedded` 或 `linked`）以及可用时的大小。`read_task_attachment` 会尽量把图片作为 MCP 图片内容直接返回，这样 AI 客户端可以直接查看图片，而不是只能读一段 base64 文本。
 
-## 🛠️ 完整工具参考
+## 🛠️ 完整工具参考——25 个工具
 
-### 📊 数据库与任务管理
+### 任务和项目操作
 
-1. **dump_database** - 获取 OmniFocus 数据库状态
-2. **add_omnifocus_task** - 创建任务（增强子任务支持）
-3. **add_project** - 创建项目
+1. **dump_database** - 导出 OmniFocus 数据库
+2. **add_omnifocus_task** - 创建单个任务，支持子任务与重复规则
+3. **add_project** - 创建单个项目
 4. **remove_item** - 删除任务或项目
-5. **edit_item** - 编辑任务或项目（现已支持任务转移：项目/父任务/Inbox）
-6. **move_task** - 将已有任务转移到项目/父任务/Inbox
-7. **batch_move_tasks** - 原子执行并验证用户已确认的任务整理方案
-8. **batch_add_items** - 批量添加（增强子任务支持）
-9. **batch_remove_items** - 按稳定 ID 预检、Undo 回滚并验证用户已确认的删除批次
-10. **create_project_from_outline** - 使用稳定 Folder/Tag ID 创建并验证用户确认过的项目树
-11. **get_task_by_id** - 查询任务信息，并返回附件元信息
-12. **read_task_attachment** - 读取 `get_task_by_id` 返回的任务附件
+5. **edit_item** - 编辑或调整任务/项目位置
+6. **move_task** - 移动单个任务
+7. **batch_move_tasks** - 原子移动用户确认的任务集合
+8. **batch_complete_tasks** - 原子完成或恢复最多 100 个任务
+9. **batch_add_items** - 批量创建任务或项目
+10. **batch_remove_items** - 原子删除用户确认的项目集合
+11. **create_project_from_outline** - 创建并验证完整项目树
+12. **get_task_by_id** - 读取单个任务及附件元信息
+13. **read_task_attachment** - 读取任务报告的某个附件
+14. **get_tasks** - 通过 `source` 读取 Inbox、Flagged、Forecast、Tag 或自定义透视任务
+15. **filter_tasks** - 按状态、日期、项目、标签和文本等筛选；`{ "completedToday": true }` 可查看今日完成
+16. **get_projects** - 读取所有项目，或使用 `view=due_for_review` 读取待回顾项目
+17. **mark_projects_reviewed** - 原子标记用户确认的项目为已回顾
+18. **set_repetition_rule** - 设置、更新或清除任务重复规则
 
-### 🔍 内置透视工具
+### 组织与生产力
 
-11. **get_inbox_tasks** - 收件箱透视
-12. **get_flagged_tasks** - 已标记透视
-13. **get_forecast_tasks** - 预测透视（包含截止/推迟/计划日期任务数据）
-14. **get_tasks_by_tag** - 基于标签的过滤
-15. **filter_tasks** - 无限组合的终极过滤
+19. **manage_perspectives** - `list`、`get` 或 `update` 自定义透视及其筛选规则
+20. **manage_folders** - `list`、`get`、`add`、`edit` 或 `remove` Folder
+21. **manage_tags** - `list`、`search`、`add`、`edit` 或 `remove` Tag
+22. **manage_task_notifications** - `list`、`add` 或 `remove` 任务提醒
+23. **append_to_note** - 追加任务/项目备注，不覆盖原内容
+24. **count_tasks** - 使用筛选引擎统计任务
+25. **duplicate_task** - 复制任务，可选择包含子任务
 
-### 🌟 自定义透视工具（新功能）
-
-16. **list_custom_perspectives** - 🌟 **新功能**：列出所有自定义透视及详情
-17. **get_custom_perspective_tasks** - 🌟 **新功能**：访问自定义透视，支持层级显示
-
-### 📋 项目与回顾
-
-18. **get_projects** - 轻量列出/过滤项目，包含原生回顾日期和周期
-19. **get_projects_due_for_review** - 列出已到回顾日期的项目，最逾期的排在最前
-20. **mark_projects_reviewed** - 原子标记用户已确认的项目为已回顾，并验证下一回顾日期
-
-### 📁 Folder 管理
-
-20. **add_folder** - 创建文件夹，可指定父文件夹
-21. **edit_folder** - 改名或移动文件夹
-22. **remove_folder** - 删除文件夹及其中项目/任务
-23. **list_folders** - 列出文件夹层级和项目数
-24. **get_folder** - 查看文件夹的直属项目和子文件夹
-
-### ⚡ 生产力工具
-
-25. **append_to_note** - 追加备注而不覆盖原内容
-26. **count_tasks** - 使用与 `filter_tasks` 相同的条件做低开销统计
-27. **duplicate_task** - 复制任务，可选择是否包含子任务
-
-### 🏷️ 标签管理
-
-28. **list_tags** - 列出标签
-29. **add_tag** - 创建标签
-30. **edit_tag** - 改名、改状态或移动标签
-31. **remove_tag** - 删除标签（不会删除任务）
-32. **search_tags** - 模糊或精确搜索标签
-
-### 🔔 任务提醒
-
-33. **list_task_notifications** - 列出任务提醒
-34. **add_task_notification** - 添加绝对时间或相对截止时间的提醒
-35. **remove_task_notification** - 删除单个或全部提醒
-
-### 📊 分析与跟踪
-
-36. **get_today_completed_tasks** - 查看今日完成的任务
+四个 `manage_*` 工具同时包含读取和写入，因此 MCP annotation 保守地标为破坏性；`list`、`get`、`search` 不会修改数据，`remove` 则必须遵循与独立删除工具相同的确认流程。`manage_perspectives` 不会创建或删除透视（OmniFocus 没有提供对应的自动化接口），唯一的写操作是原地编辑。
 
 ## 💬 MCP Prompts
 
@@ -750,17 +741,19 @@ filter_tasks {
 
 ```bash
 # 列出您的自定义透视
-list_custom_perspectives {"format": "detailed"}
+manage_perspectives {"action": "list"}
 
 # 访问带项目树的自定义透视
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "今日复盘",
   "displayMode": "project_tree",
   "hideCompleted": true
 }
 
 # 快速查看周计划的平铺视图
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "本周项目",
   "displayMode": "flat"
 }
@@ -775,10 +768,10 @@ get_custom_perspective_tasks {
 claude mcp list
 
 # 测试基本连接
-get_inbox_tasks
+get_tasks {"source": "inbox"}
 
-# 测试新的自定义透视功能
-list_custom_perspectives
+# 测试自定义透视访问
+manage_perspectives {"action": "list"}
 ```
 
 ### 故障排除

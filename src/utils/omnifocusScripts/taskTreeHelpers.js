@@ -66,6 +66,57 @@ function omnifocusMcpIsRepeating(task) {
   }
 }
 
+const omnifocusMcpTagPathCache = {};
+
+function omnifocusMcpSerializeTag(tag) {
+  const leafId = tag && tag.id ? tag.id.primaryKey : null;
+  if (leafId && omnifocusMcpTagPathCache[leafId]) {
+    return omnifocusMcpTagPathCache[leafId];
+  }
+
+  const chain = [];
+  const visited = {};
+  let current = tag;
+  let depth = 0;
+  while (current && depth < 64) {
+    let currentId = null;
+    let currentName = null;
+    let parent = null;
+    try {
+      currentId = current.id ? current.id.primaryKey : null;
+      currentName = current.name || null;
+      parent = current.parent || null;
+    } catch (error) {
+      break;
+    }
+
+    if (currentId && visited[currentId]) break;
+    if (currentId) visited[currentId] = true;
+    if (currentName) chain.push({ id: currentId, name: currentName });
+    current = parent;
+    depth += 1;
+  }
+
+  chain.reverse();
+  const leaf = chain.length > 0
+    ? chain[chain.length - 1]
+    : { id: leafId, name: tag && tag.name ? tag.name : "" };
+  const serialized = {
+    id: leafId || leaf.id,
+    name: leaf.name,
+    path: chain.length > 0
+      ? chain.map((item) => item.name).join(" / ")
+      : leaf.name,
+    ancestorIds: chain
+      .slice(0, -1)
+      .map((item) => item.id)
+      .filter((id) => !!id),
+  };
+
+  if (leafId) omnifocusMcpTagPathCache[leafId] = serialized;
+  return serialized;
+}
+
 function omnifocusMcpVisibleChildren(task, hideCompleted) {
   let children = [];
   try {
@@ -109,10 +160,7 @@ function omnifocusMcpSerializeTaskNode(task, options, depth, state) {
   };
   if (!options.compact) {
     node.note = task.note || "";
-    node.tags = (task.tags || []).map((tag) => ({
-      id: tag.id.primaryKey,
-      name: tag.name,
-    }));
+    node.tags = (task.tags || []).map((tag) => omnifocusMcpSerializeTag(tag));
   }
 
   if (canExpand) {

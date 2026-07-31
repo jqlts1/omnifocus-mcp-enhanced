@@ -1,8 +1,8 @@
 {
   "name": "omnifocus-mcp-enhanced",
   "type": "module",
-  "version": "1.21.0",
-  "description": "Enhanced MCP server with 29 consolidated tools: unified task reads, folder/tag management, batch operations, project shaping, and comprehensive task management",
+  "version": "2.1.0",
+  "description": "Enhanced MCP server with 25 consolidated tools: unified task/project reads, folder/tag/notification management, batch operations, project shaping, and comprehensive task management",
   "main": "dist/server.js",
   "bin": {
     "omnifocus-mcp-enhanced": "cli.cjs"

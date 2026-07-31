@@ -1,3 +1,11 @@
+export interface TaskTag {
+  id?: string;
+  name: string;
+  path?: string;
+  ancestorIds?: string[];
+}
+
+
 export interface TaskTreeNode {
   id: string;
   name: string;
@@ -13,7 +21,7 @@ export interface TaskTreeNode {
   parentId?: string | null;
   inInbox?: boolean;
   isRepeating?: boolean;
-  tags?: Array<{ id?: string; name: string }>;
+  tags?: TaskTag[];
   childrenCount?: number;
   children?: TaskTreeNode[];
   childrenTruncated?: boolean;
@@ -77,7 +85,7 @@ function formatChild(
   }
 
   if (task.tags && task.tags.length > 0) {
-    output += `${continuation}🏷 ${task.tags.map((tag) => tag.name).join(', ')}\n`;
+    output += `${continuation}🏷 ${task.tags.map((tag) => tag.path || tag.name).join(', ')}\n`;
   }
 
   if (options.showSubtasks && task.children && task.children.length > 0) {
@@ -114,9 +122,10 @@ export function formatTaskTreeNode(
 
   if (task.tags && task.tags.length > 0) {
     const matched = new Set(options.matchedTags || []);
-    const names = task.tags.map((tag) =>
-      matched.has(tag.name) ? `**${tag.name}**` : tag.name,
-    );
+    const names = task.tags.map((tag) => {
+      const displayName = tag.path || tag.name;
+      return matched.has(tag.name) ? `**${displayName}**` : displayName;
+    });
     output += `   🏷 ${names.join(', ')}\n`;
   }
 

@@ -113,20 +113,23 @@ export async function executeOmniFocusScript(scriptPath: string, args?: any): Pr
     // Read the script file
     let scriptContent = readFileSync(actualPath, 'utf8');
 
-    const taskTreeScripts = new Set([
-      'inboxTasks.js',
-      'flaggedTasks.js',
-      'forecastTasks.js',
-      'tasksByTag.js',
-      'filterTasks.js',
-      'getTaskById.js',
-    ]);
-    if (taskTreeScripts.has(scriptName)) {
-      const helperDistPath = join(__dirname, '..', 'utils', 'omnifocusScripts', 'taskTreeHelpers.js');
-      const helperSrcPath = join(__dirname, '..', '..', 'src', 'utils', 'omnifocusScripts', 'taskTreeHelpers.js');
+    const HELPER_BY_SCRIPT: Record<string, string | undefined> = {
+      'inboxTasks.js': 'taskTreeHelpers.js',
+      'flaggedTasks.js': 'taskTreeHelpers.js',
+      'forecastTasks.js': 'taskTreeHelpers.js',
+      'tasksByTag.js': 'taskTreeHelpers.js',
+      'filterTasks.js': 'taskTreeHelpers.js',
+      'getTaskById.js': 'taskTreeHelpers.js',
+      'getPerspectiveRules.js': 'perspectiveRuleHelpers.js',
+      'updatePerspectiveRules.js': 'perspectiveRuleHelpers.js',
+    };
+    const helperName = HELPER_BY_SCRIPT[scriptName];
+    if (helperName) {
+      const helperDistPath = join(__dirname, '..', 'utils', 'omnifocusScripts', helperName);
+      const helperSrcPath = join(__dirname, '..', '..', 'src', 'utils', 'omnifocusScripts', helperName);
       const helperPath = existsSync(helperDistPath) ? helperDistPath : helperSrcPath;
       if (!existsSync(helperPath)) {
-        throw new Error('OmniFocus task tree helper not found');
+        throw new Error(`OmniFocus helper script not found: ${helperName}`);
       }
       scriptContent = readFileSync(helperPath, 'utf8') + '\n' + scriptContent;
     }

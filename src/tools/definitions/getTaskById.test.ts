@@ -9,7 +9,14 @@ test('formatTaskInfo includes attachment metadata for follow-up reads', () => {
     note: 'Latest UI mocks are attached',
     hasChildren: false,
     childrenCount: 0,
-    tags: [{ name: 'design' }],
+    tags: [
+      {
+        id: 'tag-design',
+        name: 'design',
+        path: 'work / design',
+        ancestorIds: ['tag-work'],
+      },
+    ],
     children: [],
     childrenTruncated: false,
     flagged: false,
@@ -34,6 +41,7 @@ test('formatTaskInfo includes attachment metadata for follow-up reads', () => {
   assert.match(output, /ui-mock\.png/);
   assert.match(output, /image\/png/);
   assert.match(output, /Use read_task_attachment/);
+  assert.match(output, /Tags\*\*: work \/ design/);
 });
 
 test('formatTaskInfo renders the repetition rule and next occurrence', () => {

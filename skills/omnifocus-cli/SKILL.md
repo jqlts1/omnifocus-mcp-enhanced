@@ -1,6 +1,6 @@
 ---
 name: omnifocus-cli
-description: Use a generated local CLI for OmniFocus MCP operations (tasks, project outlines, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 29 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
+description: Use a generated local CLI for OmniFocus MCP operations (tasks, project outlines, reviews, folders, tags, notifications, perspectives, filtering and counting) to keep context usage low and avoid loading 25 full MCP tool schemas in chat. Trigger when the user asks for OmniFocus actions and local shell execution is available.
 ---
 
 # OmniFocus CLI
@@ -8,7 +8,7 @@ description: Use a generated local CLI for OmniFocus MCP operations (tasks, proj
 ## Overview
 
 Use the local bundled CLI instead of direct MCP tool-calling for OmniFocus requests.
-The MCP server exposes 29 tools; loading all their schemas into chat is expensive.
+The MCP server exposes 25 consolidated tools; loading all their schemas into chat is expensive.
 This CLI gives you the same capabilities as deterministic shell commands.
 
 CLI location: `bin/omnifocus-enhanced.cjs` (relative to this skill directory).
@@ -27,6 +27,9 @@ These matter — getting them wrong causes confusing errors:
 
 Use `get-tasks` with `--source` to select the view. All views support task-tree
 aware output with `[N subtasks]` counts.
+Detailed reads render an assigned tag's full OmniFocus hierarchy, for example
+`团队 / 守一`. Structured results keep the assigned leaf `id` and `name` and
+add `path` plus `ancestorIds`; compact reads continue to omit tags.
 
 ```bash
 # Inbox, flagged, forecast
@@ -37,8 +40,15 @@ bin/omnifocus-enhanced.cjs get-tasks --source forecast --days 7
 # By tag
 bin/omnifocus-enhanced.cjs get-tasks --source tag --tag-name "work"
 
-# Custom perspectives (OmniFocus Pro)
+# Custom perspectives (OmniFocus Pro) — read the tasks a perspective produces
 bin/omnifocus-enhanced.cjs get-tasks --source custom --perspective-name "今日计划"
+
+# Custom perspectives — read and edit the filter rules themselves
+bin/omnifocus-enhanced.cjs manage-perspectives --action list
+bin/omnifocus-enhanced.cjs manage-perspectives --action get --name "今日计划"
+# Always preview a rule change first; --rules takes the document returned by get
+bin/omnifocus-enhanced.cjs manage-perspectives --action update --name "今日计划" \
+  --rules '{"match":"all","rules":[{"type":"availability","value":"available"}]}' --dry-run true
 
 # Subtask expansion
 bin/omnifocus-enhanced.cjs get-tasks --source inbox --show-subtasks true
@@ -51,7 +61,7 @@ bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>"
 bin/omnifocus-enhanced.cjs get-task-by-id --task-id "<id>" --show-subtasks true
 
 # Completed today
-bin/omnifocus-enhanced.cjs get-today-completed-tasks
+bin/omnifocus-enhanced.cjs filter-tasks --completed-today true --task-status Completed --sort-by completedDate
 ```
 
 ## Inbox Organization
@@ -298,8 +308,8 @@ the saved review dates automatically.
 ```bash
 bin/omnifocus-enhanced.cjs get-projects --status Active
 bin/omnifocus-enhanced.cjs get-projects --status Active,OnHold --folder-name "Work"
-bin/omnifocus-enhanced.cjs get-projects-due-for-review
-bin/omnifocus-enhanced.cjs get-projects-due-for-review --include-on-hold true
+bin/omnifocus-enhanced.cjs get-projects --view due_for_review
+bin/omnifocus-enhanced.cjs get-projects --view due_for_review --include-on-hold true
 bin/omnifocus-enhanced.cjs mark-projects-reviewed --project-ids "<project-1>,<project-2>"
 bin/omnifocus-enhanced.cjs add-project --name "New Project" --folder-name "Work"
 bin/omnifocus-enhanced.cjs edit-item --item-type project --id "<id>" --new-project-status onHold
@@ -315,7 +325,7 @@ bin/omnifocus-enhanced.cjs manage-folders --action list
 bin/omnifocus-enhanced.cjs manage-folders --action get --name "Work"
 bin/omnifocus-enhanced.cjs manage-folders --action add --name "Clients" --parent-folder-name "Work"
 bin/omnifocus-enhanced.cjs manage-folders --action edit --name "Clients" --new-name "Key Clients"
-bin/omnifocus-enhanced.cjs manage-folders --action edit --name "Key Clients" --parent-folder-name ""   # move to root
+bin/omnifocus-enhanced.cjs manage-folders --action edit --name "Key Clients" --new-parent-folder-name ""   # move to root
 bin/omnifocus-enhanced.cjs manage-folders --action remove --name "Old Archive"
 ```
 
@@ -333,7 +343,7 @@ bin/omnifocus-enhanced.cjs manage-tags --action add --name "Deep Work"
 bin/omnifocus-enhanced.cjs manage-tags --action add --name "Client A" --parent-tag-name "Clients"
 bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Deep Work" --new-name "Focus"
 bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Focus" --new-status onHold
-bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Client A" --parent-tag-name ""   # move to root
+bin/omnifocus-enhanced.cjs manage-tags --action edit --name "Client A" --new-parent-tag-name ""   # move to root
 bin/omnifocus-enhanced.cjs manage-tags --action remove --name "Obsolete"
 ```
 
@@ -342,16 +352,16 @@ Removing a tag does not delete tasks — they just lose the tag. Child tags ARE 
 ## Notifications (reminders)
 
 ```bash
-bin/omnifocus-enhanced.cjs list-task-notifications --task-name "Submit report"
+bin/omnifocus-enhanced.cjs manage-task-notifications --action list --task-name "Submit report"
 
 # Fixed time
-bin/omnifocus-enhanced.cjs add-task-notification --task-name "Submit report" --absolute-date "2026-03-05T09:00:00"
+bin/omnifocus-enhanced.cjs manage-task-notifications --action add --task-name "Submit report" --absolute-date "2026-03-05T09:00:00"
 
 # 30 minutes before the due date (task MUST have a due date)
-bin/omnifocus-enhanced.cjs add-task-notification --task-name "Submit report" --relative-minutes -30
+bin/omnifocus-enhanced.cjs manage-task-notifications --action add --task-name "Submit report" --relative-minutes -30
 
-bin/omnifocus-enhanced.cjs remove-task-notification --task-name "Submit report" --index 0
-bin/omnifocus-enhanced.cjs remove-task-notification --task-name "Submit report" --remove-all true
+bin/omnifocus-enhanced.cjs manage-task-notifications --action remove --task-name "Submit report" --index 0
+bin/omnifocus-enhanced.cjs manage-task-notifications --action remove --task-name "Submit report" --remove-all true
 ```
 
 ## Task Health Scan
@@ -396,7 +406,9 @@ Report format:
   `manage-folders --action remove`, `manage-tags --action remove`.
 - **Summarize long output.** Report counts, deadlines, and flagged items rather
   than dumping every row.
-- **Tags vs custom perspectives are different things.** `@work` is a tag — use `manage-tags`; "今日计划" is a custom perspective — use `get-tasks --source custom`.
+- **Tags vs custom perspectives are different things.** `@work` is a tag — use `manage-tags`; "今日计划" is a custom perspective — use `get-tasks --source custom` for its tasks, or `manage-perspectives` for its rules.
+- **Editing perspective rules replaces the whole rule tree.** Run `manage-perspectives --action get` first and send the complete document back with your change applied, including any rules reported as `raw`, or they will be dropped. OmniFocus stores rules without validating them, so a dropped or malformed rule silently makes the perspective match everything.
+- **`manage-perspectives` cannot create or delete a perspective.** OmniFocus exposes no automation API for either; ask the user to do it in the app.
 
 ## Maintenance
 
@@ -416,9 +428,33 @@ npx -y omnifocus-mcp-enhanced@latest install-skill --global
 
 The installer pins the MCP server to the exact package version that shipped the
 skill (and mcporter to `@latest`), regenerates the
-CLI, verifies all 29 commands, and checks the live OmniFocus connection. To
+CLI, verifies all 25 commands, and checks the live OmniFocus connection. To
 inspect the generated command count manually:
 
 ```bash
-bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 32 (29 tools + built-ins)
+bin/omnifocus-enhanced.cjs --help | grep -cE "^\s+[a-z][a-z-]+"   # expect 28 (25 tools + built-ins)
 ```
+
+`install-skill` is the only supported way to refresh the CLI. Do **not** use
+`mcporter generate-cli --from <bundle>`, even though `mcporter inspect-cli`
+recommends it: the replay metadata omits the server's `lifecycle`, so
+regenerating that way silently turns off keep-alive and roughly doubles the
+latency of every command. The installer bakes keep-alive into the bundle and
+verifies it is present.
+
+Keep-alive means one warm server process is reused across calls instead of
+re-resolving `npx -y` and cold starting a server each time. The daemon runs
+against the CLI's own generated config, so plain `mcporter daemon status` reads
+the wrong file and always reports "not running". Check the real one with:
+
+```bash
+npx -y mcporter@latest --config $(ls -t ~/.mcporter/generated/*.json | head -1) daemon status
+```
+
+Expect roughly 5s per command against a real database. About 2.5s of that is
+OmniFocus's own AppleScript bridge — a bare `osascript` count over
+`flattenedTasks` costs that much on its own — so it is a hard floor no amount of
+tuning removes. That bridge also serializes: three concurrent commands measured
+1.05x against running them one after another, so plan reads sequentially and do
+not assume concurrency hides latency. Timings vary widely; take the median of at
+least four runs before believing a regression.

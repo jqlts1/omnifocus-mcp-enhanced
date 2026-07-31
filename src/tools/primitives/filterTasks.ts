@@ -1,5 +1,10 @@
 import { executeOmniFocusScript } from '../../utils/scriptExecution.js';
-import { dedupeExpandedTopLevelTasks, formatTaskTreeNode, TaskTreeNode } from './taskTreeFormatter.js';
+import {
+  dedupeExpandedTopLevelTasks,
+  formatTaskTreeNode,
+  TaskTag,
+  TaskTreeNode,
+} from './taskTreeFormatter.js';
 import { decodeFilterTasksCursor, encodeFilterTasksCursor } from './filterTasksCursor.js';
 
 export interface FilterTasksOptions {
@@ -10,9 +15,8 @@ export interface FilterTasksOptions {
   perspective?: 'inbox' | 'flagged' | 'all' | 'custom';
 
   // 💫 自定义透视参数
-  // Custom perspectives are intentionally not accepted here. Native custom
-  // perspective membership must be read through get_custom_perspective_tasks;
-  // pretending to combine it with arbitrary filters produced incorrect results.
+  // Native custom perspective membership is read through get_tasks with
+  // source=custom; combining it with arbitrary filters is not valid.
 
   // 📁 项目/标签过滤
   projectFilter?: string;
@@ -392,7 +396,9 @@ function formatTask(task: any): string {
 
   // 标签
   if (task.tags && task.tags.length > 0) {
-    const tagNames = task.tags.map((tag: any) => tag.name).join(', ');
+    const tagNames = task.tags
+      .map((tag: TaskTag) => tag.path || tag.name)
+      .join(', ');
     output += `  🏷 ${tagNames}\n`;
   }
 

@@ -5,7 +5,7 @@ import {
   normalizeTaskAttachments,
 } from './taskAttachments.js';
 import type { RepetitionSnapshot } from './repetitionRule.js';
-import { TaskTreeNode } from './taskTreeFormatter.js';
+import { TaskTag, TaskTreeNode } from './taskTreeFormatter.js';
 
 // Interface for task lookup parameters
 export interface GetTaskByIdParams {
@@ -26,7 +26,7 @@ export interface TaskInfo extends TaskTreeNode {
   projectName?: string;
   hasChildren: boolean;
   childrenCount: number;
-  tags: Array<{ id?: string; name: string }>;
+  tags: TaskTag[];
   children: TaskTreeNode[];
   childrenTruncated: boolean;
   dueDate?: string;
@@ -50,7 +50,7 @@ interface RawTaskInfo {
   projectName?: string | null;
   hasChildren: boolean;
   childrenCount: number;
-  tags?: Array<{ id?: string; name: string }>;
+  tags?: TaskTag[];
   children?: TaskTreeNode[];
   childrenTruncated?: boolean;
   dueDate?: string | null;

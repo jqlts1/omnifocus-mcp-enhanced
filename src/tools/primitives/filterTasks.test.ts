@@ -27,7 +27,9 @@ interface TaskOverrides {
   flagged?: boolean;
   inInbox?: boolean;
   projectName?: string | null;
-  tags?: string[];
+  tags?: Array<
+    string | { id: { primaryKey: string }; name: string; parent?: unknown }
+  >;
   children?: any[];
 }
 
@@ -50,10 +52,14 @@ function task(id: string, overrides: TaskOverrides = {}) {
     containingProject: projectName
       ? { id: { primaryKey: `project-${projectName}` }, name: projectName }
       : null,
-    tags: (overrides.tags || []).map((name, index) => ({
-      id: { primaryKey: `tag-${index}-${name}` },
-      name,
-    })),
+    tags: (overrides.tags || []).map((tag, index) => {
+      if (typeof tag !== 'string') return tag;
+      return {
+        id: { primaryKey: `tag-${index}-${tag}` },
+        name: tag,
+        parent: null,
+      };
+    }),
     children: overrides.children || [],
   };
   value.children.forEach((child: any) => { child.parent = value; });
@@ -322,6 +328,45 @@ test('filterTasks OmniJS paginates null-last values in both directions', () => {
   }, NOW);
   assert.deepEqual(first.tasks.map((item: any) => item.id), ['dated', 'none-b']);
   assert.deepEqual(second.tasks.map((item: any) => item.id), ['none-a']);
+});
+
+test('filterTasks OmniJS serializes full assigned tag paths', () => {
+  const team = { id: { primaryKey: 'tag-team' }, name: '团队', parent: null };
+  const member = {
+    id: { primaryKey: 'tag-member' },
+    name: '守一',
+    parent: team,
+  };
+  const result = runFilter([task('nested', { tags: [member] })], {}, NOW);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(result.tasks[0].tags)), [
+    {
+      id: 'tag-member',
+      name: '守一',
+      path: '团队 / 守一',
+      ancestorIds: ['tag-team'],
+    },
+  ]);
+});
+
+test('filterTasks OmniJS bounds cyclic tag parents', () => {
+  const first: { id: { primaryKey: string }; name: string; parent: unknown } = {
+    id: { primaryKey: 'tag-a' },
+    name: 'A',
+    parent: null,
+  };
+  const second = {
+    id: { primaryKey: 'tag-b' },
+    name: 'B',
+    parent: first,
+  };
+  first.parent = second;
+  const result = runFilter([
+    task('cyclic', { tags: [first] }),
+  ], {}, NOW);
+
+  assert.equal(result.tasks[0].tags[0].name, 'A');
+  assert.match(result.tasks[0].tags[0].path, /A/);
 });
 
 test('filterTasks OmniJS compact serialization omits notes and tags', () => {

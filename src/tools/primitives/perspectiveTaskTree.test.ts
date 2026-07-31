@@ -32,12 +32,35 @@ test('buildPerspectiveTaskTree groups by project and preserves nested children',
   assert.equal(inbox!.rootTasks[0].id, 'i1');
 });
 
+test('perspective tree prefers full tag paths', () => {
+  const tree = buildPerspectiveTaskTree(
+    [
+      {
+        id: 'nested',
+        name: 'Nested tag task',
+        project: 'Alpha',
+        parent: null,
+        tags: [
+          {
+            id: 'tag-member',
+            name: '守一',
+            path: '团队 / 守一',
+          },
+        ],
+      },
+    ],
+    { hideCompleted: true },
+  );
+
+  assert.deepEqual(tree.rootTasks[0].displayTags, ['#团队 / 守一']);
+});
+
 test('buildPerspectiveTaskTree tolerates self-parent cycle by keeping node as root', () => {
   const tasks = [
     { id: 'self', name: 'Self Loop', project: 'Alpha', parent: 'self', tags: [], note: '', completed: false },
   ];
 
-  const tree = buildPerspectiveTaskTree(tasks as any[], { hideCompleted: true });
+  const tree = buildPerspectiveTaskTree(tasks, { hideCompleted: true });
   assert.equal(tree.rootTasks.length, 1);
   assert.equal(tree.rootTasks[0].id, 'self');
   assert.equal(tree.rootTasks[0].children.length, 0);

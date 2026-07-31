@@ -107,6 +107,7 @@
       if (before.completed === targetCompleted) {
         plan.push({
           task,
+          taskId: item.taskId,
           action: "unchanged",
           before,
           repetition,
@@ -135,6 +136,7 @@
 
       plan.push({
         task,
+        taskId: item.taskId,
         action: item.action,
         before,
         repetition,
@@ -159,29 +161,39 @@
       }
 
       try {
-        let completedTask = step.task;
         if (step.action === "complete") {
-          if (step.completionDate) {
-            completedTask = step.task.markComplete(step.completionDate);
-          } else {
-            completedTask = step.task.markComplete();
-          }
-
-          // For repeating tasks, markComplete returns the completed clone
-          // Store this reference for verification
+          const taskIdsBefore = step.repetition && typeof flattenedTasks !== "undefined"
+            ? new Set(flattenedTasks.map((task) => primaryKey(task)))
+            : null;
+          const returnedTask = step.completionDate
+            ? step.task.markComplete(step.completionDate)
+            : step.task.markComplete();
+          const completedTask = returnedTask || step.task;
           step.completedTask = completedTask;
 
-          // Check if a new instance was generated (repeating task)
-          if (step.repetition && completedTask !== step.task) {
-            // The original task is now the new instance
-            generatedTasks.push({ original: step.task, generated: step.task, completed: completedTask });
+          if (step.repetition) {
+            let generatedTask = returnedTask && returnedTask !== step.task
+              ? step.task
+              : null;
+            if (!generatedTask && taskIdsBefore && typeof flattenedTasks !== "undefined") {
+              generatedTask = flattenedTasks.find(
+                (task) => !taskIdsBefore.has(primaryKey(task)),
+              ) || null;
+            }
+            if (generatedTask && generatedTask !== completedTask) {
+              generatedTasks.push({
+                originalTaskId: step.taskId,
+                generated: generatedTask,
+                completed: completedTask,
+              });
+            }
           }
         } else if (step.action === "incomplete") {
           step.task.markIncomplete();
         }
 
         results.push({
-          taskId: primaryKey(step.task),
+          taskId: step.taskId,
           action: step.action,
           before: step.before,
         });
@@ -190,7 +202,7 @@
         for (let restore = index - 1; restore >= 0; restore -= 1) {
           const prev = plan[restore];
           if (prev.action === "unchanged") continue;
-          restoreCompletionState(prev.task, prev.before);
+          restoreCompletionState(prev.completedTask || prev.task, prev.before);
         }
 
         // Delete generated tasks
@@ -200,7 +212,7 @@
 
         return fail(
           "COMPLETION_FAILED_RESTORED",
-          `Failed to ${step.action} task ${primaryKey(step.task)}: ${String(error)}`,
+          `Failed to ${step.action} task ${step.taskId}: ${String(error)}`,
           { restored: true },
         );
       }
@@ -220,7 +232,7 @@
       }
 
       // Use the original task reference from the plan, not a lookup
-      const step = plan.find((s) => primaryKey(s.task) === result.taskId);
+      const step = plan.find((candidate) => candidate.taskId === result.taskId);
       if (!step) {
         mismatches.push(`${result.taskId}: task not found in plan`);
         continue;
@@ -252,7 +264,7 @@
       // Find generated task if any (new incomplete instance from repeating task)
       let generatedTaskId = null;
       let nextOccurrence = null;
-      const gen = generatedTasks.find((g) => primaryKey(g.completed) === result.taskId);
+      const gen = generatedTasks.find((candidate) => candidate.originalTaskId === result.taskId);
       if (gen) {
         generatedTaskId = primaryKey(gen.generated);
         try {
@@ -280,7 +292,7 @@
       for (let restore = plan.length - 1; restore >= 0; restore -= 1) {
         const step = plan[restore];
         if (step.action === "unchanged") continue;
-        restoreCompletionState(step.task, step.before);
+        restoreCompletionState(step.completedTask || step.task, step.before);
       }
 
       // Delete generated tasks

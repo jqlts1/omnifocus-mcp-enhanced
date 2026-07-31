@@ -42,6 +42,12 @@ export function formatTaskInfo(
     infoText += `• **Project**: ${task.projectName} (${task.projectId})\n`;
   }
 
+  if (task.tags.length > 0) {
+    infoText += `• **Tags**: ${task.tags
+      .map((tag) => tag.path || tag.name)
+      .join(', ')}\n`;
+  }
+
   if (task.dueDate) {
     infoText += `• **Due**: ${new Date(task.dueDate).toLocaleString()}\n`;
   }

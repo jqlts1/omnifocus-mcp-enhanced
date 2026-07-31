@@ -15,7 +15,14 @@ const task: TaskTreeNode = {
   plannedDate: '2026-07-27T09:00:00.000Z',
   flagged: true,
   estimatedMinutes: 45,
-  tags: [{ name: 'private-tag' }],
+  tags: [
+    {
+      id: 'tag-private',
+      name: 'private-tag',
+      path: 'contexts / private-tag',
+      ancestorIds: ['tag-contexts'],
+    },
+  ],
   childrenCount: 1,
   children: [{
     id: 'child-1',
@@ -55,6 +62,7 @@ test('detailed output remains available with notes and tags', () => {
   const output = formatTaskTreeNode(task, '', { showSubtasks: false });
   assert.match(output, /Sensitive planning note/);
   assert.match(output, /private-tag/);
+  assert.match(output, /contexts \/ private-tag/);
 });
 
 test('default no-cursor output adds page metadata only when another page exists', async () => {

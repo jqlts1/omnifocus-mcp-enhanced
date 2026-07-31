@@ -17,7 +17,7 @@ export interface PerspectiveTaskInput {
   projectName?: string | null;
   parent?: string | null;
   parentTaskInfo?: { id?: string; name?: string } | null;
-  tags?: Array<string | { id?: string; name?: string }>;
+  tags?: Array<string | { id?: string; name?: string; path?: string }>;
 }
 
 export interface PerspectiveTaskNode {
@@ -225,8 +225,11 @@ function normalizeTags(tags: PerspectiveTaskInput['tags']): string[] {
       if (typeof tag === 'string') {
         return tag.trim();
       }
-      if (tag && typeof tag === 'object' && typeof tag.name === 'string') {
-        return tag.name.trim();
+      if (tag && typeof tag === 'object') {
+        if (typeof tag.path === 'string' && tag.path.trim()) {
+          return tag.path.trim();
+        }
+        if (typeof tag.name === 'string') return tag.name.trim();
       }
       return '';
     })

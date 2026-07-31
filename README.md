@@ -44,6 +44,12 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 
 ## 🆕 Latest Release
 
+- **v2.1.0** - Custom perspective rule management: the new `manage_perspectives` tool reads, explains, and edits the filter rules behind a custom perspective, replacing `list_custom_perspectives`. Rules are exposed as a readable, name-based document instead of raw primary keys, and edits are written in place so a perspective's identifier never changes. The rule vocabulary was verified against the running app rather than taken from Omni's documentation, which proved both incomplete and partly wrong: `actionHasPlannedDate` is undocumented, the documented `changed` date field is ignored by the filter engine, and an entire `actionHasDate*` family present in the binary is dead. OmniFocus performs no validation on rule writes — an invalid rule is stored intact and then silently makes the perspective match everything — so the server validates every rule before writing, preserves rules it does not recognize verbatim, refuses unknown or ambiguous tag and project names, rolls back on failure, and forces the display refresh that OmniFocus otherwise skips. Creating and deleting perspectives remain out of scope: OmniFocus exposes no automation API for either. The surface remains 25 tools, 5 prompts, and 3 resources.
+
+  The skill installer also stops leaking latency. mcporter only keeps an MCP server process alive when its config entry asks for it, and its built-in defaults cover a handful of browser-automation servers and nothing else, so every CLI call was re-resolving `npx -y` and cold starting a server. The installer now registers the server with `lifecycle: "keep-alive"` and asserts the setting reached the generated bundle — measured at 2.1x faster per command (12.9s → 6.1s median, interleaved A/B). Note that `mcporter generate-cli --from <bundle>` drops `lifecycle` from its replay metadata, so refreshing the CLI that way silently reverts this; `install-skill` is the only supported refresh path. The generated CLI is also pinned to `--runtime node`, because mcporter otherwise picks the runtime from whatever is on `PATH` at generation time and emits a `#!/usr/bin/env bun` shebang that fails to exec from shells with a narrower `PATH`. A new test asserts the installer's verification checklist names exactly the tools the server registers, so a renamed tool can no longer ship an installer that aborts on a correctly installed package.
+
+- **v2.0.0** - Consolidated the MCP surface from 41 specialized tools to 25 strict tools: task views now use `get_tasks`, project reads use `get_projects`, and Folder/Tag/notification CRUD use `manage_*` actions. Removed legacy tool names rather than keeping aliases. Detailed task reads now preserve each assigned leaf tag while exposing its full OmniFocus hierarchy through `path` and `ancestorIds` (for example, `团队 / 守一`); compact reads still omit tags. The bundled Skill and installer now generate and verify the 25-command surface.
+
 - **v1.21.0** - Batch task completion: new `batch_complete_tasks` tool marks up to 100 tasks complete or incomplete by stable ID in one verified transaction. The tool preflights every ID, snapshots original completion states, applies each action, reads back to verify status and completion dates, and restores previous states on any failure. Repeating tasks generate new instances when completed; the tool reports `generatedTaskId` and `nextOccurrence`. Idempotent items are reported as `unchanged` rather than failing. The surface now includes 41 tools, 5 prompts, and 3 resources.
 
 - **v1.20.0** - Repeating tasks completed: repetition is now readable and verified everywhere. `get_task_by_id` returns the rule string, schedule type, anchor date, catch-up behavior, and the next occurrence; list reads add only an `isRepeating` marker; `dump_database` reports real repetition instead of hard-coded nulls. `add_omnifocus_task` and every task node of `create_project_from_outline` accept a `repetition` object using ICS rule strings, and `set_repetition_rule` now snapshots the previous rule, verifies every written field, restores on failure, and reports an unconfirmed restore with the affected task ID. The surface remains 40 tools, 5 prompts, and 3 resources.
@@ -96,7 +102,7 @@ Want to see where the project is heading next? See the [roadmap](docs/roadmap/20
 - **🔔 Task Notifications** - List, add, and remove reminders (absolute time or relative to due date)
 - **💬 MCP Prompts** - 5 guided workflows (daily, weekly, inbox processing, project planning, project shaping)
 - **📡 MCP Resources** - 3 live JSON snapshots (inbox, today, active projects)
-- **🛠️ Agent Skill** - One-command install of a local CLI covering all 40 tools, to keep AI context usage low
+- **🛠️ Agent Skill** - One-command install of a local CLI covering all 25 consolidated tools, to keep AI context usage low
 - **📅 Time Management** - Due, defer, planned dates, estimates, and scheduling
 - **🏷️ Advanced Tagging** - Tag-based filtering with exact/partial matching
 - **🚫 Mutually Exclusive Tags** - Automatically respects exclusive tag groups when applying tags
@@ -296,22 +302,24 @@ Access all major OmniFocus perspectives programmatically:
 
 ```bash
 # Inbox perspective
-get_inbox_tasks {"hideCompleted": true}
+get_tasks {"source": "inbox", "hideCompleted": true}
 
 # Flagged tasks
-get_flagged_tasks {"projectFilter": "SEO Project"}
+get_tasks {"source": "flagged", "projectFilter": "SEO Project"}
 
 # Forecast (next 7 days)
-get_forecast_tasks {"days": 7, "hideCompleted": true}
+get_tasks {"source": "forecast", "days": 7, "hideCompleted": true}
 
 # Tasks by tag
-get_tasks_by_tag {"tagName": "AI", "exactMatch": false}
+get_tasks {"source": "tag", "tagName": "AI", "exactMatch": false}
 
 # Every result shows its direct subtask count; expand the task tree on demand
-get_inbox_tasks {"showSubtasks": true, "maxSubtaskDepth": 2}
+get_tasks {"source": "inbox", "showSubtasks": true, "maxSubtaskDepth": 2}
 ```
 
 `showSubtasks` defaults to `false`. `maxSubtaskDepth` is a non-negative integer: `0` expands nothing, `1` shows direct children, and omitting it allows full recursion. List commands apply their completed-task visibility to descendants. Expanded descendants provide structure and do not need to match the top-level filter themselves.
+
+Detailed task reads preserve the assigned leaf tag and show its full hierarchy path. For example, a task assigned `守一` under `团队` is rendered as `团队 / 守一`; structured results retain the leaf `id`/`name` and add `path` plus `ancestorIds`. Compact output continues to omit tags.
 
 ### 3. 🚀 Ultimate Task Filter
 
@@ -380,24 +388,30 @@ Changing filters or sorting invalidates the cursor. `limit`, `outputMode`, and t
 Access your OmniFocus custom perspectives with hierarchical task display:
 
 ```bash
-# 🌟 NEW: List all your custom perspectives
-list_custom_perspectives {"format": "detailed"}
+# List all your custom perspectives
+manage_perspectives {"action": "list"}
+
+# Read a perspective's filter rules, explained in plain language
+manage_perspectives {"action": "get", "name": "今日工作安排"}
 
 # 🌳 NEW: Project tree view (default)
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "今日工作安排",  # Your custom perspective name
   "displayMode": "project_tree",    # project_tree | task_tree | flat
   "hideCompleted": true
 }
 
 # Global task tree (legacy showHierarchy=true equivalent)
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "Today Review",
   "displayMode": "task_tree"
 }
 
 # Flat list (legacy groupByProject=false equivalent)
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "Weekly Planning",
   "displayMode": "flat"
 }
@@ -408,7 +422,7 @@ get_custom_perspective_tasks {
 - ✅ **Native Integration** - Uses OmniFocus `Perspective.Custom` API directly
 - ✅ **Tree Structure** - Visual parent-child task relationships with ├─, └─ symbols
 - ✅ **Project-First Grouping** - Project header first, then nested subtasks
-- ✅ **Readable Metadata** - Full notes and `#tags` in tree output
+- ✅ **Readable Metadata** - Detailed task reads show full notes and hierarchical tag paths such as `#Team / Member`; compact reads still omit tags
 - ✅ **AI-Friendly** - Enhanced descriptions prevent tool selection confusion
 - ✅ **Professional Output** - Clean, readable task hierarchies
 
@@ -601,75 +615,40 @@ read_task_attachment {
 
 `get_task_by_id` now reports attachment IDs, names, MIME guesses, source (`embedded` vs `linked`), and sizes when available. `read_task_attachment` returns images as MCP image content when possible, so AI clients can inspect the image directly instead of parsing base64 from plain text.
 
-## 🛠️ Complete Tool Reference
+## 🛠️ Complete Tool Reference — 25 Tools
 
-### 📊 Database & Task Management
+### Task and project operations
 
-1. **dump_database** - Get OmniFocus database state
-2. **add_omnifocus_task** - Create tasks (enhanced with subtask support)
-3. **add_project** - Create projects
-4. **remove_item** - Delete tasks or projects
-5. **edit_item** - Edit tasks or projects (now supports task moves: project/parent/inbox)
-6. **move_task** - Move an existing task to project/parent task/inbox
-7. **batch_move_tasks** - Atomically execute and verify a confirmed task organization plan
-8. **batch_add_items** - Bulk add (enhanced with subtask support)
-9. **batch_remove_items** - Preflight, undo-roll back, and verify a confirmed stable-ID deletion batch
-10. **create_project_from_outline** - Create and verify one user-confirmed project tree using stable Folder/Tag IDs
-11. **get_task_by_id** - Query task information, including attachment metadata
-12. **read_task_attachment** - Read an attachment reported by `get_task_by_id`
+1. **dump_database** - Export the OmniFocus database
+2. **add_omnifocus_task** - Create one task, including subtasks and repetition
+3. **add_project** - Create one project
+4. **remove_item** - Delete a task or project
+5. **edit_item** - Edit or reposition a task or project
+6. **move_task** - Move one task
+7. **batch_move_tasks** - Atomically move a confirmed task set
+8. **batch_complete_tasks** - Atomically complete or reopen up to 100 tasks
+9. **batch_add_items** - Add multiple tasks or projects
+10. **batch_remove_items** - Atomically delete a confirmed item set
+11. **create_project_from_outline** - Create and verify one complete project tree
+12. **get_task_by_id** - Read one task and its attachment metadata
+13. **read_task_attachment** - Read one reported task attachment
+14. **get_tasks** - Read inbox, flagged, forecast, tag, or custom-perspective tasks via `source`
+15. **filter_tasks** - Filter tasks by status, dates, project, tags, text, and more; use `{ "completedToday": true }` for today's completed work
+16. **get_projects** - Read all projects or use `view=due_for_review` for projects due for review
+17. **mark_projects_reviewed** - Atomically mark confirmed projects reviewed
+18. **set_repetition_rule** - Set, update, or clear a task repeat rule
 
-### 🔍 Built-in Perspective Tools
+### Organization and productivity
 
-12. **get_inbox_tasks** - Inbox perspective
-13. **get_flagged_tasks** - Flagged perspective
-14. **get_forecast_tasks** - Forecast perspective (due/deferred/planned task data included)
-15. **get_tasks_by_tag** - Tag-based filtering
-16. **filter_tasks** - Ultimate filtering with unlimited combinations
+19. **manage_perspectives** - `list`, `get`, or `update` custom perspectives and their filter rules
+20. **manage_folders** - `list`, `get`, `add`, `edit`, or `remove` folders
+21. **manage_tags** - `list`, `search`, `add`, `edit`, or `remove` tags
+22. **manage_task_notifications** - `list`, `add`, or `remove` task reminders
+23. **append_to_note** - Append without overwriting a task/project note
+24. **count_tasks** - Count tasks using the filter engine
+25. **duplicate_task** - Duplicate a task, optionally with subtasks
 
-### 🌟 Custom Perspective Tools (NEW)
-
-16. **list_custom_perspectives** - 🌟 **NEW**: List all custom perspectives with details
-17. **get_custom_perspective_tasks** - 🌟 **NEW**: Access custom perspective with hierarchical display
-
-### 📁 Folder Management Tools (NEW)
-
-18. **add_folder** - 🆕 **NEW**: Create a folder, optionally nested under a parent folder
-19. **edit_folder** - 🆕 **NEW**: Rename a folder or move it under a different parent (empty string moves to root)
-20. **remove_folder** - 🆕 **NEW**: Delete a folder (⚠️ also deletes all contained projects and tasks)
-21. **list_folders** - 🆕 **NEW**: List all folders with IDs, parents, status, and project counts
-22. **get_folder** - 🆕 **NEW**: Get a single folder with its child projects and subfolders
-
-### ⚡ Productivity Tools (NEW)
-
-23. **append_to_note** - 🆕 **NEW**: Append text to a task/project note without overwriting
-24. **count_tasks** - 🆕 **NEW**: Fast "how many" queries with a status breakdown (same filters as filter_tasks)
-25. **duplicate_task** - 🆕 **NEW**: Clone a task with/without subtasks, optionally renamed
-
-### 📋 Project Review Tools (NEW)
-
-26. **get_projects** - List/filter projects with native review dates and intervals
-27. **get_projects_due_for_review** - List projects whose next review date has arrived, most overdue first
-28. **mark_projects_reviewed** - Atomically mark a confirmed set of eligible projects reviewed and verify their next review dates
-
-### 🏷️ Tag Management Tools (NEW)
-
-28. **list_tags** - List all tags with IDs, parents, and active status
-29. **add_tag** - 🆕 **NEW**: Create a tag, optionally nested under a parent tag
-30. **edit_tag** - 🆕 **NEW**: Rename, change status (active/onHold/dropped), or move a tag
-31. **remove_tag** - 🆕 **NEW**: Delete a tag (tasks are kept, they just lose the tag)
-32. **search_tags** - 🆕 **NEW**: Search tags by name (fuzzy or exact)
-
-### 🔔 Notification Tools (NEW)
-
-33. **list_task_notifications** - 🆕 **NEW**: List reminders set on a task
-34. **add_task_notification** - 🆕 **NEW**: Add a reminder (absolute time or minutes relative to due date)
-35. **remove_task_notification** - 🆕 **NEW**: Remove a reminder by index, or remove all
-
-### 📊 Analytics & Tracking
-
-36. **get_today_completed_tasks** - View today's completed tasks
-
-> Note: `get_tasks_by_tag` (#14) and `list_tags` (#26) were available in earlier versions; the tag CRUD tools are new in v1.10.0.
+The four `manage_*` tools mix reads and writes, so their MCP annotations are deliberately conservative and destructive. `list`/`get`/`search` actions do not mutate; remove actions require the same confirmation discipline as dedicated deletion tools. `manage_perspectives` never creates or deletes a perspective — OmniFocus exposes no automation API for either — so its only write is an in-place edit.
 
 ## 💬 MCP Prompts (NEW in v1.10.0)
 
@@ -695,7 +674,7 @@ Live JSON snapshots your AI client can read without calling a tool.
 
 ## 🛠️ Agent Skill (NEW in v1.11.0)
 
-With 40 tools, loading every MCP tool schema into an AI conversation costs a lot of context. The bundled **`omnifocus-cli` skill** solves this: it generates a local CLI so your agent drives OmniFocus with shell commands instead.
+With 25 consolidated tools, loading every MCP schema still costs context. The bundled **`omnifocus-cli` skill** generates a local CLI so agents can drive OmniFocus through compact shell commands instead.
 
 ### Install
 
@@ -725,10 +704,10 @@ server registration is written to the home mcporter configuration.
 
 That single command:
 
-1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter), pinned to the exact package version that shipped the installer
-2. Generates a standalone CLI from the server's live tool schemas (~20s)
+1. Registers the MCP server with [mcporter](https://github.com/openclaw/mcporter), pinned to the exact package version that shipped the installer, with `lifecycle: "keep-alive"` so repeat calls reuse one warm server instead of cold starting one each time
+2. Generates a standalone CLI from the server's live tool schemas (~20s), pinned to the Node runtime so the CLI stays runnable from any shell
 3. Installs `SKILL.md` + the CLI into the current project's `.claude/skills/omnifocus-cli/` (or `~/.claude/skills/omnifocus-cli/` with `--global`)
-4. Verifies all 38 tools are present and that OmniFocus is reachable
+4. Verifies all 25 tools are present, that keep-alive reached the generated bundle, and that OmniFocus is reachable
 
 Install elsewhere with `CLAUDE_SKILLS_DIR=/custom/path npx -y omnifocus-mcp-enhanced@latest install-skill` (`AGENT_SKILLS_DIR` remains available as a legacy alias).
 
@@ -741,10 +720,10 @@ The CLI is **not** shipped pre-built. It is generated on your machine from the s
 ```bash
 CLI=.claude/skills/omnifocus-cli/bin/omnifocus-enhanced.cjs
 
-$CLI get-inbox-tasks
+$CLI get-tasks --source inbox
 $CLI count-tasks --flagged true
 $CLI filter-tasks --task-status Available,Next --due-this-week true
-$CLI add-folder --name "Clients" --parent-folder-name "Work"
+$CLI manage-folders --action add --name "Clients" --parent-folder-name "Work"
 ```
 
 Flag conventions: booleans need explicit values (`--flagged true`), arrays are comma-separated (`--task-status Available,Next`), and `--raw '<json>'` bypasses flag parsing for complex nested arguments.
@@ -756,6 +735,19 @@ Re-run the installer after upgrading the server — a stale CLI will silently mi
 ```bash
 npm install -g omnifocus-mcp-enhanced@latest
 npx -y omnifocus-mcp-enhanced@latest install-skill
+```
+
+`install-skill` is the only supported refresh path. Do **not** use `mcporter
+generate-cli --from <bundle>`, even though `mcporter inspect-cli` suggests it:
+the replay metadata drops the server's `lifecycle`, so regenerating that way
+silently disables keep-alive and roughly doubles the latency of every command.
+
+The keep-alive daemon runs against the generated CLI's own config, so a plain
+`mcporter daemon status` reads the wrong file and always reports "not running".
+Inspect the real one with:
+
+```bash
+npx -y mcporter@latest --config $(ls -t ~/.mcporter/generated/*.json | head -1) daemon status
 ```
 
 Batch move feature roadmap (future): [docs/roadmap/2026-02-25-batch-move-tasks-plan.md](docs/roadmap/2026-02-25-batch-move-tasks-plan.md)
@@ -867,17 +859,19 @@ filter_tasks {
 
 ```bash
 # List your custom perspectives
-list_custom_perspectives {"format": "detailed"}
+manage_perspectives {"action": "list"}
 
 # Access a custom perspective with project tree
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "Today Review",
   "displayMode": "project_tree",
   "hideCompleted": true
 }
 
 # Quick flat view of weekly planning
-get_custom_perspective_tasks {
+get_tasks {
+  "source": "custom",
   "perspectiveName": "Weekly Planning",
   "displayMode": "flat"
 }
@@ -887,23 +881,23 @@ get_custom_perspective_tasks {
 
 ```bash
 # List all folders with project counts
-list_folders {"includeDropped": false}
+manage_folders {"action": "list", "includeDropped": false}
 
 # Create a top-level folder
-add_folder {"name": "Work"}
+manage_folders {"action": "add", "name": "Work"}
 
 # Create a nested folder
-add_folder {"name": "Clients", "parentFolderName": "Work"}
+manage_folders {"action": "add", "name": "Clients", "parentFolderName": "Work"}
 
 # Inspect a folder's projects and subfolders
-get_folder {"name": "Work"}
+manage_folders {"action": "get", "name": "Work"}
 
 # Rename or move a folder (empty string moves to root)
-edit_folder {"name": "Clients", "newName": "Key Clients"}
-edit_folder {"name": "Key Clients", "newParentFolderName": ""}
+manage_folders {"action": "edit", "name": "Clients", "newName": "Key Clients"}
+manage_folders {"action": "edit", "name": "Key Clients", "newParentFolderName": ""}
 
 # Delete a folder (⚠️ also deletes all contained projects and tasks)
-remove_folder {"name": "Old Archive"}
+manage_folders {"action": "remove", "name": "Old Archive"}
 ```
 
 ### ⚡ Productivity Tools
@@ -939,43 +933,45 @@ duplicate_task {"taskId": "abc123", "includeSubtasks": false}
 
 ```bash
 # Search and list tags
-search_tags {"query": "work"}
-list_tags {"includeInactive": false}
+manage_tags {"action": "search", "query": "work"}
+manage_tags {"action": "list", "includeInactive": false}
 
 # Create a tag, optionally nested
-add_tag {"name": "Deep Work"}
-add_tag {"name": "Client A", "parentTagName": "Clients"}
+manage_tags {"action": "add", "name": "Deep Work"}
+manage_tags {"action": "add", "name": "Client A", "parentTagName": "Clients"}
 
 # Rename, pause, or move a tag ("" moves to root)
-edit_tag {"name": "Deep Work", "newName": "Focus"}
-edit_tag {"name": "Focus", "newStatus": "onHold"}
-edit_tag {"name": "Client A", "newParentTagName": ""}
+manage_tags {"action": "edit", "name": "Deep Work", "newName": "Focus"}
+manage_tags {"action": "edit", "name": "Focus", "newStatus": "onHold"}
+manage_tags {"action": "edit", "name": "Client A", "newParentTagName": ""}
 
 # Delete a tag (tasks are kept, they just lose the tag)
-remove_tag {"name": "Obsolete"}
+manage_tags {"action": "remove", "name": "Obsolete"}
 ```
 
 ### 🔔 Task Notifications
 
 ```bash
 # See what reminders a task has
-list_task_notifications {"taskName": "Submit report"}
+manage_task_notifications {"action": "list", "taskName": "Submit report"}
 
 # Remind at a fixed time
-add_task_notification {
+manage_task_notifications {
+  "action": "add",
   "taskName": "Submit report",
   "absoluteDate": "2026-03-05T09:00:00"
 }
 
 # Remind 30 minutes before the due date (requires a due date)
-add_task_notification {
+manage_task_notifications {
+  "action": "add",
   "taskName": "Submit report",
   "relativeMinutes": -30
 }
 
 # Remove one by index, or clear them all
-remove_task_notification {"taskName": "Submit report", "index": 0}
-remove_task_notification {"taskName": "Submit report", "removeAll": true}
+manage_task_notifications {"action": "remove", "taskName": "Submit report", "index": 0}
+manage_task_notifications {"action": "remove", "taskName": "Submit report", "removeAll": true}
 ```
 
 ## 🔧 Configuration
@@ -989,10 +985,10 @@ Verify the server is registered:
 claude mcp list
 
 # Test basic connection
-get_inbox_tasks
+get_tasks {"source": "inbox"}
 
-# Test new custom perspective features
-list_custom_perspectives
+# Test custom perspective access
+manage_perspectives {"action": "list"}
 ```
 
 ### Claude Desktop / Cowork

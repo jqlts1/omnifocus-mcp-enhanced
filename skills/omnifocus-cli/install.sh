@@ -77,10 +77,12 @@ done
 
 if [[ "$INSTALL_GLOBAL" == true ]]; then
   MCPORTER_SCOPE="home"
+  MCPORTER_CONFIG="$HOME/.mcporter/mcporter.json"
   DEFAULT_SKILLS_ROOT="$HOME/.claude/skills"
   INSTALL_LABEL="global"
 else
   MCPORTER_SCOPE="project"
+  MCPORTER_CONFIG="$PROJECT_ROOT/config/mcporter.json"
   DEFAULT_SKILLS_ROOT="$PROJECT_ROOT/.claude/skills"
   INSTALL_LABEL="project-local"
 fi
@@ -115,8 +117,9 @@ ok "$INSTALL_LABEL install selected"
 
 # --- Register the MCP server -------------------------------------------------
 #
-# Pin the package to @latest. Without the tag, npx may serve a stale cached
-# build, which silently produces a CLI missing the newest tools.
+# The package is pinned to this installer's version. Without the pin, npx may
+# serve a stale cached build, which silently produces a CLI missing the newest
+# tools.
 
 info "Registering MCP server '$SERVER_NAME' with mcporter ($MCPORTER_SCOPE scope)"
 
@@ -125,19 +128,61 @@ npx -y mcporter@latest config add "$SERVER_NAME" \
   --scope "$MCPORTER_SCOPE" >/dev/null
 ok "Registered '$SERVER_NAME' -> npx -y $PACKAGE_SPEC ($MCPORTER_SCOPE scope)"
 
+# mcporter only keeps a server process alive when its config entry asks for it.
+# The built-in keep-alive defaults cover a handful of browser-automation servers
+# and nothing else, so without this every CLI call re-resolves `npx -y` and cold
+# starts a fresh server — measured at roughly 2x the wall time of a warm daemon.
+# `config add` has no --lifecycle flag, so patch the entry we just wrote.
+
+if ! node -e '
+  const fs = require("node:fs");
+  const [file, server] = process.argv.slice(1);
+  const raw = fs.readFileSync(file, "utf8");
+  const config = JSON.parse(raw);
+  const entry = config.mcpServers?.[server];
+  if (!entry) throw new Error(`no ${server} entry in ${file}`);
+  entry.lifecycle = "keep-alive";
+  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+' "$MCPORTER_CONFIG" "$SERVER_NAME" 2>/dev/null; then
+  warn "Could not set lifecycle=keep-alive in $MCPORTER_CONFIG."
+  warn "The CLI still works, but every call cold starts a server (~2x slower)."
+  warn "Add '\"lifecycle\": \"keep-alive\"' to the '$SERVER_NAME' entry by hand."
+else
+  ok "Enabled keep-alive so repeat calls reuse one warm server"
+fi
+
 # --- Generate the CLI --------------------------------------------------------
 
 info "Generating CLI from the server's live tool schemas (this takes ~20s)"
 
 mkdir -p "$TARGET_DIR/bin"
 
+# --runtime node is deliberate. Without it mcporter picks the runtime from
+# whatever is on PATH at generation time, emitting a `#!/usr/bin/env bun`
+# shebang whenever Bun happens to be installed. Agents routinely invoke the CLI
+# from a shell with a narrower PATH than the installing shell, and there the bun
+# shebang fails to exec. Node 18+ is already a hard requirement above.
 npx -y mcporter@latest generate-cli \
   --server "$SERVER_NAME" \
+  --runtime node \
   --output "$TARGET_DIR/bin/omnifocus-enhanced.ts" \
   --bundle "$TARGET_DIR/bin/omnifocus-enhanced.cjs" >/dev/null
 
 chmod +x "$TARGET_DIR/bin/omnifocus-enhanced.cjs"
 ok "CLI bundled at $TARGET_DIR/bin/omnifocus-enhanced.cjs"
+
+# mcporter bakes the resolved lifecycle into the bundle as a constant, so a
+# bundle generated from an entry without keep-alive is permanently ephemeral --
+# no environment variable can switch it on afterwards. Regenerating with
+# `generate-cli --from <bundle>` also silently drops it, because the replay
+# metadata omits lifecycle. Assert it landed rather than trusting the config.
+if grep -q '"lifecycle"' "$TARGET_DIR/bin/omnifocus-enhanced.ts"; then
+  ok "Keep-alive baked into the generated CLI"
+else
+  warn "The generated CLI did not inherit keep-alive; calls will be ~2x slower."
+  warn "Re-run this installer to regenerate it. Never refresh the CLI with"
+  warn "'mcporter generate-cli --from' -- that path drops keep-alive silently."
+fi
 
 # --- Install the skill manifest ----------------------------------------------
 
@@ -153,15 +198,11 @@ info "Verifying the generated CLI"
 
 REQUIRED_COMMANDS=(
   dump-database add-omnifocus-task add-project remove-item edit-item move-task
-  batch-move-tasks batch-add-items batch-remove-items create-project-from-outline get-task-by-id read-task-attachment
-  get-today-completed-tasks set-repetition-rule get-inbox-tasks get-flagged-tasks
-  get-forecast-tasks get-tasks-by-tag list-tags filter-tasks
-  list-custom-perspectives get-custom-perspective-tasks
-  get-projects get-projects-due-for-review mark-projects-reviewed
-  add-folder edit-folder remove-folder list-folders get-folder
-  append-to-note count-tasks duplicate-task
-  add-tag edit-tag remove-tag search-tags
-  list-task-notifications add-task-notification remove-task-notification
+  batch-move-tasks batch-complete-tasks batch-add-items batch-remove-items
+  create-project-from-outline get-task-by-id read-task-attachment get-tasks
+  set-repetition-rule manage-tags filter-tasks get-projects
+  mark-projects-reviewed manage-perspectives manage-folders append-to-note
+  count-tasks duplicate-task manage-task-notifications
 )
 
 HELP_OUTPUT="$("$TARGET_DIR/bin/omnifocus-enhanced.cjs" --help 2>&1 || true)"
@@ -174,14 +215,16 @@ done
 if (( ${#MISSING[@]} > 0 )); then
   warn "The generated CLI is missing ${#MISSING[@]} expected command(s):"
   printf '      %s\n' "${MISSING[@]}" >&2
-  fail "Your installed $PACKAGE is probably older than this skill. Run 'npm cache clean --force' and retry."
+  warn "This installer pins the server to $PACKAGE_SPEC, so the server cannot be"
+  warn "older than this skill. The checklist above is out of sync with the tools"
+  warn "$PACKAGE actually registers -- please report this with the list above:"
+  fail "https://github.com/jqlts1/omnifocus-mcp-enhanced/issues"
 fi
 
 ok "All ${#REQUIRED_COMMANDS[@]} tools present"
 
 TASK_TREE_COMMANDS=(
-  get-inbox-tasks get-flagged-tasks get-forecast-tasks
-  get-tasks-by-tag filter-tasks get-task-by-id
+  get-tasks filter-tasks get-task-by-id
 )
 for cmd in "${TASK_TREE_COMMANDS[@]}"; do
   TASK_TREE_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs "$cmd" --help 2>&1 || true)"
@@ -236,10 +279,18 @@ $(printf '\033[32mSkill installed.\033[0m')
   CLI:       $TARGET_DIR/bin/omnifocus-enhanced.cjs
 
 Try it:
-  $TARGET_DIR/bin/omnifocus-enhanced.cjs get-inbox-tasks
+  $TARGET_DIR/bin/omnifocus-enhanced.cjs get-tasks --source inbox
   $TARGET_DIR/bin/omnifocus-enhanced.cjs count-tasks --flagged true
 
 After upgrading $PACKAGE, re-run this installer to refresh the CLI:
   npx -y ${PACKAGE}@latest install-skill$([[ "$INSTALL_GLOBAL" == true ]] && printf ' --global')
+
+Do not refresh it with 'mcporter generate-cli --from' -- that replays metadata
+which omits lifecycle, so it silently drops keep-alive and doubles call latency.
+
+The CLI runs its keep-alive daemon against its own generated config, not
+$MCPORTER_CONFIG. Plain 'mcporter daemon status' therefore always reports
+"not running" for it. Inspect the real daemon with:
+  npx -y mcporter@latest --config \$(ls -t ~/.mcporter/generated/*.json | head -1) daemon status
 
 EOF

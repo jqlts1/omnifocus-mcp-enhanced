@@ -35,6 +35,45 @@
     // 遍历内容树，收集任务信息（含层级关系）
     let rootNode = window.content.rootNode;
 
+    const tagPathCache = {};
+    function serializeTag(tag) {
+      const leafId = tag && tag.id ? tag.id.primaryKey : null;
+      if (leafId && tagPathCache[leafId]) return tagPathCache[leafId];
+
+      const chain = [];
+      const visited = {};
+      let current = tag;
+      let depth = 0;
+      while (current && depth < 64) {
+        let id = null;
+        let name = null;
+        let parent = null;
+        try {
+          id = current.id ? current.id.primaryKey : null;
+          name = current.name || null;
+          parent = current.parent || null;
+        } catch (_error) {
+          break;
+        }
+        if (id && visited[id]) break;
+        if (id) visited[id] = true;
+        if (name) chain.push({ id, name });
+        current = parent;
+        depth += 1;
+      }
+
+      chain.reverse();
+      const leaf = chain.length > 0 ? chain[chain.length - 1] : { id: leafId, name: tag.name || "" };
+      const result = {
+        id: leafId || leaf.id,
+        name: leaf.name,
+        path: chain.length > 0 ? chain.map((item) => item.name).join(" / ") : leaf.name,
+        ancestorIds: chain.slice(0, -1).map((item) => item.id).filter((id) => !!id),
+      };
+      if (leafId) tagPathCache[leafId] = result;
+      return result;
+    }
+
     function collectTasks(node, parentId) {
       if (node.object && node.object instanceof Task) {
         let t = node.object;
@@ -46,7 +85,7 @@
           name: t.name,
           note: t.note || "",
           project: t.containingProject ? t.containingProject.name : (t.project ? t.project.name : null),
-          tags: t.tags ? t.tags.map(tag => tag.name) : [],
+          tags: t.tags ? t.tags.map(serializeTag) : [],
           dueDate: t.dueDate ? t.dueDate.toISOString() : null,
           deferDate: t.deferDate ? t.deferDate.toISOString() : null,
           plannedDate: t.plannedDate ? t.plannedDate.toISOString() : null,

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import type { ZodTypeAny } from 'zod';
 
 import { registerTools } from './registerTools.js';
 
@@ -9,6 +10,8 @@ interface RegisteredToolCall {
   name: string;
   config: {
     annotations?: ToolAnnotations;
+    description?: string;
+    inputSchema?: ZodTypeAny | Record<string, ZodTypeAny>;
   };
 }
 
@@ -24,11 +27,17 @@ function captureTools(): RegisteredToolCall[] {
   return calls;
 }
 
-test('registerTools exposes 29 unique tools through the modern MCP API', () => {
+test('registerTools exposes 25 unique consolidated tools', () => {
   const calls = captureTools();
+  const names = calls.map((call) => call.name);
 
-  assert.equal(calls.length, 29);
-  assert.equal(new Set(calls.map((call) => call.name)).size, calls.length);
+  assert.equal(calls.length, 25);
+  assert.equal(new Set(names).size, calls.length);
+  assert.equal(names.includes('manage_task_notifications'), true);
+  assert.equal(names.includes('get_today_completed_tasks'), false);
+  assert.equal(names.includes('list_task_notifications'), false);
+  assert.equal(names.includes('add_task_notification'), false);
+  assert.equal(names.includes('remove_task_notification'), false);
 });
 
 test('registerTools marks local reads and destructive writes accurately', () => {
@@ -61,6 +70,18 @@ test('registerTools marks local reads and destructive writes accurately', () => 
     idempotentHint: false,
     openWorldHint: false,
   });
+  for (const name of [
+    'manage_tags',
+    'manage_folders',
+    'manage_task_notifications',
+  ]) {
+    assert.deepEqual(byName.get(name), {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: false,
+    });
+  }
   assert.equal(
     calls.every((call) => call.config.annotations?.openWorldHint === false),
     true,
