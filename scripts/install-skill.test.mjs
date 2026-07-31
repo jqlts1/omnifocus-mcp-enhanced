@@ -48,6 +48,18 @@ test('installer opts the server into keep-alive and verifies it landed', () => {
   assert.match(installer, /grep -q '"lifecycle"' "\$TARGET_DIR\/bin\/omnifocus-enhanced\.ts"/);
 });
 
+// Project-local installs commonly live below paths such as "Mobile Documents".
+// An unquoted executable path is split by the shell; `|| true` then hides the
+// exec failure and the installer misreports it as a missing generated flag.
+test('every verification invocation quotes the generated CLI path', () => {
+  const invocations = [...installer.matchAll(/^(?!\s*(?:ok|warn|fail|CLI:))[^\n]*\$TARGET_DIR\/bin\/omnifocus-enhanced\.cjs[^\n]*$/gm)]
+    .map((match) => match[0]);
+  assert.ok(invocations.length >= 6, 'expected all generated CLI verification invocations');
+  for (const invocation of invocations) {
+    assert.match(invocation, /"\$TARGET_DIR\/bin\/omnifocus-enhanced\.cjs"/, invocation);
+  }
+});
+
 // The old message blamed a stale server and told users to clear the npm cache.
 // The installer pins the server to its own version, so that diagnosis is
 // impossible by construction and sends users into an endless cache-clear loop.

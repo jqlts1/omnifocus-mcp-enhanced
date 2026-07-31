@@ -227,7 +227,7 @@ TASK_TREE_COMMANDS=(
   get-tasks filter-tasks get-task-by-id
 )
 for cmd in "${TASK_TREE_COMMANDS[@]}"; do
-  TASK_TREE_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs "$cmd" --help 2>&1 || true)"
+  TASK_TREE_HELP="$("$TARGET_DIR/bin/omnifocus-enhanced.cjs" "$cmd" --help 2>&1 || true)"
   if ! grep -q -- "--show-subtasks" <<<"$TASK_TREE_HELP" ||
      ! grep -q -- "--max-subtask-depth" <<<"$TASK_TREE_HELP"; then
     fail "The generated CLI command '$cmd' is missing v1.13 task-tree flags. Refresh the package and retry."
@@ -245,14 +245,14 @@ if ! grep -q -- "--cursor" <<<"$FILTER_HELP"; then
 fi
 ok "Pagination cursor flag present on filter-tasks"
 
-OUTLINE_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs create-project-from-outline --help 2>&1 || true)"
+OUTLINE_HELP="$("$TARGET_DIR/bin/omnifocus-enhanced.cjs" create-project-from-outline --help 2>&1 || true)"
 if ! grep -q -- "--project" <<<"$OUTLINE_HELP" ||
    ! grep -q -- "--raw" <<<"$OUTLINE_HELP"; then
   fail "The generated create-project-from-outline command is missing its nested project input. Refresh the package and retry."
 fi
 ok "Nested project outline input present"
 
-REPETITION_HELP="$($TARGET_DIR/bin/omnifocus-enhanced.cjs add-omnifocus-task --help 2>&1 || true)"
+REPETITION_HELP="$("$TARGET_DIR/bin/omnifocus-enhanced.cjs" add-omnifocus-task --help 2>&1 || true)"
 if ! grep -q -- "--repetition" <<<"$REPETITION_HELP" &&
    ! grep -q -- "--raw" <<<"$REPETITION_HELP"; then
   fail "The generated add-omnifocus-task command cannot accept the v1.20 repetition input. Refresh the package and retry."
@@ -279,8 +279,8 @@ $(printf '\033[32mSkill installed.\033[0m')
   CLI:       $TARGET_DIR/bin/omnifocus-enhanced.cjs
 
 Try it:
-  $TARGET_DIR/bin/omnifocus-enhanced.cjs get-tasks --source inbox
-  $TARGET_DIR/bin/omnifocus-enhanced.cjs count-tasks --flagged true
+  "$TARGET_DIR/bin/omnifocus-enhanced.cjs" get-tasks --source inbox
+  "$TARGET_DIR/bin/omnifocus-enhanced.cjs" count-tasks --flagged true
 
 After upgrading $PACKAGE, re-run this installer to refresh the CLI:
   npx -y ${PACKAGE}@latest install-skill$([[ "$INSTALL_GLOBAL" == true ]] && printf ' --global')
