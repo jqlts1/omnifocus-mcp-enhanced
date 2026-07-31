@@ -44,6 +44,8 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
   Skill 安装器同时修掉了一直在漏的延迟。mcporter 只有在配置条目明确要求时才会让 MCP server 进程保持存活，而它内置的默认名单只覆盖少数几个浏览器自动化 server，因此此前每次 CLI 调用都要重新解析 `npx -y` 并冷启一个 server。安装器现在以 `lifecycle: "keep-alive"` 注册 server，并断言该设置确实进入了生成的 bundle——交错 A/B 实测每条命令快 2.1 倍（中位数 12.9s → 6.1s）。注意 `mcporter generate-cli --from <bundle>` 的回放元数据会丢掉 `lifecycle`，用这条路径刷新 CLI 会静默还原成慢速状态；`install-skill` 是唯一受支持的刷新方式。生成的 CLI 还固定使用 `--runtime node`，否则 mcporter 会根据生成时 `PATH` 上恰好存在什么来选运行时，产出 `#!/usr/bin/env bun` 的 shebang——而在 `PATH` 更窄的 shell 里它根本无法 exec。新增测试断言安装器的校验清单与 server 实际注册的工具完全一致，因此重命名工具再也不会发布出一个在正确安装的包上直接失败的安装器。
 
+  安装器验证现在还会给每一处生成 CLI 的可执行路径加引号。项目级 Skill 经常位于 `Mobile Documents` 这类含空格目录下；此前 task-tree、outline 和 repetition 的未引用路径会在空格处被 shell 拆开，执行错误又被 `|| true` 吞掉，最后误报为正确生成的 flags 缺失。新增回归测试覆盖全部验证调用。
+
 - **v2.0.0** - MCP 工具面从 41 个专用工具收敛为 25 个严格聚合工具：任务视图统一使用 `get_tasks`，项目读取统一使用 `get_projects`，Folder、Tag 和通知 CRUD 统一使用 `manage_*` action。旧工具名直接移除，不保留兼容别名。详细任务读取会保留实际分配的叶标签，并通过 `path` 和 `ancestorIds` 暴露完整 OmniFocus 标签层级（例如 `团队 / 守一`）；Compact 仍省略标签。内置 Skill 与安装器同步生成并验证 25 个命令。
 
 - **v1.21.0** - 批量完成任务：新增 `batch_complete_tasks` 工具，可在一个验证事务中按稳定 ID 批量完成或取消完成最多 100 个任务。工具会预检每个 ID、快照原始完成状态、应用每个动作、读回验证状态与完成时间，失败时恢复原状态。重复任务完成后会生成新实例，工具返回 `generatedTaskId` 与 `nextOccurrence`。幂等项报告为 `unchanged` 而非失败。当前共 41 个工具、5 个 Prompts 和 3 个 Resources。
