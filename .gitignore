@@ -55,6 +55,7 @@ generate_*.js
 # Locally generated Claude skill and project-scoped mcporter config
 /.claude/skills/omnifocus-cli/
 /config/mcporter.json
+/.mcp.json
 
 # Personal files and reports
 CLAUDE.md
