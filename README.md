@@ -133,12 +133,22 @@ npm install -g omnifocus-mcp-enhanced@latest
 npm install -g omnifocus-mcp-enhanced
 claude mcp add omnifocus-enhanced -- omnifocus-mcp-enhanced
 
-# Local project installation
+# Local project installation (project-scoped)
+# This creates/updates the current project's .mcp.json so the server is only available here.
 git clone https://github.com/jqlts1/omnifocus-mcp-enhanced.git
 cd omnifocus-mcp-enhanced
 npm install && npm run build
-claude mcp add omnifocus-enhanced -- node "/path/to/omnifocus-mcp-enhanced/dist/server.js"
+claude mcp add -s project omnifocus-enhanced -- node "/path/to/omnifocus-mcp-enhanced/dist/server.js"
 ```
+
+You can also install from npm into the consuming project's devDependencies instead of cloning:
+
+```bash
+npm install --save-dev omnifocus-mcp-enhanced
+claude mcp add -s project omnifocus-enhanced -- npx -y omnifocus-mcp-enhanced
+```
+
+After adding, run `claude` once in the project directory and approve the pending MCP connection.
 
 ### Claude Desktop / Cowork
 
