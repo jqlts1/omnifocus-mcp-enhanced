@@ -80,13 +80,34 @@ export function appleScriptDateCode(isoDate: string, variableName: string): stri
 
   const [, year, month, day] = match;
 
+  // Preserve the wall-clock time when the ISO input includes one, reading the
+  // hour/minute/second straight from the string exactly as the date components
+  // above are read. The time is taken verbatim, with no timezone conversion, so
+  // it stays consistent with the locale-independent date construction; any
+  // offset or "Z" suffix is ignored. Date-only input keeps hours/minutes/seconds
+  // at zero (midnight), leaving the original behavior untouched.
+  let hours = 0;
+  let minutes = 0;
+  let seconds = 0;
+  const timeMatch = /T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(isoDate.trim());
+  if (timeMatch) {
+    const parsedHours = Number(timeMatch[1]);
+    const parsedMinutes = Number(timeMatch[2]);
+    const parsedSeconds = timeMatch[3] ? Number(timeMatch[3]) : 0;
+    if (parsedHours <= 23 && parsedMinutes <= 59 && parsedSeconds <= 59) {
+      hours = parsedHours;
+      minutes = parsedMinutes;
+      seconds = parsedSeconds;
+    }
+  }
+
   return `
     set ${variableName} to current date
     set day of ${variableName} to 1
     set year of ${variableName} to ${Number(year)}
     set month of ${variableName} to ${Number(month)}
     set day of ${variableName} to ${Number(day)}
-    set hours of ${variableName} to 0
-    set minutes of ${variableName} to 0
-    set seconds of ${variableName} to 0`;
+    set hours of ${variableName} to ${hours}
+    set minutes of ${variableName} to ${minutes}
+    set seconds of ${variableName} to ${seconds}`;
 }
