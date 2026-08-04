@@ -40,6 +40,10 @@ OmniFocus 本身已经很强了，但它大多数时候仍然是一个需要你�
 
 ## 🆕 最新版本
 
+- **v2.1.1** - 截止、推迟和计划日期现在会保留具体时间。`appleScriptDateCode` 此前把时、分、秒硬编码为 0，因此经由 `add_omnifocus_task`、`add_project` 和 `edit_item` 写入的每个日期都会塌缩到本地零点——尽管这些工具的 schema 明确声明接受完整 ISO 日期。而走 JXA 的 `create_project_from_outline` 一直保留时间，两条写入路径的行为并不一致。现在时间直接从 ISO 字符串中读取，与年月日的既有读法完全相同：按字面 wall-clock 取值，不做任何时区换算，因此偏移量或 `Z` 后缀会被忽略，日期也永远不会和与之配对的时间脱节。仅含日期的输入仍然解析为零点，既有调用方不受影响。感谢 [@danilicari](https://github.com/danilicari)（[#40](https://github.com/jqlts1/omnifocus-mcp-enhanced/pull/40)）。
+
+  本次构建同时包含 v2.1.0 条目中描述的空格路径安装器修复——那部分改动是在 v2.1.0 发布到 npm 之后才落地的。
+
 - **v2.1.0** - 自定义透视规则管理：新增 `manage_perspectives`，可读取、解释并编辑自定义透视背后的筛选规则，取代 `list_custom_perspectives`。规则以基于名称的可读文档呈现，而不是裸的 primary key；所有编辑都是原地写入，透视的 identifier 永不改变。规则词汇表不是照抄 Omni 文档，而是逐条在运行中的 App 上实测得出——文档既不完整也有错误：`actionHasPlannedDate` 未被文档记载，文档中的 `changed` 日期字段实际被筛选引擎忽略，二进制里存在的整个 `actionHasDate*` 家族是死代码。OmniFocus 写入规则时不做任何校验——非法规则会被原样存储，然后让透视静默匹配全部条目——因此服务端在写入前校验每条规则，原样保留自己不认识的规则，拒绝未知或有歧义的标签与项目名，失败时回滚，并强制执行 OmniFocus 自身不会触发的界面刷新。创建和删除透视仍不在范围内：OmniFocus 没有提供对应的自动化接口。当前仍为 25 个工具、5 个 Prompts 和 3 个 Resources。
 
   Skill 安装器同时修掉了一直在漏的延迟。mcporter 只有在配置条目明确要求时才会让 MCP server 进程保持存活，而它内置的默认名单只覆盖少数几个浏览器自动化 server，因此此前每次 CLI 调用都要重新解析 `npx -y` 并冷启一个 server。安装器现在以 `lifecycle: "keep-alive"` 注册 server，并断言该设置确实进入了生成的 bundle——交错 A/B 实测每条命令快 2.1 倍（中位数 12.9s → 6.1s）。注意 `mcporter generate-cli --from <bundle>` 的回放元数据会丢掉 `lifecycle`，用这条路径刷新 CLI 会静默还原成慢速状态；`install-skill` 是唯一受支持的刷新方式。生成的 CLI 还固定使用 `--runtime node`，否则 mcporter 会根据生成时 `PATH` 上恰好存在什么来选运行时，产出 `#!/usr/bin/env bun` 的 shebang——而在 `PATH` 更窄的 shell 里它根本无法 exec。新增测试断言安装器的校验清单与 server 实际注册的工具完全一致，因此重命名工具再也不会发布出一个在正确安装的包上直接失败的安装器。
